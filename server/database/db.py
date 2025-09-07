@@ -8,3 +8,9 @@ if database_url == None:
 engine = create_engine(database_url, echo=True)
 SessionLocal = sessionmaker(bind = engine, autoflush= False, autocommit=False)
 Base = declarative_base()
+
+
+def init_database():
+        Base.metadata.create_all(bind=engine)
+        print("✅ Tablas creadas")
+        return True

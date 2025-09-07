@@ -4,15 +4,17 @@ from utils.hash_pass import hash_pass
 from config.config import pass_admin
 from services.roles_services import RolesService
 from utils.hash_pass import hash_pass
+from sqlalchemy.orm import Session
+from models.Roles import Roles
 
 class UserService: 
     def __init__(self):
         self.userModel = Users
-        self.db = SessionLocal()
+        self.roleModel = Roles
     
-    def create_admin_user(self):
+    def create_admin_user(self, db: Session):
         roles_service = RolesService()
-        role_admin = roles_service.findRoleByName(name="ADMIN")
+        role_admin = roles_service.findRoleByName(name="ADMIN", db=db)
         
         if not role_admin or not hasattr(role_admin, "id"):
             raise ValueError("ADMIN role not found or invalid role object")
@@ -21,61 +23,77 @@ class UserService:
         if pass_admin is None:
             pass_admin = "admin"
         passwd = hash_pass(pass_admin)
-        user_admin = Users(names="admin", lastname="admin", username="admin", passwd=passwd, role=role_admin.id)
+        user_admin = Users(names="admin", lastname="admin", username="admin", passwd=passwd, role_id=role_admin.id)
         try:
-            self.db.add(user_admin)
-            self.db.commit()
+            db.add(user_admin)
+            db.commit()
             print("Usuario admin creado!")
             
         except Exception as e:
             print("Error al crear el usuario admin: ", e)
         finally:
-            self.db.close()
+            db.close()
             
-    def get_users(self):
+    def get_users(self, db: Session):
         try:
-            users = self.db.query(self.userModel.id,
+            users = db.query(self.userModel.id,
                           self.userModel.names,
                           self.userModel.lastname,
                           self.userModel.username,
                           self.userModel.last_login,
-                        ).all()
+                          self.roleModel.name.label("role_name"),
+                        ).join(self.roleModel).all()
             return users
         except Exception as e:
             print("Error al obtener los usuarios", e)
             return False
         finally:
-            self.db.close()
+            db.close()
         
-    def get_user(self, id: str):
+    def get_user(self, id: str, db: Session):
         try:
-            user = self.db.query(self.userModel).filter(self.userModel.id == id).first()
-            return user
+            user = db.query(self.userModel.id,
+                          self.userModel.names,
+                          self.userModel.lastname,
+                          self.userModel.username,
+                          self.userModel.last_login,
+                          self.roleModel.name.label("role_name")).join(self.roleModel).filter(self.userModel.id == id).first()
+            if user:
+                return {
+                    "id": user.id,
+                    "names": user.names,
+                    "lastname": user.lastname,
+                    "username": user.username,
+                    "last_login": user.last_login,
+                    "role_name": user.role_name
+                }
+            else: 
+                return None
         except Exception as e:
             print("Error al obtener los usuarios", e)
             return False
         finally:
-            self.db.close()
+            db.close()
             
-    def create_user(self, names: str, lastname: str, username: str, passwd: str, role: str):
+    def create_user(self, names: str, lastname: str, username: str, passwd: str, role: str, db:Session):
         try:
             hashed_pass = hash_pass(passwd)
-            new_user = self.userModel(names=names, lastname=lastname, username=username, passwd=hashed_pass, role=role)
-            self.db.add(new_user)
-            self.db.commit()
+            new_user = self.userModel(names=names, lastname=lastname, username=username, passwd=hashed_pass, role_id=role)
+            db.add(new_user)
+            db.commit()
             return new_user
         except Exception as e:
             print("Error al crear el usuario", e)
             return False
         finally:
-            self.db.close()
+            db.close()
             
-    def edit_user(self, id: str, names: str, lastname: str, username: str, passwd: str, role: str) :
+    def edit_user(self, id: str, names: str, lastname: str, username: str, passwd: str, role: str, db: Session) :
         try:
         
-            find = self.db.query(self.userModel).filter(self.userModel.id == id).first()
-            if not find or len(find) == 0:
-                return False
+            find = db.query(self.userModel).filter(self.userModel.id == id).first()
+            if not find:
+                return None
             
             pass_encrypt = hash_pass(passwd)
             
@@ -83,24 +101,25 @@ class UserService:
             setattr(find, "lastname", lastname)
             setattr(find, "username", username)
             setattr(find, "passwd", pass_encrypt)
-            self.db.commit()
-            
+            setattr(find, "role_id", role)
+            db.commit()
+            return True
         except Exception as e:
-            print("Error al eliminar el usuario", e)
+            print("Error al actualizar el usuario", e)
             return False
         finally:
-            self.db.close()
+            db.close()
     
-    def delete_user(self, id: str):
+    def delete_user(self, id: str, db: Session):
         try:
-            user = self.db.query(self.userModel).filter(self.userModel.id == id).first()
+            user = db.query(self.userModel).filter(self.userModel.id == id).first()
             if not user:
                 return False
-            self.db.delete(user)
-            self.db.commit()
+            db.delete(user)
+            db.commit()
             return True
         except Exception as e:
             print("Error al eliminar el usuario", e)
             return False
         finally:
-            self.db.close()
+            db.close()

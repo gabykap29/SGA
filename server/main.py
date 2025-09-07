@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from controllers.user_controllers import user_routes
+from controllers.roles_controllers import role_router
 from fastapi.middleware.cors import CORSMiddleware
 from utils.create_admin import create_admin
-
+from utils.create_roles import create_roles
+from database.db import init_database
 app = FastAPI()
 
 
@@ -13,8 +15,33 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-create_admin()
+
+
+
 app.include_router(user_routes)
+app.include_router(role_router)
 @app.get("/")
 def root():
     return {"message": "Hello World"}
+
+@app.on_event("startup")
+async def startup_event():
+    """Evento que se ejecuta al iniciar la aplicación"""
+    print("🚀 Iniciando aplicación...")
+    
+    # ✅ ORDEN CORRECTO
+    # 1. Primero inicializar la base de datos (crear tablas)
+    if init_database():
+        print("✅ Base de datos inicializada")
+        
+        # 2. Luego crear los roles
+        print("📋 Creando roles...")
+        create_roles()
+        
+        # 3. Finalmente crear el usuario admin
+        print("👤 Creando usuario administrador...")
+        create_admin()
+        
+        print("🎉 Inicialización completa!")
+    else:
+        print("❌ Error al inicializar la base de datos")

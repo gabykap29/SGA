@@ -1,39 +1,39 @@
 from models.Roles import Roles
 from database.db import SessionLocal
+from sqlalchemy.orm import Session
 
 class RolesService:
     def __init__(self):
         self.roleModel = Roles 
-        self.db = SessionLocal()
-    def create_roles(self):
+    def create_roles(self, db:Session):
         try:
             roles_list = [
                 self.roleModel(name="ADMIN"),
                 self.roleModel(name="MODERATE"),
                 self.roleModel(name="USERS")
             ]
-            self.db.add_all(roles_list)
-            self.db.commit()
+            db.add_all(roles_list)
+            db.commit()
             print("Roles cargados con exito!")
             
         except Exception as e:
             print("Error al crear los roles", e)
         finally:
-            self.db.close()
-    def get_roles(self):
+            db.close()
+    def get_roles(self, db: Session):
         try:
-            return self.db.query(self.roleModel).all()
+            return db.query(self.roleModel).all()
         except Exception as e:
             print("Error al obtener los roles", e)
             return False
         finally:
-            self.db.close()
+            db.close()
             
-    def findRoleByName(self, name: str):
+    def findRoleByName(self, name: str, db:Session):
         try:
-            return self.db.query(self.roleModel).filter(self.roleModel.name == name).first()
+            return db.query(self.roleModel).filter(self.roleModel.name == name).first()
         except Exception as e:
             print("Error al obtener los roles", e)
             return False
         finally:
-            self.db.close()
+            db.close()

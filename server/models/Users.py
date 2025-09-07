@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Integer, ForeignKey
+from sqlalchemy import Column, String, DateTime, ForeignKey
 from database.db import Base
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm  import relationship
@@ -15,6 +15,6 @@ class Users(Base):
     create_at = Column(DateTime, default= lambda: datetime.now(timezone.utc) )
     update_at = Column(DateTime, default= lambda: datetime.now(timezone.utc) )
     last_login = Column(DateTime, nullable=True)
-    role_id = Column(Integer, ForeignKey("roles.id"))
+    role_id = Column(UUID(as_uuid=True), ForeignKey("roles.id"))
     
-    roles = relationship("role", back_populates="users")
+    roles = relationship("Roles", back_populates="users")
