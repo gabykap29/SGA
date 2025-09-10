@@ -6,11 +6,35 @@ from services.roles_services import RolesService
 from utils.hash_pass import hash_pass
 from sqlalchemy.orm import Session
 from models.Roles import Roles
+from passlib.context import CryptContext
 
 class UserService: 
     def __init__(self):
         self.userModel = Users
         self.roleModel = Roles
+    
+    def login(self, username: str, password: str, db: Session):
+        """
+            Busca un usuario por su nombre y verifica su contraseña.
+
+            :param username: Nombre de usuario.
+            :param password: Contraseña a verificar.
+            :param db: Sesión de la base de datos.
+            :return: El objeto del usuario si la autenticación es exitosa, False en caso contrario.
+        """
+        user = db.query(self.userModel).filter(self.userModel.username == username).first()
+        if not user or user is None:
+            print("Usuario no encontrado!")
+            return False
+        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        if user.passwd is None:
+            return False
+        verify_pass = pwd_context.verify(password, user.passwd)
+        if not verify_pass:
+            return False
+        return user
+    
+    
     
     def create_admin_user(self, db: Session):
         roles_service = RolesService()
@@ -84,6 +108,20 @@ class UserService:
             return new_user
         except Exception as e:
             print("Error al crear el usuario", e)
+            return False
+        finally:
+            db.close()
+    
+    def get_user_username(self, username: str, db: Session):
+        try:
+            user = db.query(self.userModel).filter(self.userModel.username == username).first()
+            if user == None:
+                print("El usuario no existe!")
+                return False
+            return user
+        
+        except Exception as e:
+            print("Error al obtener el usuario", e)
             return False
         finally:
             db.close()

@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from utils.create_admin import create_admin
 from utils.create_roles import create_roles
 from database.db import init_database
+from controllers.auth_controllers import auth_router
 app = FastAPI()
 
 
@@ -20,6 +21,7 @@ app.add_middleware(
 
 app.include_router(user_routes)
 app.include_router(role_router)
+app.include_router(auth_router)
 @app.get("/")
 def root():
     return {"message": "Hello World"}
