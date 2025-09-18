@@ -7,6 +7,6 @@ import uuid
 class Roles(Base):
     __tablename__ = "roles"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    name = Column(String, nullable=False)
+    name = Column(String(10), nullable=False)
     
     users = relationship("Users", back_populates="roles")

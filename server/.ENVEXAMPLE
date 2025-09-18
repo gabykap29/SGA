@@ -1,0 +1,5 @@
+DATABASE_URL="mysql+pymysql://usuario:contraseña@localhost:3306/mi_base"
+PASS_ADMIN="admin"
+SECRET_KEY="klajshdlkasjdlk"
+HASH_ALGORITHM = "H256"
+TOKEN_EXPIRATION_MINUTES= 2000
