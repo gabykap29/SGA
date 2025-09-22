@@ -1,14 +1,9 @@
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
 import jwt
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import  HTTPException, status
 from jwt.exceptions import InvalidTokenError
-from passlib.context import CryptContext 
-from pydantic import BaseModel
-
 from config.config import secret_key, hash_algorithm
-
+from models.schemas.token_schemas import TokenData
 
 
 def create_access_token(data: dict, expires_delta:timedelta | None = None): 
@@ -22,3 +17,17 @@ def create_access_token(data: dict, expires_delta:timedelta | None = None):
     encode_jwt = jwt.encode(to_encode, secret_key, algorithm= hash_algorithm)
     return encode_jwt
 
+def decode_access_token(token: str) -> dict:
+    try:
+        payload = jwt.decode(token, secret_key, algorithms=[hash_algorithm])
+        token_data = {
+            "username": payload.get("sub"),   # o "username" si lo guardaste así
+            "user_id": payload.get("user_id")
+        }
+        return token_data
+    except InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido o expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )

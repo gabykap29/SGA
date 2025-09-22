@@ -1,5 +1,4 @@
 from models.Users import Users
-from database.db import SessionLocal
 from utils.hash_pass import hash_pass
 from config.config import pass_admin
 from services.roles_services import RolesService
@@ -7,6 +6,7 @@ from utils.hash_pass import hash_pass
 from sqlalchemy.orm import Session
 from models.Roles import Roles
 from passlib.context import CryptContext
+from datetime import date, datetime
 
 class UserService: 
     def __init__(self):
@@ -32,6 +32,9 @@ class UserService:
         verify_pass = pwd_context.verify(password, user.passwd)
         if not verify_pass:
             return False
+        now = datetime.now()
+        user.last_login = now
+        db.commit()
         return user
     
     

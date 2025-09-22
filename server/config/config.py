@@ -12,7 +12,7 @@ if os.getenv("HASH_ALGORITHM"):
 else: 
     hash_algorithm = "H256"
 if os.getenv("TOKEN_EXPIRATION_MINUTES"):
-    token_expires_minutes = os.getenv("TOKEN_EXPIRATION_MINUTES")
+    token_expires_minutes = int(os.getenv("TOKEN_EXPIRATION_MINUTES"))
 else:
     token_expires_minutes = 60
 

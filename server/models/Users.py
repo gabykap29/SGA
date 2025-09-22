@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, DateTime, ForeignKey
 from database.db import Base
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.types import UUID
 from sqlalchemy.orm  import relationship
 import uuid
 from datetime import datetime, timezone
@@ -18,3 +18,4 @@ class Users(Base):
     role_id = Column(UUID(as_uuid=True), ForeignKey("roles.id"))
     
     roles = relationship("Roles", back_populates="users")
+    persons = relationship("Persons", back_populates="users")
