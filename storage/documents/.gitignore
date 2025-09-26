@@ -1,0 +1,3 @@
+# Excluir todos los archivos encriptados
+*.enc
+*.tmp

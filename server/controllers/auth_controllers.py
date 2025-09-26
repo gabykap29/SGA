@@ -2,7 +2,7 @@ from services.users_services import UserService
 from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi import APIRouter
-from models.schemas.token_schemas import Token, TokenData
+# from models.schemas.token_schemas import TokenData
 from typing import Annotated
 from database.db import SessionLocal
 from config.config import token_expires_minutes
@@ -13,7 +13,7 @@ user_service = UserService()
 auth_router = APIRouter()
 
 @auth_router.post("/login")
-async def login(formdata: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
+async def login(formdata: Annotated[OAuth2PasswordRequestForm, Depends()]):
     try:
         db_session = SessionLocal()
         user = user_service.login(formdata.username, formdata.password, db=db_session)
@@ -32,7 +32,17 @@ async def login(formdata: Annotated[OAuth2PasswordRequestForm, Depends()]) -> To
             expires_delta=access_token_expires
         )
         db_session.close()
-        return Token(access_token=access_token, token_type="bearer")
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": str(user.id),
+                "username": user.username,
+                "names": user.names,
+                "lastname": user.lastname,
+                "role_name": user.roles.name if user.roles else None
+            }
+        }
 
     except Exception as e:
         print(e)

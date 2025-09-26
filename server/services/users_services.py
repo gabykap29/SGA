@@ -22,7 +22,8 @@ class UserService:
             :param db: Sesión de la base de datos.
             :return: El objeto del usuario si la autenticación es exitosa, False en caso contrario.
         """
-        user = db.query(self.userModel).filter(self.userModel.username == username).first()
+        from sqlalchemy.orm import joinedload
+        user = db.query(self.userModel).options(joinedload(self.userModel.roles)).filter(self.userModel.username == username).first()
         if not user or user is None:
             print("Usuario no encontrado!")
             return False
