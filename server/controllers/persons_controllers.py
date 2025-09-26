@@ -1,10 +1,10 @@
 from fastapi import APIRouter, HTTPException, Header, status
 from fastapi.responses import JSONResponse
+from starlette.status import HTTP_200_OK, HTTP_422_UNPROCESSABLE_CONTENT
 from services.persons_services import PersonsService
 from models.schemas.person_schemas import PersonSchema, PersonResponse
 from database.db import SessionLocal
 from utils.jwt import decode_access_token
-from models.schemas. token_schemas import TokenData
 
 router = APIRouter(tags=["Persons"], prefix="/persons")
 person_service = PersonsService()
@@ -84,6 +84,7 @@ def create_person(body: PersonSchema,
             "message": "Persona creada!"
         }
     except Exception as e:
+        print("Error interno del servidor al intentar crear una persona ", e)
         raise HTTPException(
             status_code= status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Error al crear la persona, verifique los campos o que la persona ya no este existente!"
@@ -119,5 +120,28 @@ def update_person(id: str, body: PersonSchema):
                 status_code= status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="ERROR INTERNO EN EL SERVIDOR AL INTENTAR ACTUALIZAR"
             )
+    finally:
+        db_session.close()
+
+@router.patch("/{person_id}/{record_id}", status_code=HTTP_200_OK)
+def add_record_to_person(person_id: str, record_id: str, type_relationship: str):
+    db_session = SessionLocal()
+    try:
+        record = person_service.add_record(person_id=person_id, record_id= record_id,type_relationship=type_relationship ,db=db_session )
+        if not record:
+            return HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Error, no se pudo vincular la persona con el antecedente... intente nuevamente mas tarde."
+            )
+        return JSONResponse(
+            status_code= status.HTTP_200_OK,
+            content="Antecedente vinculado con exito!"
+        )
+    except Exception as e: 
+        print("Error interno en el servidor la vincular la persona!", e)
+        return HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno en el servidor al vincular la persona!"
+        )
     finally:
         db_session.close()

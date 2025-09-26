@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import String, Column, ForeignKey, Date, Text, null, DateTime
+from sqlalchemy import String, Column, Date, Text, DateTime
 from database.db import Base
 from sqlalchemy.types import UUID
 from sqlalchemy.orm import relationship
@@ -11,7 +11,9 @@ class Records(Base):
     title = Column(String(255), nullable= False)
     date = Column(Date, nullable= False)
     content = Column(Text, nullable= False)
+    observations = Column(Text, nullable=True)
     create_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     person_relationships = relationship("RecordsPersons", back_populates="record")
+    files = relationship("Files", back_populates="record")

@@ -21,6 +21,8 @@ class Persons(Base):
     
     users = relationship("Users", back_populates="persons")
     record_relationships = relationship("RecordsPersons", back_populates="person")
+    # Una persona puede tener cero o más archivos (relación opcional)
+    files = relationship("Files", back_populates="person", cascade="all, delete-orphan", lazy="select")
     
     connections_as_person = relationship(
         "ConnectionType",

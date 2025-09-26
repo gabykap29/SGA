@@ -1,0 +1,14 @@
+# Dependencias adicionales necesarias para el sistema de archivos
+# Agregar estas líneas al requirements.txt existente
+
+# Encriptación de archivos
+cryptography==41.0.7
+
+# Validación de tipos de archivo
+python-magic==0.4.27
+
+# Manejo de archivos multipart en FastAPI (ya debería estar incluido)
+python-multipart==0.0.6
+
+# Para procesamiento de imágenes (opcional, para validación adicional)
+Pillow==10.0.1

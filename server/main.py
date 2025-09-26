@@ -7,9 +7,13 @@ from utils.create_roles import create_roles
 from database.db import init_database
 from controllers.auth_controllers import auth_router
 from controllers.persons_controllers import router as person_router
+from controllers.records_controolers import router as record_router
+from controllers.files_controllers import router as files_router
 
 # Importar todos los modelos para que SQLAlchemy pueda mapear las relaciones
+# Importar todos los modelos para que SQLAlchemy pueda mapear las relaciones
 import models
+from sqlalchemy.orm import configure_mappers
 
 app = FastAPI()
 
@@ -26,6 +30,8 @@ app.include_router(user_routes)
 app.include_router(role_router)
 app.include_router(auth_router)
 app.include_router(person_router)
+app.include_router(record_router)
+app.include_router(files_router)
 
 @app.get("/")
 def root():
@@ -36,17 +42,24 @@ async def startup_event():
     """Evento que se ejecuta al iniciar la aplicación"""
     print("🚀 Iniciando aplicación...")
     
-    # 1. Primero inicializar la base de datos (crear tablas)
+    # 1. Primero configurar los mappers de SQLAlchemy
+    try:
+        configure_mappers()
+        print("✅ Mappers de SQLAlchemy configurados")
+    except Exception as e:
+        print(f"⚠️  Advertencia al configurar mappers: {e}")
+    
+    # 2. Inicializar la base de datos (crear tablas)
     if init_database():
         print("✅ Base de datos inicializada")
         
-        # 2. Luego crear los roles
+        # 3. Luego crear los roles
         print("📋 Creando roles...")
         create_roles()
         
-        # 3. Finalmente crear el usuario admin
+        # 4. Finalmente crear el usuario admin
         print("👤 Creando usuario administrador...")
-        create = create_admin()
+        create_admin()
 
     else:
         print("❌ Error al inicializar la base de datos")

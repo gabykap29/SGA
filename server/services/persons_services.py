@@ -1,7 +1,8 @@
 from models.Persons import Persons
 from models.Record import Records
 from models.Users import Users
-from sqlalchemy.orm import Session
+from models.Recortds_Persons import RecordsPersons
+from sqlalchemy.orm import Session, joinedload
 from models.Connection_Type import ConnectionType
 import uuid
 class PersonsService:
@@ -11,20 +12,32 @@ class PersonsService:
         self.userModel = Users
         self.connectionType = ConnectionType
     def get_persons(self, db: Session):
-        persons = db.query(self.personModel)
+        persons = db.query(self.personModel).options(
+            joinedload(self.personModel.record_relationships).joinedload(RecordsPersons.record),
+            joinedload(self.personModel.files)  # Cargar archivos (puede ser lista vacía)
+        ).all()
         if not persons:
-            db.close()
             return []
-        db.close()
         return persons
     
-    def get_person(self, person_id: str, db:Session):
-            person = db.query(self.personModel).filter(self.personModel.person_id == uuid.UUID(person_id)).first()
-            if not person:
-                return False
-            return person
-    
-    
+    def get_person(self, person_id: str, db: Session):
+        try:
+            person_uuid = uuid.UUID(person_id)
+        except ValueError:
+            return False
+
+        person = (
+            db.query(self.personModel)
+            .options(
+                joinedload(self.personModel.users),
+                joinedload(self.personModel.record_relationships).joinedload(RecordsPersons.record),
+                joinedload(self.personModel.files)  # Cargar archivos (puede ser lista vacía)
+            )
+            .filter(self.personModel.person_id == person_uuid)
+            .first()
+        )
+        return person
+
     def create_person(self, identification: str, identification_type: str, names: str, lastnames:str, address: str, province: str, country: str, user_id: str, db: Session):
         try:
             
@@ -66,20 +79,35 @@ class PersonsService:
         finally:
             db.close()
             
-    def add_record(self, person_id: str, record_id: str, db:Session):
+    def add_record(self, person_id: str, record_id: str, type_relationship: str, db:Session):
         try:
-            person = db.query(self.personModel).filter(self.personModel.person_id == person_id).first()
+            person = db.query(self.personModel).filter(self.personModel.person_id == uuid.UUID(person_id)).first()
             if not person:
                 print("La persona no existe!")
                 return False
-            record = db.query(self.recordModel).filter(self.recordModel.record_id == record_id).first()
+            record = db.query(self.recordModel).filter(self.recordModel.record_id == uuid.UUID(record_id)).first()
             if not record:
                 print("El antecedente no existe!")
                 return False 
             
-            person.records(record)
-            record.persons(person)
+            # Verificar si la relación ya existe
+            existing_relationship = db.query(RecordsPersons).filter(
+                RecordsPersons.person_id == person.person_id,
+                RecordsPersons.record_id == record.record_id
+            ).first()
             
+            if existing_relationship:
+                print("La relación entre la persona y el registro ya existe!")
+                return False
+            
+            # Crear la relación en la tabla intermedia
+            relationship = RecordsPersons(
+                person_id=person.person_id,
+                record_id=record.record_id,
+                type_relationship=type_relationship
+            )
+            
+            db.add(relationship)
             db.commit()
             
             return True
