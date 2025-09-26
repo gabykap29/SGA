@@ -5,12 +5,13 @@ from services.persons_services import PersonsService
 from models.schemas.person_schemas import PersonSchema, PersonResponse
 from database.db import SessionLocal
 from utils.jwt import decode_access_token
+from typing import List
 
 router = APIRouter(tags=["Persons"], prefix="/persons")
 person_service = PersonsService()
 
 
-@router.get("", status_code=status.HTTP_200_OK)
+@router.get("", status_code=status.HTTP_200_OK, response_model=List[PersonResponse])
 def get_persons():
     db_session = SessionLocal()
     try:
@@ -18,12 +19,11 @@ def get_persons():
         persons_list = list(persons)
         
         if not persons_list or len(persons_list) < 1:
-            return JSONResponse(
-                content="Aun no se han cargado personas!",
-                status_code= status.HTTP_404_NOT_FOUND
-            )
+            return []
         
-        return persons_list
+        # Convertir a esquemas Pydantic mientras la sesión está activa
+        persons_response = [PersonResponse.model_validate(person) for person in persons_list]
+        return persons_response
     except Exception as e:
         print("Error critico al obtener las personas", e)
         raise HTTPException(
@@ -55,10 +55,10 @@ def get_person(id: str):
     finally:
         db_session.close()
 
-@router.post("/create", status_code=status.HTTP_201_CREATED)
+@router.post("/create", status_code=status.HTTP_201_CREATED, response_model=PersonResponse)
 def create_person(body: PersonSchema,
                   authorization: str = Header(None)
-                  ) -> dict[str, str]:
+                  ):
     
     if not authorization:
         raise HTTPException(status_code=401, detail="Token requerido")
@@ -79,16 +79,29 @@ def create_person(body: PersonSchema,
                                     )
         
         if not person:
-            raise
-        return {
-            "message": "Persona creada!"
-        }
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Error al crear la persona"
+            )
+        
+        # Convertir el objeto SQLAlchemy usando el esquema Pydantic y devolver directamente
+        person_response = PersonResponse.model_validate(person)
+        return person_response
     except Exception as e:
         print("Error interno del servidor al intentar crear una persona ", e)
-        raise HTTPException(
-            status_code= status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Error al crear la persona, verifique los campos o que la persona ya no este existente!"
+        error_message = str(e)
+        
+        # Verificar si es un error de duplicado
+        if "Duplicate entry" in error_message and "identification" in error_message:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Ya existe una persona con esta identificación"
             )
+        
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Error al crear la persona, verifique los campos"
+        )
     finally:
         db_session.close()
         

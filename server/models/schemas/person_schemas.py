@@ -25,23 +25,20 @@ class RecordSchema(BaseModel):
     create_at: datetime
     updated_at: datetime
     
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 class RecordRelationshipSchema(BaseModel):
     id: UUID
     type_relationship: str
     record: RecordSchema
     
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 class UserResponse(BaseModel):
     id: UUID
     username: str    
     
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 class FileMinimalForPersonResponse(BaseModel):
     """Schema mínimo para archivos en respuesta de personas"""
@@ -51,8 +48,7 @@ class FileMinimalForPersonResponse(BaseModel):
     file_size: int
     created_at: datetime
     
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 class PersonResponse(BaseModel):
     person_id: UUID
@@ -70,7 +66,6 @@ class PersonResponse(BaseModel):
     record_relationships: List[RecordRelationshipSchema] = []
     files: List[FileMinimalForPersonResponse] = []  # Lista opcional de archivos (puede estar vacía)
     
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
         
         

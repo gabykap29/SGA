@@ -2,11 +2,10 @@ from models.Users import Users
 from utils.hash_pass import hash_pass
 from config.config import pass_admin
 from services.roles_services import RolesService
-from utils.hash_pass import hash_pass
 from sqlalchemy.orm import Session
 from models.Roles import Roles
 from passlib.context import CryptContext
-from datetime import date, datetime
+from datetime import datetime
 
 class UserService: 
     def __init__(self):

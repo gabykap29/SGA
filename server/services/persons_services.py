@@ -49,7 +49,21 @@ class PersonsService:
 
             db.add(new_person)
             db.commit()
-            return True
+            db.refresh(new_person)
+            
+            # Cargar las relaciones necesarias para la respuesta
+            person_with_relations = (
+                db.query(self.personModel)
+                .options(
+                    joinedload(self.personModel.users),
+                    joinedload(self.personModel.record_relationships).joinedload(RecordsPersons.record),
+                    joinedload(self.personModel.files)
+                )
+                .filter(self.personModel.person_id == new_person.person_id)
+                .first()
+            )
+            
+            return person_with_relations
         
         except Exception as e:
             print("Error al crear el usuario!", e)
