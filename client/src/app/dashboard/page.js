@@ -12,6 +12,7 @@ import RecentPersonsTable from '../../../components/dashboard/RecentPersonsTable
 
 // Servicios
 import { dashboardService } from '../../../services/dashboardService';
+import personService from '../../../services/personService';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -36,24 +37,54 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const result = await dashboardService.getDashboardData();
+      
+      // Intentar cargar datos con dashboardService
+      let result = await dashboardService.getDashboardData();
       
       if (result.success) {
         setDashboardData(result.data);
       } else {
-        toast.error('Error al cargar datos del dashboard');
-        console.error('Error loading dashboard data:', result.error);
+        console.warn('DashboardService failed, trying direct PersonService...');
         
-        // Datos de fallback
-        setDashboardData({
-          stats: {
-            totalPersonas: 0,
-            totalAntecedentes: 0,
-            registrosActivos: 0,
-            nuevosEsteMes: 0
-          },
-          recentPersons: []
-        });
+        // Fallback: intentar cargar personas directamente con personService
+        try {
+          const personsResult = await personService.getPersons();
+          
+          if (personsResult.success) {
+            const persons = personsResult.data;
+            const sortedPersons = persons.sort((a, b) => {
+              const dateA = new Date(a.created_at || a.updated_at || 0);
+              const dateB = new Date(b.created_at || b.updated_at || 0);
+              return dateB - dateA;
+            });
+            
+            setDashboardData({
+              stats: {
+                totalPersonas: persons.length,
+                totalAntecedentes: 0,
+                registrosActivos: persons.length,
+                nuevosEsteMes: persons.length
+              },
+              recentPersons: sortedPersons.slice(0, 5)
+            });
+          } else {
+            throw new Error(personsResult.error);
+          }
+        } catch (fallbackError) {
+          console.error('Fallback also failed:', fallbackError);
+          toast.error('Error al cargar datos del dashboard');
+          
+          // Datos completamente de fallback
+          setDashboardData({
+            stats: {
+              totalPersonas: 0,
+              totalAntecedentes: 0,
+              registrosActivos: 0,
+              nuevosEsteMes: 0
+            },
+            recentPersons: []
+          });
+        }
       }
     } catch (error) {
       console.error('Error loading dashboard:', error);

@@ -76,13 +76,13 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
             <thead className="bg-light">
               <tr>
                 <th className="fw-semibold text-muted py-3">Nombre Completo</th>
-                <th className="fw-semibold text-muted py-3">DNI</th>
-                <th className="fw-semibold text-muted py-3">Edad</th>
+                <th className="fw-semibold text-muted py-3">Identificación</th>
+                <th className="fw-semibold text-muted py-3">Provincia</th>
                 <th className="fw-semibold text-muted py-3">
                   <FiCalendar className="me-1" size={14} />
                   Fecha de Registro
                 </th>
-                <th className="fw-semibold text-muted py-3">Estado</th>
+                <th className="fw-semibold text-muted py-3">País</th>
                 <th className="fw-semibold text-muted py-3 text-center">Acciones</th>
               </tr>
             </thead>
@@ -99,25 +99,33 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
                           style={{ width: '40px', height: '40px', fontSize: '14px' }}
                         >
                           {person.names?.charAt(0) || 'N'}
-                          {person.lastname?.charAt(0) || 'A'}
+                          {person.lastnames?.charAt(0) || 'A'}
                         </div>
                         <div>
                           <div className="fw-semibold">
-                            {person.names} {person.lastname}
+                            {person.names} {person.lastnames}
                           </div>
                           <small className="text-muted">
-                            ID: {person.id}
+                            ID: {person.person_id || person.id}
                           </small>
                         </div>
                       </div>
                     </td>
                     <td className="py-3">
-                      <span className="font-monospace">
-                        {person.dni || 'No especificado'}
-                      </span>
+                      <div>
+                        <span className="font-monospace fw-semibold">
+                          {person.identification || 'No especificado'}
+                        </span>
+                        <br />
+                        <small className="text-muted">
+                          {person.identification_type || 'N/A'}
+                        </small>
+                      </div>
                     </td>
                     <td className="py-3">
-                      {person.age ? `${person.age} años` : 'N/A'}
+                      <Badge bg="light" text="dark">
+                        {person.province || 'N/A'}
+                      </Badge>
                     </td>
                     <td className="py-3">
                       <span className="text-muted">
@@ -125,11 +133,8 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
                       </span>
                     </td>
                     <td className="py-3">
-                      <Badge 
-                        bg={person.active ? 'success' : 'secondary'} 
-                        pill
-                      >
-                        {person.active ? 'Activo' : 'Inactivo'}
+                      <Badge bg="info" text="dark">
+                        {person.country || 'Argentina'}
                       </Badge>
                     </td>
                     <td className="py-3 text-center">

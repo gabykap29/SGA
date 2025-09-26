@@ -3,7 +3,7 @@
  * Servicio para obtener datos del dashboard
  */
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'http://localhost:8001';
 
 class DashboardService {
   /**
@@ -52,7 +52,7 @@ class DashboardService {
         throw new Error('No hay token de autenticación');
       }
 
-      const response = await fetch(`${API_BASE_URL}/persons?limit=${limit}&recent=true`, {
+      const response = await fetch(`${API_BASE_URL}/persons`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -65,9 +65,23 @@ class DashboardService {
       }
 
       const data = await response.json();
+      
+      // Procesar los datos: ordenar por fecha de creación y limitar
+      let processedData = Array.isArray(data) ? data : [];
+      
+      // Ordenar por fecha de creación (más recientes primero)
+      processedData.sort((a, b) => {
+        const dateA = new Date(a.created_at || a.updated_at || 0);
+        const dateB = new Date(b.created_at || b.updated_at || 0);
+        return dateB - dateA;
+      });
+      
+      // Limitar la cantidad
+      processedData = processedData.slice(0, limit);
+      
       return {
         success: true,
-        data: data
+        data: processedData
       };
     } catch (error) {
       console.error('Error obteniendo personas recientes:', error);
@@ -83,28 +97,22 @@ class DashboardService {
    */
   async getDashboardData() {
     try {
-      const [statsResult, personsResult] = await Promise.allSettled([
-        this.getStats(),
+      // Por ahora solo cargamos personas, las estadísticas las calculamos localmente
+      const [personsResult] = await Promise.allSettled([
         this.getRecentPersons(5)
       ]);
 
-      // Procesar estadísticas
-      let stats = null;
-      if (statsResult.status === 'fulfilled' && statsResult.value.success) {
-        stats = statsResult.value.data;
-      } else {
-        // Datos de fallback si no hay endpoint de stats
-        const personsData = personsResult.status === 'fulfilled' && personsResult.value.success 
-          ? personsResult.value.data 
-          : [];
-        
-        stats = {
-          totalPersonas: personsData.length || 0,
-          totalAntecedentes: 0, // TODO: implementar cuando esté disponible
-          registrosActivos: personsData.filter(p => p.active).length || 0,
-          nuevosEsteMes: personsData.length || 0 // Simplificado por ahora
-        };
-      }
+      // Procesar estadísticas basadas en los datos de personas
+      const personsData = personsResult.status === 'fulfilled' && personsResult.value.success 
+        ? personsResult.value.data 
+        : [];
+      
+      const stats = {
+        totalPersonas: personsData.length || 0,
+        totalAntecedentes: 0, // TODO: implementar cuando esté disponible
+        registrosActivos: personsData.length || 0,
+        nuevosEsteMes: personsData.length || 0 // Simplificado por ahora
+      };
 
       // Procesar personas recientes
       let recentPersons = [];
