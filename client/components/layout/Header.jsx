@@ -55,9 +55,9 @@ const Header = ({ toggleSidebar, sidebarOpen }) => {
     <Navbar 
       bg="dark" 
       variant="dark" 
-      className="px-3 py-3 border-bottom border-secondary"
+      className="px-3 py-3 border-bottom"
       style={{ 
-        marginLeft: sidebarOpen ? '0' : '0',
+        backgroundColor: '#212529',
         transition: 'margin-left 0.3s ease-in-out',
         zIndex: 1030
       }}
@@ -73,7 +73,7 @@ const Header = ({ toggleSidebar, sidebarOpen }) => {
       </Button>
 
       {/* Título de la página */}
-      <Navbar.Brand className="mb-0 fw-bold">
+      <Navbar.Brand className="mb-0 fw-bold" onClick={() => router.push('/dashboard')} style={{ cursor: 'pointer' }}>
         Dashboard
       </Navbar.Brand>
 

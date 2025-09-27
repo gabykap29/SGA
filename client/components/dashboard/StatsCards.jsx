@@ -3,9 +3,9 @@
 import { Card, Row, Col } from 'react-bootstrap';
 import { FiUsers, FiFileText, FiTrendingUp, FiDatabase } from 'react-icons/fi';
 
-const StatsCard = ({ title, value, icon: Icon, color, loading = false }) => {
+const StatsCard = ({ title, value, icon: Icon, loading = false }) => {
   return (
-    <Card className="h-100 border-0 shadow-sm">
+    <Card className="h-100 border-1 shadow-sm">
       <Card.Body className="d-flex align-items-center">
         <div className="flex-grow-1">
           <h6 className="text-muted mb-1 fw-normal">{title}</h6>
@@ -14,7 +14,7 @@ const StatsCard = ({ title, value, icon: Icon, color, loading = false }) => {
               <span className="placeholder col-6"></span>
             </div>
           ) : (
-            <h3 className="mb-0 fw-bold" style={{ color }}>
+            <h3 className="mb-0 fw-bold text-dark">
               {value}
             </h3>
           )}
@@ -24,8 +24,8 @@ const StatsCard = ({ title, value, icon: Icon, color, loading = false }) => {
           style={{ 
             width: '50px', 
             height: '50px', 
-            backgroundColor: `${color}15`,
-            color: color
+            backgroundColor: '#f5f5f5',
+            color: '#212529'
           }}
         >
           <Icon size={24} />
@@ -40,26 +40,22 @@ const StatsCards = ({ stats, loading = false }) => {
     {
       title: 'Total Personas',
       value: stats?.totalPersonas || 0,
-      icon: FiUsers,
-      color: '#007bff'
+      icon: FiUsers
     },
     {
       title: 'Antecedentes Cargados',
       value: stats?.totalAntecedentes || 0,
-      icon: FiFileText,
-      color: '#28a745'
+      icon: FiFileText
     },
     {
       title: 'Registros Activos',
       value: stats?.registrosActivos || 0,
-      icon: FiDatabase,
-      color: '#ffc107'
+      icon: FiDatabase
     },
     {
       title: 'Nuevos Este Mes',
       value: stats?.nuevosEsteMes || 0,
-      icon: FiTrendingUp,
-      color: '#dc3545'
+      icon: FiTrendingUp
     }
   ];
 
@@ -71,7 +67,6 @@ const StatsCards = ({ stats, loading = false }) => {
             title={card.title}
             value={card.value}
             icon={card.icon}
-            color={card.color}
             loading={loading}
           />
         </Col>

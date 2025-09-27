@@ -12,7 +12,7 @@ const DashboardLayout = ({ children }) => {
   };
 
   return (
-    <div className="min-vh-100 bg-light">
+    <div className="min-vh-100" style={{ backgroundColor: '#f5f5f5' }}>
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} toggle={toggleSidebar} />
       

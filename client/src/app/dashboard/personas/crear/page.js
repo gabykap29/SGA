@@ -188,7 +188,13 @@ export default function CreatePerson() {
 
   const handleFinish = () => {
     toast.success('Persona creada y configurada completamente');
-    router.push('/dashboard/personas/filtrar');
+    // Redirect to the person detail page using the person ID
+    if (personData && personData.person_id) {
+      router.push(`/dashboard/personas/${personData.person_id}`);
+    } else {
+      // Fallback to dashboard if no person ID is available
+      router.push('/dashboard');
+    }
   };
 
   const isStepAccessible = (stepId) => {
@@ -244,32 +250,34 @@ export default function CreatePerson() {
   return (
     <DashboardLayout>
       <Container fluid>
-        {/* Header mejorado */}
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <div>
-            <div className="d-flex align-items-center mb-2">
-              <Button 
-                variant="link" 
-                onClick={() => router.push('/dashboard')}
-                className="p-0 me-3 text-decoration-none text-muted"
-              >
-                <FiArrowLeft size={20} />
-              </Button>
-              <h2 className="fw-bold text-dark mb-0">Crear Nueva Persona</h2>
+        {/* Cuadro de título */}
+        <div className="mb-4 p-4 bg-white rounded shadow-sm" style={{ border: '1px solid #d4cfcfff' }}>
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <div className="d-flex align-items-center mb-2">
+                <Button 
+                  variant="link" 
+                  onClick={() => router.push('/dashboard')}
+                  className="p-0 me-3 text-decoration-none text-muted"
+                >
+                  <FiArrowLeft size={20} />
+                </Button>
+                <h2 className="fw-bold text-dark mb-0">Crear Nueva Persona</h2>
+              </div>
+              <p className="lead text-muted mb-0 ms-5">Complete los siguientes pasos para registrar una nueva persona en el sistema</p>
             </div>
-            <p className="text-muted mb-0 ms-5">Complete los siguientes pasos para registrar una nueva persona en el sistema</p>
-          </div>
-          
-          {/* Indicador de progreso en header */}
-          <div className="text-end">
-            <div className="small text-muted mb-1">Progreso general</div>
-            <div className="d-flex align-items-center">
-              <span className="small fw-medium me-2">{Math.round(calculateProgress())}%</span>
-              <ProgressBar 
-                now={calculateProgress()} 
-                style={{ width: '100px', height: '6px' }}
-                className="rounded-pill"
-              />
+            
+            {/* Indicador de progreso en header */}
+            <div className="text-end">
+              <div className="small text-muted mb-1">Progreso general</div>
+              <div className="d-flex align-items-center">
+                <span className="small fw-medium me-2">{Math.round(calculateProgress())}%</span>
+                <ProgressBar 
+                  now={calculateProgress()} 
+                  style={{ width: '100px', height: '6px' }}
+                  className="rounded-pill"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -278,8 +286,8 @@ export default function CreatePerson() {
           {/* Sidebar rediseñado */}
           <Col lg={4} xl={3} className="mb-4">
             {/* Stepper vertical mejorado */}
-            <Card className="border-0 shadow-sm">
-              <Card.Header className="bg-white border-0 pb-2">
+            <Card className="border-1 shadow-sm">
+              <Card.Header className="bg-light border-1 pb-2">
                 <h6 className="mb-0 fw-bold text-dark">Pasos del Proceso</h6>
               </Card.Header>
               <Card.Body className="py-3">
@@ -373,7 +381,7 @@ export default function CreatePerson() {
             {/* Panel de resumen mejorado */}
             {personData && (
               <Card className="border-0 shadow-sm mt-3">
-                <Card.Header className="bg-success bg-opacity-10 border-0">
+                <Card.Header className="bg-success bg-opacity-10 border-1">
                   <div className="d-flex align-items-center">
                     <div className="bg-success rounded-circle d-flex align-items-center justify-content-center me-2" style={{width: '24px', height: '24px'}}>
                       <FiCheck size={14} className="text-white" />
@@ -421,8 +429,8 @@ export default function CreatePerson() {
 
           {/* Contenido principal mejorado */}
           <Col lg={8} xl={9}>
-            <Card className="border-0 shadow-sm">
-              <Card.Header className="bg-white border-0 py-3">
+            <Card className="border-1 shadow-sm">
+              <Card.Header className="bg-light border-1 py-3">
                 <div className="d-flex align-items-center justify-content-between">
                   <div className="d-flex align-items-center">
                     {(() => {

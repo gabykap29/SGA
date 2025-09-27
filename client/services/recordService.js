@@ -164,6 +164,50 @@ class RecordService {
       return { success: false, error: 'Error de conexión' };
     }
   }
+
+  // Vincular una persona a un antecedente
+  async linkPersonToRecord(personId, recordId) {
+    try {
+      const response = await fetch(`${this.baseURL}/records/${recordId}/link-person`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ person_id: personId })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return { success: true, data };
+      } else {
+        const errorData = await response.json();
+        return { success: false, error: errorData.detail || 'Error al vincular antecedente' };
+      }
+    } catch (error) {
+      console.error('RecordService.linkPersonToRecord error:', error);
+      return { success: false, error: 'Error de conexión' };
+    }
+  }
+
+  // Desvincular una persona de un antecedente
+  async unlinkPersonFromRecord(personId, recordId) {
+    try {
+      const response = await fetch(`${this.baseURL}/records/${recordId}/unlink-person`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ person_id: personId })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return { success: true, data };
+      } else {
+        const errorData = await response.json();
+        return { success: false, error: errorData.detail || 'Error al desvincular antecedente' };
+      }
+    } catch (error) {
+      console.error('RecordService.unlinkPersonFromRecord error:', error);
+      return { success: false, error: 'Error de conexión' };
+    }
+  }
 }
 
 // Crear instancia única del servicio

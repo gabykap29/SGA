@@ -99,7 +99,7 @@ export default function Dashboard() {
       <DashboardLayout>
         <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
           <div className="text-center">
-            <Spinner animation="border" variant="primary" className="mb-3" />
+            <Spinner animation="border" variant="dark" className="mb-3" />
             <div className="text-muted">Cargando dashboard...</div>
           </div>
         </Container>
@@ -110,10 +110,12 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <Container fluid>
-        {/* Título de bienvenida */}
-        <div className="mb-4">
-          <h2 className="fw-bold text-dark mb-1">Dashboard</h2>
-          <p className="text-muted">Resumen general del sistema</p>
+        {/* Cuadro de título */}
+        <div className="mb-4 p-4 bg-white rounded shadow-sm" style={{ border: '1px solid #d4cfcfff' }}>
+          <h2 className="fw-bold text-dark mb-2">Dashboard</h2>
+          <p className="text-muted lead mb-0">
+            ➜ Resumen general del sistema
+          </p>
         </div>
 
         {/* Tarjetas de estadísticas */}
