@@ -14,14 +14,29 @@ import { toast } from 'react-toastify';
 
 const Header = ({ toggleSidebar, sidebarOpen }) => {
   const [user, setUser] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
-
+  
   useEffect(() => {
+    // Detectar si estamos en dispositivo móvil
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 992);
+    };
+    
+    // Comprobar al cargar
+    checkIsMobile();
+    
+    // Escuchar cambios de tamaño
+    window.addEventListener('resize', checkIsMobile);
+    
     // Obtener información del usuario del localStorage
     const userData = localStorage.getItem('user');
     if (userData) {
       setUser(JSON.parse(userData));
     }
+    
+    // Limpiar listener
+    return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
   const handleLogout = () => {
@@ -55,7 +70,7 @@ const Header = ({ toggleSidebar, sidebarOpen }) => {
     <Navbar 
       bg="dark" 
       variant="dark" 
-      className="px-3 py-3 border-bottom"
+      className={`px-${isMobile ? '2' : '3'} py-${isMobile ? '2' : '3'} border-bottom`}
       style={{ 
         backgroundColor: '#212529',
         transition: 'margin-left 0.3s ease-in-out',
@@ -65,84 +80,101 @@ const Header = ({ toggleSidebar, sidebarOpen }) => {
       {/* Botón menú hamburguesa */}
       <Button
         variant="outline-light"
-        size="sm"
+        size={isMobile ? "sm" : "md"}
         onClick={toggleSidebar}
-        className="me-3 d-flex align-items-center"
+        className="me-2 me-md-3 d-flex align-items-center justify-content-center"
+        style={{
+          width: isMobile ? '32px' : '38px',
+          height: isMobile ? '32px' : '38px',
+          padding: '0'
+        }}
       >
-        <FiMenu size={18} />
+        <FiMenu size={isMobile ? 16 : 18} />
       </Button>
 
       {/* Título de la página */}
-      <Navbar.Brand className="mb-0 fw-bold" onClick={() => router.push('/dashboard')} style={{ cursor: 'pointer' }}>
+      <Navbar.Brand className="mb-0 fw-bold" onClick={() => router.push('/dashboard')} style={{ cursor: 'pointer', fontSize: isMobile ? '1rem' : '1.25rem' }}>
         Dashboard
       </Navbar.Brand>
 
       {/* Espaciador */}
-      <div className="ms-auto d-flex align-items-center">
-        {/* Notificaciones */}
-        <Button 
-          variant="outline-light" 
-          size="sm" 
-          className="me-3 position-relative"
-          onClick={() => toast.info('No hay notificaciones nuevas')}
-        >
-          <FiBell size={16} />
-          <span 
-            className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-            style={{ fontSize: '0.6rem' }}
-          >
-            0
-          </span>
-        </Button>
-
-        {/* Dropdown del usuario */}
-        <Dropdown align="end">
-          <Dropdown.Toggle 
+      <div className="ms-auto">
+        {/* Botones de acción */}
+        <div className="d-flex align-items-center">
+          {/* Notificaciones */}
+          <Button 
             variant="outline-light" 
-            size="sm"
-            className="d-flex align-items-center"
+            className="d-flex align-items-center justify-content-center position-relative me-2" 
+            style={{
+              width: isMobile ? '32px' : '38px',
+              height: isMobile ? '32px' : '38px',
+              padding: '0'
+            }}
           >
-            <FiUser size={16} className="me-2" />
-            <span className="d-none d-md-inline">
-              {user?.username || 'Usuario'}
+            <FiBell size={isMobile ? 16 : 18} />
+            <span 
+              className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+              style={{ fontSize: '0.6rem' }}
+            >
+              0
             </span>
-          </Dropdown.Toggle>
+          </Button>
 
-          <Dropdown.Menu className="shadow border-0">
-            <Dropdown.Header>
-              <div className="fw-bold">{user?.username || 'Usuario'}</div>
-              <small className="text-muted">{user?.role_name || 'Rol no definido'}</small>
-            </Dropdown.Header>
-            
-            <Dropdown.Divider />
-            
-            <Dropdown.Item 
-              onClick={handleProfile}
+          {/* Dropdown del usuario */}
+          <Dropdown align="end">
+            <Dropdown.Toggle 
+              variant="outline-light" 
+              size={isMobile ? "sm" : "md"}
               className="d-flex align-items-center"
+              style={{ 
+                paddingLeft: isMobile ? '8px' : '12px', 
+                paddingRight: isMobile ? '8px' : '12px',
+                paddingTop: isMobile ? '4px' : '6px',
+                paddingBottom: isMobile ? '4px' : '6px'
+              }}
             >
-              <FiUser size={14} className="me-2" />
-              Mi Perfil
-            </Dropdown.Item>
-            
-            <Dropdown.Item 
-              onClick={handleSettings}
-              className="d-flex align-items-center"
-            >
-              <FiSettings size={14} className="me-2" />
-              Configuración
-            </Dropdown.Item>
-            
-            <Dropdown.Divider />
-            
-            <Dropdown.Item 
-              onClick={handleLogout}
-              className="d-flex align-items-center text-danger"
-            >
-              <FiLogOut size={14} className="me-2" />
-              Cerrar Sesión
-            </Dropdown.Item>
-          </Dropdown.Menu>
-        </Dropdown>
+              <FiUser size={isMobile ? 14 : 16} className="me-1 me-md-2" />
+              <span className="d-none d-md-inline">
+                {user?.username || 'Usuario'}
+              </span>
+            </Dropdown.Toggle>
+
+            <Dropdown.Menu className="shadow border-0">
+              <Dropdown.Header>
+                <div className="fw-bold">{user?.username || 'Usuario'}</div>
+                <small className="text-muted">{user?.role_name || 'Rol no definido'}</small>
+              </Dropdown.Header>
+              
+              <Dropdown.Divider />
+              
+              <Dropdown.Item 
+                onClick={handleProfile}
+                className="d-flex align-items-center"
+              >
+                <FiUser size={14} className="me-2" />
+                Mi Perfil
+              </Dropdown.Item>
+              
+              <Dropdown.Item 
+                onClick={handleSettings}
+                className="d-flex align-items-center"
+              >
+                <FiSettings size={14} className="me-2" />
+                Configuración
+              </Dropdown.Item>
+              
+              <Dropdown.Divider />
+              
+              <Dropdown.Item 
+                onClick={handleLogout}
+                className="d-flex align-items-center text-danger"
+              >
+                <FiLogOut size={14} className="me-2" />
+                Cerrar Sesión
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
+        </div>
       </div>
     </Navbar>
   );

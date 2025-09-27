@@ -7,9 +7,9 @@ from models.schemas.file_schemas import (
     FileUploadRequest, FileResponse, FileListResponse, 
     FilesByPersonResponse, FileUpdateRequest, FileDownloadResponse
 )
-from utils.jwt import decode_access_token
-from typing import List, Optional
+from typing import List, Optional, Dict
 import io
+from dependencies.is_auth import is_authenticated
 
 router = APIRouter(tags=["Files"], prefix="/files")
 files_service = FilesService()
@@ -22,24 +22,7 @@ def get_db():
     finally:
         db.close()
 
-def get_current_user_id(authorization: str = Header(None)):
-    """Dependency para obtener el ID del usuario actual desde el header Authorization"""
-    if not authorization:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token de autorización requerido en el header"
-        )
-    
-    # Extraer el token del formato "Bearer <token>"
-    try:
-        token = authorization.split(" ")[1]
-        token_decode = decode_access_token(token)
-        return token_decode["user_id"]
-    except (IndexError, KeyError):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token de autorización inválido"
-        )
+
 
 @router.post("/upload", response_model=FileResponse, status_code=status.HTTP_201_CREATED)
 async def upload_file(
@@ -47,7 +30,7 @@ async def upload_file(
     person_id: str = Form(...),
     record_id: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
-    current_user: str = Depends(get_current_user_id),
+    current_user: Dict = Depends(is_authenticated),
     db: Session = Depends(get_db)
 ):
     """
@@ -81,7 +64,7 @@ async def upload_file(
             file_size=file_size,
             mime_type=file.content_type or "application/octet-stream",
             person_id=person_id,
-            uploaded_by=current_user,
+            uploaded_by=current_user["user_id"],
             record_id=record_id,
             description=description,
             db=db
@@ -103,6 +86,7 @@ async def upload_file(
 @router.get("/{file_id}", response_model=FileResponse)
 def get_file_info(
     file_id: str,
+    current_user: Dict = Depends(is_authenticated),
     db: Session = Depends(get_db)
 ):
     """
@@ -121,6 +105,7 @@ def get_file_info(
 @router.get("/{file_id}/download")
 def download_file(
     file_id: str,
+    current_user: Dict = Depends(is_authenticated),
     db: Session = Depends(get_db)
 ):
     """
@@ -160,6 +145,7 @@ def download_file(
 @router.get("/person/{person_id}", response_model=List[FileListResponse])
 def get_files_by_person(
     person_id: str,
+    current_user: Dict = Depends(is_authenticated),
     db: Session = Depends(get_db)
 ):
     """
@@ -171,6 +157,7 @@ def get_files_by_person(
 @router.get("/record/{record_id}", response_model=List[FileListResponse])
 def get_files_by_record(
     record_id: str,
+    current_user: Dict = Depends(is_authenticated),
     db: Session = Depends(get_db)
 ):
     """
@@ -184,7 +171,7 @@ def update_file_metadata(
     file_id: str,
     update_data: FileUpdateRequest,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user_id)
+    current_user: Dict = Depends(is_authenticated)
 ):
     """
     Actualiza los metadatos de un archivo
@@ -207,7 +194,7 @@ def update_file_metadata(
 def delete_file(
     file_id: str,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user_id)
+    current_user: Dict = Depends(is_authenticated)
 ):
     """
     Elimina lógicamente un archivo del sistema
@@ -229,7 +216,7 @@ def delete_file(
 def permanently_delete_file(
     file_id: str,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user_id)
+    current_user: Dict = Depends(is_authenticated)
 ):
     """
     Elimina permanentemente un archivo del sistema
@@ -258,7 +245,7 @@ def permanently_delete_file(
 @router.get("/stats/summary")
 def get_file_stats(
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user_id)
+    current_user: Dict = Depends(is_authenticated)
 ):
     """
     Obtiene estadísticas generales de archivos del sistema
@@ -271,6 +258,7 @@ def list_all_files(
     skip: int = 0,
     limit: int = 100,
     file_type: Optional[str] = None,
+    current_user: Dict = Depends(is_authenticated),
     db: Session = Depends(get_db)
 ):
     """
@@ -279,7 +267,7 @@ def list_all_files(
     try:
         # Construir query base
         query = db.query(files_service.fileModel).filter(
-            files_service.fileModel.is_active == True
+            files_service.fileModel.is_active
         )
         
         # Filtrar por tipo si se especifica

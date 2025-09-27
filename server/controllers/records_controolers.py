@@ -1,14 +1,16 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
 from services.records_services import RecordService
 from database.db import SessionLocal
 from models.schemas.record_schema import RecordSchema
+from typing import Dict
+from dependencies.is_auth import is_authenticated
 
 router = APIRouter(tags=["Records"], prefix="/records")
 record_service = RecordService()
 
 @router.get("", status_code=status.HTTP_200_OK)
-def get_records():
+def get_records(current_user: Dict = Depends(is_authenticated)):
     db_session = SessionLocal()
     try: 
         records = record_service.get_records(db=db_session)
@@ -29,8 +31,8 @@ def get_records():
     finally:
         db_session.close()
 
-@router.get("/{id}", status_code=status.HTTP_200_OK)
-def get_record(id: str):
+@router.get("/{id}")
+def get_record_by_id(id: str, current_user: Dict = Depends(is_authenticated)):
     db_session = SessionLocal()
     try:
         record = record_service.get_record(record_id=id, db=db_session)
@@ -49,17 +51,17 @@ def get_record(id: str):
     finally:
         db_session.close()
 
-@router.post("", status_code=status.HTTP_201_CREATED)
-def create_record(body: RecordSchema):
+@router.post("/create", status_code=status.HTTP_201_CREATED)
+def create_record(record: RecordSchema, current_user: Dict = Depends(is_authenticated)):
     db_session = SessionLocal()
     try:
         new_record = record_service.create_record(
-            body.title, body.date, body.content, body.observations, db=db_session
+            record.title, record.date, record.content, record.observations, db=db_session
         )
-        if record_service is str:
+        if isinstance(new_record, str):
             return JSONResponse(
-                content= new_record,
-                status_code= status.HTTP_422_UNPROCESSABLE_ENTITY
+                content=new_record,
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
             )
         return JSONResponse(
             content="Antecedente creado correctamente!",
@@ -75,19 +77,19 @@ def create_record(body: RecordSchema):
         db_session.close()
 
 
-@router.put("/{id}", status_code=status.HTTP_200_OK)
-def update_record(id: str, body: RecordSchema):
+@router.patch("/update/{id}", status_code=status.HTTP_200_OK)
+def update_record(id: str, record: RecordSchema, current_user: Dict = Depends(is_authenticated)):
     db_session = SessionLocal()
     try:
-        record = record_service.update_record(
+        result = record_service.update_record(
             record_id=id,
-            title=body.title,
-            date=body.date.strftime("%Y-%m-%d") if hasattr(body.date, "strftime") else str(body.date),
-            content=body.content,
-            observations=body.observations,
+            title=record.title,
+            date=record.date.strftime("%Y-%m-%d") if hasattr(record.date, "strftime") else str(record.date),
+            content=record.content,
+            observations=record.observations,
             db=db_session
         )
-        if not record:
+        if not result:
             return HTTPException(
                 status_code=422,
                 detail="Verifique los campos"
@@ -108,7 +110,7 @@ def update_record(id: str, body: RecordSchema):
 
 
 @router.get("/stats/", status_code=status.HTTP_200_OK)
-def stats():
+def stats(current_user: Dict = Depends(is_authenticated)):
     db_session = SessionLocal()
     try: 
         stats = record_service.stats(db=db_session)
@@ -123,7 +125,7 @@ def stats():
         db_session.close()
 
 @router.delete("/{id}", status_code=status.HTTP_200_OK)
-def delete_report(id: str):
+def delete_report(id: str, current_user: Dict = Depends(is_authenticated)):
     db_session = SessionLocal()
     try: 
         record = record_service.delete_record(record_id=id, db=db_session)

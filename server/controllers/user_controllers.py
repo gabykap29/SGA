@@ -1,14 +1,15 @@
 from services.users_services import UserService
-from fastapi import HTTPException, status, APIRouter
+from fastapi import HTTPException, status, APIRouter, Depends
 from models.schemas.user_schema import UserSchema, UserResponses
 from database.db import SessionLocal
-from typing import List
+from typing import List, Dict
+from dependencies.is_auth import is_authenticated
 user_routes = APIRouter(tags=["Users"], prefix="/users")
 user_model = UserService()
 
 
 @user_routes.get("", status_code=status.HTTP_200_OK, response_model=List[UserResponses])
-def get_users():
+def get_users(current_user: Dict = Depends(is_authenticated)):
     db_session = SessionLocal()
     try:
         users = user_model.get_users(db=db_session)
@@ -23,7 +24,7 @@ def get_users():
         db_session.close()
 
 @user_routes.get("/{id}", status_code=status.HTTP_200_OK, response_model=UserResponses)
-def get_user(id: str):
+def get_user(id: str, current_user: Dict = Depends(is_authenticated)):
     db_session = SessionLocal()
     user = user_model.get_user(id, db=db_session)
     if not user: 
@@ -35,7 +36,7 @@ def get_user(id: str):
     return user
 
 @user_routes.post("/create", status_code=status.HTTP_201_CREATED)
-def create_user(body: UserSchema) -> dict[str, str]:
+def create_user(body: UserSchema, current_user: Dict = Depends(is_authenticated)) -> dict[str, str]:
     db_session = SessionLocal()
     if body.passwd != body.confirm_passwd:
         raise HTTPException(
@@ -59,7 +60,7 @@ def create_user(body: UserSchema) -> dict[str, str]:
     return {"msg": "Usuario creado correctamente!"}
 
 @user_routes.put("/{id}", status_code=status.HTTP_200_OK)
-def update(id: str, body: UserSchema) -> dict[str, str]:
+def update(id: str, body: UserSchema, current_user: Dict = Depends(is_authenticated)) -> dict[str, str]:
     db_session = SessionLocal()
     edit = user_model.edit_user(id, str(body.names),
         str(body.lastname),
@@ -77,7 +78,7 @@ def update(id: str, body: UserSchema) -> dict[str, str]:
     return {"msg": "Usuario actualizado correctamente"}
 
 @user_routes.delete("/{id}", status_code=status.HTTP_200_OK)
-def delete_user(id: str) -> dict[str, str]:
+def delete_user(id: str, current_user: Dict = Depends(is_authenticated)) -> dict[str, str]:
     db_session = SessionLocal()
     user = user_model.delete_user(id, db=db_session)
     if not user:

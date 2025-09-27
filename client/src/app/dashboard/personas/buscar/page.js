@@ -16,14 +16,29 @@ export default function SearchPersons() {
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isMobile, setIsMobile] = useState(false);
   const resultsPerPage = 10;
 
-  // Comprobar autenticación
+  // Comprobar autenticación y detectar dispositivo móvil
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
       router.push('/');
     }
+    
+    // Detectar si estamos en dispositivo móvil
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Comprobar al cargar
+    checkIsMobile();
+    
+    // Escuchar cambios de tamaño
+    window.addEventListener('resize', checkIsMobile);
+    
+    // Limpiar listener
+    return () => window.removeEventListener('resize', checkIsMobile);
   }, [router]);
 
   const handleInputChange = (e) => {
@@ -101,17 +116,64 @@ export default function SearchPersons() {
       />
     );
     
-    // Page numbers
-    for (let i = 1; i <= totalPages; i++) {
+    // Para dispositivos móviles, mostrar un paginador más compacto
+    if (isMobile) {
+      // Siempre mostrar la primera página
+      if (1 !== currentPage) {
+        pageItems.push(
+          <Pagination.Item
+            key={1}
+            onClick={() => setCurrentPage(1)}
+          >
+            {1}
+          </Pagination.Item>
+        );
+      }
+      
+      // Agregar ellipsis si hay más de 3 páginas y no estamos en las primeras páginas
+      if (currentPage > 2) {
+        pageItems.push(<Pagination.Ellipsis key="ellipsis1" disabled />);
+      }
+      
+      // Página actual
       pageItems.push(
         <Pagination.Item
-          key={i}
-          active={i === currentPage}
-          onClick={() => setCurrentPage(i)}
+          key={currentPage}
+          active={true}
         >
-          {i}
+          {currentPage}
         </Pagination.Item>
       );
+      
+      // Agregar ellipsis si hay más de 3 páginas y no estamos en las últimas páginas
+      if (currentPage < totalPages - 1) {
+        pageItems.push(<Pagination.Ellipsis key="ellipsis2" disabled />);
+      }
+      
+      // Siempre mostrar la última página
+      if (totalPages !== currentPage) {
+        pageItems.push(
+          <Pagination.Item
+            key={totalPages}
+            onClick={() => setCurrentPage(totalPages)}
+          >
+            {totalPages}
+          </Pagination.Item>
+        );
+      }
+    } else {
+      // En dispositivos de escritorio, mostrar todas las páginas
+      for (let i = 1; i <= totalPages; i++) {
+        pageItems.push(
+          <Pagination.Item
+            key={i}
+            active={i === currentPage}
+            onClick={() => setCurrentPage(i)}
+          >
+            {i}
+          </Pagination.Item>
+        );
+      }
     }
     
     // Next button
@@ -123,23 +185,23 @@ export default function SearchPersons() {
       />
     );
 
-    return <Pagination className="justify-content-center mt-4">{pageItems}</Pagination>;
+    return <Pagination size={isMobile ? "sm" : "md"} className="justify-content-center mt-3 mt-md-4">{pageItems}</Pagination>;
   };
 
   return (
     <DashboardLayout>
       <Container fluid>
         {/* Cuadro de título */}
-        <div className="mb-4 p-4 bg-white rounded shadow-sm" style={{ border: '1px solid #d4cfcfff' }}>
-          <h2 className="fw-bold text-dark mb-2">Buscar Personas</h2>
-          <p className="text-muted lead mb-0">
+        <div className="mb-3 mb-md-4 p-3 p-md-4 bg-white rounded shadow-sm" style={{ border: '1px solid #d4cfcfff' }}>
+          <h2 className="fw-bold text-dark mb-2 fs-3 fs-md-2">Buscar Personas</h2>
+          <p className="text-muted mb-0" style={{ fontSize: '0.95rem' }}>
             ➜ Encuentra personas por nombre, DNI o domicilio
           </p>
         </div>
 
         {/* Formulario de búsqueda */}
-        <Card className="mb-4 border-1 shadow-sm">
-          <Card.Body className="p-4">
+        <Card className="mb-3 mb-md-4 border-1 shadow-sm">
+          <Card.Body className="p-3 p-md-4">
             <Form onSubmit={handleSearch}>
               <Row className="align-items-end mb-3">
                 <Col>
@@ -172,14 +234,14 @@ export default function SearchPersons() {
               </div>
 
               {showDescription && (
-                <Alert variant="info" className="mb-3">
-                  <h6 className="fw-bold">Cómo buscar</h6>
+                <Alert variant="info" className="mb-3 p-2 p-md-3">
+                  <h6 className="fw-bold mb-2 mb-md-2">Cómo buscar</h6>
                   <p className="mb-1 small">Puedes buscar personas usando:</p>
-                  <ul className="mb-0 small">
-                    <li>Nombre o apellido (ej: "Juan Pérez")</li>
-                    <li>Número de documento (ej: "38654321")</li>
-                    <li>Tipo de documento (ej: "DNI")</li>
-                    <li>Domicilio o parte del mismo (ej: "San Martin")</li>
+                  <ul className="mb-0 small ps-3 ps-md-4">
+                    <li>Nombre o apellido</li>
+                    <li>Número de documento</li>
+                    <li>Tipo de documento</li>
+                    <li>Domicilio</li>
                   </ul>
                 </Alert>
               )}
@@ -188,49 +250,50 @@ export default function SearchPersons() {
                 <Button 
                   type="submit" 
                   variant="dark"
-                  className="px-4"
+                  className="px-3 px-md-4"
+                  size="sm"
                   disabled={isSearching}
                 >
                   {isSearching ? (
                     <>
-                      <Spinner size="sm" animation="border" className="me-2" />
-                      Buscando...
+                      <Spinner size="sm" animation="border" className="me-1 me-md-2" />
+                      <span className="d-none d-sm-inline">Buscando...</span>
+                      <span className="d-inline d-sm-none">...</span>
                     </>
                   ) : (
                     <>
-                      <FiSearch className="me-2" />
-                      Buscar
+                      <FiSearch className="me-1 me-md-2" />
+                      <span className="d-none d-sm-inline">Buscar</span>
                     </>
                   )}
                 </Button>
                 <Button 
                   type="button" 
                   variant="light" 
+                  size="sm"
                   className="ms-2"
                   onClick={handleClearSearch}
                   disabled={isSearching || (!searchQuery && !searchPerformed)}
                 >
                   <FiX className="me-1" />
-                  Limpiar
+                  <span className="d-none d-sm-inline">Limpiar</span>
                 </Button>
               </div>
             </Form>
           </Card.Body>
         </Card>
 
-        {/* Resultados de búsqueda */}
+            {/* Resultados de búsqueda */}
         {searchPerformed && (
           <Card className="border-1 shadow-sm">
-            <Card.Header className="bg-light border-1 py-3 px-4">
+            <Card.Header className="bg-light border-1 py-2 py-md-3 px-3 px-md-4">
               <div className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0 fw-bold text-dark">Resultados de Búsqueda</h5>
-                <Badge bg="dark" pill className="px-3 py-2">
+                <h5 className="mb-0 fw-bold text-dark fs-6 fs-md-5">Resultados de Búsqueda</h5>
+                <Badge bg="dark" pill className="px-2 px-md-3 py-1 py-md-2" style={{ fontSize: '0.7rem' }}>
                   {searchResults.length} {searchResults.length === 1 ? 'resultado' : 'resultados'}
                 </Badge>
               </div>
-            </Card.Header>
-            
-            {isSearching ? (
+            </Card.Header>            {isSearching ? (
               <div className="text-center py-5">
                 <Spinner animation="border" variant="dark" />
                 <p className="mt-3 text-muted">Buscando personas...</p>
@@ -238,12 +301,12 @@ export default function SearchPersons() {
             ) : searchResults.length > 0 ? (
               <>
                 <div className="table-responsive">
-                  <Table hover className="mb-0">
+                  <Table hover responsive className="mb-0">
                     <thead className="bg-light">
                       <tr>
                         <th>Nombre Completo</th>
-                        <th>Documento</th>
-                        <th>Ubicación</th>
+                        <th className="d-none d-md-table-cell">Documento</th>
+                        <th className="d-none d-md-table-cell">Ubicación</th>
                         <th>Acciones</th>
                       </tr>
                     </thead>
@@ -252,21 +315,24 @@ export default function SearchPersons() {
                         <tr key={person.person_id}>
                           <td className="align-middle">
                             <div className="d-flex align-items-center">
-                              <div className="rounded-circle bg-light p-2 me-2">
-                                <FiUser size={18} className="text-muted" />
+                              <div className="rounded-circle bg-light p-1 p-md-2 me-2">
+                                <FiUser size={16} className="text-muted" />
                               </div>
                               <div>
                                 <div className="fw-medium text-dark">{person.names} {person.lastnames}</div>
-                                <div className="small text-muted">ID: {person.person_id}</div>
+                                <div className="small text-muted d-none d-md-block">ID: {person.person_id}</div>
+                                <div className="small text-muted d-block d-md-none">
+                                  {person.identification_type} {person.identification}
+                                </div>
                               </div>
                             </div>
                           </td>
-                          <td className="align-middle">
+                          <td className="align-middle d-none d-md-table-cell">
                             <Badge bg="dark" className="py-1 px-2">
                               {person.identification_type} {person.identification}
                             </Badge>
                           </td>
-                          <td className="align-middle">
+                          <td className="align-middle d-none d-md-table-cell">
                             <div className="d-flex align-items-center">
                               <FiHome className="text-muted me-2" />
                               <span>
@@ -276,12 +342,14 @@ export default function SearchPersons() {
                             </div>
                           </td>
                           <td className="align-middle">
-                            <div className="d-flex gap-2">
+                            <div className="d-flex gap-1 gap-md-2">
                               <Button
                                 variant="outline-dark"
                                 size="sm"
                                 onClick={() => handleViewPerson(person.person_id)}
                                 title="Ver detalles"
+                                className="p-1 p-md-2 d-flex align-items-center justify-content-center"
+                                style={{ width: '28px', height: '28px' }}
                               >
                                 <FiEye size={14} />
                               </Button>
@@ -290,6 +358,8 @@ export default function SearchPersons() {
                                 size="sm"
                                 onClick={() => handleEditPerson(person.person_id)}
                                 title="Editar"
+                                className="p-1 p-md-2 d-flex align-items-center justify-content-center"
+                                style={{ width: '28px', height: '28px' }}
                               >
                                 <FiEdit size={14} />
                               </Button>
@@ -303,12 +373,12 @@ export default function SearchPersons() {
                 {renderPagination()}
               </>
             ) : (
-              <Alert variant="info" className="m-4">
+              <Alert variant="info" className="m-2 m-md-4">
                 <div className="d-flex align-items-center">
-                  <FiSearch className="me-3" size={24} />
+                  <FiSearch className="me-2 me-md-3" size={isMobile ? 20 : 24} />
                   <div>
                     <p className="mb-0 fw-bold">No se encontraron resultados</p>
-                    <p className="mb-0 small">Intenta con otros términos de búsqueda como nombre, apellido, DNI o domicilio.</p>
+                    <p className="mb-0 small">Intenta con otros términos de búsqueda.</p>
                   </div>
                 </div>
               </Alert>

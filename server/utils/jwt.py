@@ -1,9 +1,8 @@
 from datetime import datetime, timedelta, timezone
 import jwt
 from fastapi import  HTTPException, status
-from jwt.exceptions import InvalidTokenError
+from jwt.exceptions import PyJWTError
 from config.config import secret_key, hash_algorithm
-from models.schemas.token_schemas import TokenData
 
 
 def create_access_token(data: dict, expires_delta:timedelta | None = None): 
@@ -25,7 +24,7 @@ def decode_access_token(token: str) -> dict:
             "user_id": payload.get("user_id")
         }
         return token_data
-    except InvalidTokenError:
+    except PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido o expirado",

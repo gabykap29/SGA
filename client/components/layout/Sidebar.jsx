@@ -13,7 +13,7 @@ import {
   FiSearch
 } from 'react-icons/fi';
 
-const Sidebar = ({ isOpen, toggle }) => {
+const Sidebar = ({ isOpen, toggle, isMobile }) => {
   const [openMenus, setOpenMenus] = useState({
     personas: false,
     antecedentes: false
@@ -24,6 +24,13 @@ const Sidebar = ({ isOpen, toggle }) => {
       ...prev,
       [menu]: !prev[menu]
     }));
+  };
+  
+  const handleNavClick = () => {
+    // En dispositivos móviles, cerrar el sidebar al hacer clic en un enlace
+    if (isMobile) {
+      toggle();
+    }
   };
 
   const sidebarItems = [
@@ -58,20 +65,22 @@ const Sidebar = ({ isOpen, toggle }) => {
 
   return (
     <>
-      {/* Overlay para móvil */}
-      {isOpen && (
+      {/* Overlay para dispositivos móviles */}
+      {isMobile && isOpen && (
         <div 
-          className="position-fixed w-100 h-100" 
-          style={{ 
-            top: 0, 
-            left: 0, 
-            backgroundColor: 'rgba(0,0,0,0.5)', 
-            zIndex: 1040 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 1040,
           }}
           onClick={toggle}
         />
       )}
-      
+    
       {/* Sidebar */}
       <div 
         className={`bg-dark text-white position-fixed h-100 transition-all ${
@@ -83,7 +92,8 @@ const Sidebar = ({ isOpen, toggle }) => {
           left: 0,
           zIndex: 1050,
           transition: 'transform 0.3s ease-in-out',
-          transform: isOpen ? 'translateX(0)' : 'translateX(-100%)'
+          transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
+          overflowY: 'auto'
         }}
       >
         {/* Header del sidebar */}
@@ -124,6 +134,7 @@ const Sidebar = ({ isOpen, toggle }) => {
                           key={index}
                           href={subItem.href}
                           className="text-light d-flex align-items-center py-2 px-3 rounded submenu-item"
+                          onClick={handleNavClick}
                         >
                           <subItem.icon size={14} className="me-2" />
                           <span className="small">{subItem.title}</span>
@@ -136,6 +147,7 @@ const Sidebar = ({ isOpen, toggle }) => {
                 <Nav.Link
                   href={item.href}
                   className="text-white d-flex align-items-center py-3 px-3 rounded hover-item"
+                  onClick={handleNavClick}
                 >
                   <item.icon size={18} className="me-3" />
                   <span className="fw-medium">{item.title}</span>
@@ -164,6 +176,12 @@ const Sidebar = ({ isOpen, toggle }) => {
         @media (min-width: 992px) {
           .sidebar-desktop {
             transform: translateX(0) !important;
+          }
+        }
+        
+        @media (max-width: 991px) {
+          .translate-x-n100 {
+            transform: translateX(-100%) !important;
           }
         }
       `}</style>
