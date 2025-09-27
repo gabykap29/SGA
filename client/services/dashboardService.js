@@ -3,7 +3,7 @@
  * Servicio para obtener datos del dashboard
  */
 
-const API_BASE_URL = 'http://localhost:8001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
 
 class DashboardService {
   /**
@@ -16,7 +16,9 @@ class DashboardService {
         throw new Error('No hay token de autenticación');
       }
 
-      const response = await fetch(`${API_BASE_URL}/dashboard/stats`, {
+      console.log('Solicitando estadísticas a:', `${API_BASE_URL}/records/stats/`);
+      
+      const response = await fetch(`${API_BASE_URL}/records/stats/`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -25,10 +27,13 @@ class DashboardService {
       });
 
       if (!response.ok) {
+        console.error('Error en la respuesta:', response.status, response.statusText);
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('Datos recibidos de estadísticas:', data);
+      
       return {
         success: true,
         data: data
@@ -94,38 +99,40 @@ class DashboardService {
 
   /**
    * Obtiene estadísticas específicas para el dashboard
+   * @deprecated Use getStats() instead
    */
   async getDashboardData() {
+    console.warn('getDashboardData() está obsoleto. Utilice getStats() para obtener estadísticas.');
+    
     try {
-      // Por ahora solo cargamos personas, las estadísticas las calculamos localmente
-      const [personsResult] = await Promise.allSettled([
-        this.getRecentPersons(5)
-      ]);
-
-      // Procesar estadísticas basadas en los datos de personas
-      const personsData = personsResult.status === 'fulfilled' && personsResult.value.success 
-        ? personsResult.value.data 
-        : [];
+      // Obtenemos estadísticas reales del servidor
+      const statsResult = await this.getStats();
+      const personsResult = await this.getRecentPersons(5);
       
-      const stats = {
-        totalPersonas: personsData.length || 0,
-        totalAntecedentes: 0, // TODO: implementar cuando esté disponible
-        registrosActivos: personsData.length || 0,
-        nuevosEsteMes: personsData.length || 0 // Simplificado por ahora
-      };
-
-      // Procesar personas recientes
-      let recentPersons = [];
-      if (personsResult.status === 'fulfilled' && personsResult.value.success) {
-        recentPersons = personsResult.value.data;
+      console.log('getDashboardData - statsResult:', statsResult);
+      
+      if (statsResult.success && personsResult.success && statsResult.data && statsResult.data.stats) {
+        const stats = statsResult.data.stats;
+        console.log('getDashboardData - stats procesados:', stats);
+        
+        return {
+          success: true,
+          data: {
+            stats: {
+              totalPersonas: stats.cant_person || 0,
+              totalAntecedentes: stats.cant_record || 0,
+              registrosActivos: stats.cant_record || 0,
+              nuevosEsteMes: stats.cant_month || 0
+            },
+            recentPersons: personsResult.data
+          }
+        };
       }
-
+      
+      // Fallback por si falla
       return {
-        success: true,
-        data: {
-          stats,
-          recentPersons
-        }
+        success: false,
+        error: 'Error al obtener datos del dashboard'
       };
     } catch (error) {
       console.error('Error obteniendo datos del dashboard:', error);

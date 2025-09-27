@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, Header, status
+from fastapi import APIRouter, HTTPException, Header, Query, status
 from fastapi.responses import JSONResponse
-from starlette.status import HTTP_200_OK, HTTP_422_UNPROCESSABLE_CONTENT
+from starlette.status import HTTP_200_OK
 from services.persons_services import PersonsService
 from models.schemas.person_schemas import PersonSchema, PersonResponse
 from database.db import SessionLocal
@@ -54,6 +54,30 @@ def get_person(id: str):
         )
     finally:
         db_session.close()
+
+@router.get("/search/")
+def search_person(
+    query: str = Query(..., description="buscar a una persona por DNI, Apellido, NOmbre, domicilio")
+):
+    print(query)
+    db_session = SessionLocal()
+    try:
+        persons = person_service.search_person(query=query, db=db_session)
+        if len(persons) == 0:
+            raise HTTPException(
+                detail="No se encontraron personas que coincidan con la busqueda!",
+                status_code=status.HTTP_404_NOT_FOUND,            
+            )
+        return persons
+    except Exception as e:
+        print("Error interno en el servidor al buscar las personas: ",e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno en el servidor al buscar las personas!"
+        )
+    finally:
+        db_session.close()
+
 
 @router.post("/create", status_code=status.HTTP_201_CREATED, response_model=PersonResponse)
 def create_person(body: PersonSchema,
@@ -135,6 +159,7 @@ def update_person(id: str, body: PersonSchema):
             )
     finally:
         db_session.close()
+
 
 @router.patch("/{person_id}/{record_id}", status_code=HTTP_200_OK)
 def add_record_to_person(person_id: str, record_id: str, type_relationship: str):

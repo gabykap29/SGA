@@ -9,7 +9,8 @@ import {
   FiPlus, 
   FiFilter, 
   FiChevronDown,
-  FiChevronRight 
+  FiChevronRight,
+  FiSearch
 } from 'react-icons/fi';
 
 const Sidebar = ({ isOpen, toggle }) => {
@@ -33,7 +34,7 @@ const Sidebar = ({ isOpen, toggle }) => {
       hasSubmenu: true,
       submenu: [
         { title: 'Crear', icon: FiPlus, href: '/dashboard/personas/crear' },
-        { title: 'Filtrar', icon: FiFilter, href: '/dashboard/personas/filtrar' }
+        { title: 'Buscar', icon: FiSearch, href: '/dashboard/personas/buscar' },
       ]
     },
     {
@@ -43,7 +44,7 @@ const Sidebar = ({ isOpen, toggle }) => {
       hasSubmenu: true,
       submenu: [
         { title: 'Crear', icon: FiPlus, href: '/dashboard/antecedentes/crear' },
-        { title: 'Filtrar', icon: FiFilter, href: '/dashboard/antecedentes/filtrar' }
+        { title: 'Filtrar', icon: FiFilter, href: '/dashboard/antecedentes' }
       ]
     },
     {

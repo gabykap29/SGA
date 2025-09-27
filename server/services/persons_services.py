@@ -3,6 +3,7 @@ from models.Record import Records
 from models.Users import Users
 from models.Recortds_Persons import RecordsPersons
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import or_
 from models.Connection_Type import ConnectionType
 import uuid
 class PersonsService:
@@ -70,7 +71,26 @@ class PersonsService:
             return False
         finally:
             db.close()
-            
+    def search_person(self, query: str, db: Session):
+        try: 
+            print("contenido de query: ", query)
+            if not query or query is None: 
+                return []
+
+            q = f"%{query}%"
+            persons = db.query(self.personModel).filter(
+                or_(
+                    self.personModel.identification.ilike(q),
+                    self.personModel.lastnames.ilike(q),
+                    self.personModel.names.ilike(q),
+                    self.personModel.address.ilike(q),
+                )
+            ).limit(limit=50).all()
+            return persons
+
+        except Exception as e:
+            print("Error al buscar la persona: ",e)
+            return "Error al obtener la persona, verifique la busqueda ingresada"
     def update_person(self,person_id: str, identification: str, identification_type: str, names: str, lastnames:str, address: str, province: str, country: str, db: Session):
         try:
             person = db.query(self.personModel).filter(self.personModel.person_id == uuid.UUID(person_id)).first()

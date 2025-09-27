@@ -32,46 +32,76 @@ export default function Dashboard() {
 
     // Cargar datos del dashboard
     loadDashboardData();
+    
+    // Actualizar los datos cada 30 segundos para mantenerlos frescos
+    const intervalId = setInterval(() => {
+      loadDashboardData();
+    }, 30000);
+    
+    // Limpiar el intervalo cuando el componente se desmonte
+    return () => clearInterval(intervalId);
   }, [router]);
 
   const loadDashboardData = async () => {
     try {
       setLoading(true);
       
-      // Intentar cargar datos con dashboardService
-      let result = await dashboardService.getDashboardData();
+      // Obtener estadísticas del servidor utilizando el nuevo endpoint
+      const statsResult = await dashboardService.getStats();
       
-      if (result.success) {
-        setDashboardData(result.data);
+      // Obtener personas recientes para la tabla
+      const personsResult = await dashboardService.getRecentPersons(5);
+      
+      console.log('Stats result:', statsResult);
+      
+      if (statsResult.success && personsResult.success) {
+        // Verificar la estructura de datos recibida
+        if (statsResult.data && statsResult.data.stats) {
+          console.log('Estadísticas encontradas:', statsResult.data.stats);
+          
+          // Combinar datos de estadísticas y personas recientes
+          setDashboardData({
+            stats: {
+              totalPersonas: statsResult.data.stats.cant_person || 0,
+              totalAntecedentes: statsResult.data.stats.cant_record || 0,
+              registrosActivos: statsResult.data.stats.cant_record || 0,
+              nuevosEsteMes: statsResult.data.stats.cant_month || 0
+            },
+            recentPersons: personsResult.data || []
+          });
+        } else {
+          console.error('Formato de respuesta incorrecto:', statsResult);
+          toast.error('Error en el formato de los datos recibidos');
+        }
       } else {
-        console.warn('DashboardService failed, trying direct PersonService...');
+        console.warn('Error al cargar datos del dashboard, utilizando fallback...');
         
         // Fallback: intentar cargar personas directamente con personService
         try {
-          const personsResult = await personService.getPersons();
+          const fallbackPersonsResult = await personService.getPersons();
           
-          if (personsResult.success) {
-            const persons = personsResult.data;
-            const sortedPersons = persons.sort((a, b) => {
+          if (fallbackPersonsResult.success) {
+            const persons = fallbackPersonsResult.data;
+            const sortedPersons = Array.isArray(persons) ? persons.sort((a, b) => {
               const dateA = new Date(a.created_at || a.updated_at || 0);
               const dateB = new Date(b.created_at || b.updated_at || 0);
               return dateB - dateA;
-            });
+            }) : [];
             
             setDashboardData({
               stats: {
-                totalPersonas: persons.length,
+                totalPersonas: persons.length || 0,
                 totalAntecedentes: 0,
-                registrosActivos: persons.length,
-                nuevosEsteMes: persons.length
+                registrosActivos: 0,
+                nuevosEsteMes: 0
               },
               recentPersons: sortedPersons.slice(0, 5)
             });
           } else {
-            throw new Error(personsResult.error);
+            throw new Error(fallbackPersonsResult.error);
           }
         } catch (fallbackError) {
-          console.error('Fallback also failed:', fallbackError);
+          console.error('Fallback también falló:', fallbackError);
           toast.error('Error al cargar datos del dashboard');
           
           // Datos completamente de fallback
@@ -87,7 +117,7 @@ export default function Dashboard() {
         }
       }
     } catch (error) {
-      console.error('Error loading dashboard:', error);
+      console.error('Error al cargar el dashboard:', error);
       toast.error('Error inesperado al cargar el dashboard');
     } finally {
       setLoading(false);

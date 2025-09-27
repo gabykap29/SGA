@@ -110,7 +110,7 @@ class PersonService {
   // Actualizar una persona
   async updatePerson(personId, personData) {
     try {
-      const response = await fetch(`${this.baseURL}/api/v1/persons/${personId}`, {
+      const response = await fetch(`${this.baseURL}/persons/update/${personId}`, {
         method: 'PUT',
         headers: this.getHeaders(),
         body: JSON.stringify(personData)
@@ -132,7 +132,7 @@ class PersonService {
   // Eliminar una persona
   async deletePerson(personId) {
     try {
-      const response = await fetch(`${this.baseURL}/api/v1/persons/${personId}`, {
+      const response = await fetch(`${this.baseURL}/persons/delete/${personId}`, {
         method: 'DELETE',
         headers: this.getHeaders()
       });
@@ -298,7 +298,7 @@ class PersonService {
   // Obtener antecedentes vinculados a una persona
   async getPersonRecords(personId) {
     try {
-      const response = await fetch(`${this.baseURL}/api/v1/persons/${personId}/records`, {
+      const response = await fetch(`${this.baseURL}/persons/${personId}/records`, {
         method: 'GET',
         headers: this.getHeaders()
       });
@@ -319,7 +319,7 @@ class PersonService {
   // Obtener estadísticas de personas
   async getPersonStats() {
     try {
-      const response = await fetch(`${this.baseURL}/api/v1/persons/stats`, {
+      const response = await fetch(`${this.baseURL}/persons/stats`, {
         method: 'GET',
         headers: this.getHeaders()
       });
@@ -338,18 +338,16 @@ class PersonService {
   }
 
   // Buscar personas por término
-  async searchPersons(searchTerm, filters = {}) {
+  async searchPersons(searchTerm) {
     try {
+      // El endpoint solo requiere el parámetro query
       const queryParams = new URLSearchParams();
-      queryParams.append('search', searchTerm);
+      queryParams.append('query', searchTerm);
       
-      Object.keys(filters).forEach(key => {
-        if (filters[key] !== null && filters[key] !== undefined && filters[key] !== '') {
-          queryParams.append(key, filters[key]);
-        }
-      });
+      console.log('Realizando búsqueda con término:', searchTerm);
+      console.log('URL completa:', `${this.baseURL}/persons/search/?${queryParams.toString()}`);
 
-      const response = await fetch(`${this.baseURL}/api/v1/persons/search?${queryParams.toString()}`, {
+      const response = await fetch(`${this.baseURL}/persons/search/?${queryParams.toString()}`, {
         method: 'GET',
         headers: this.getHeaders()
       });
@@ -370,7 +368,7 @@ class PersonService {
   // Obtener personas recientes
   async getRecentPersons(limit = 5) {
     try {
-      const response = await fetch(`${this.baseURL}/api/v1/persons/recent?limit=${limit}`, {
+      const response = await fetch(`${this.baseURL}/persons`, {
         method: 'GET',
         headers: this.getHeaders()
       });

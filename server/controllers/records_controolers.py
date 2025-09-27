@@ -107,6 +107,21 @@ def update_record(id: str, body: RecordSchema):
         db_session.close()
 
 
+@router.get("/stats/", status_code=status.HTTP_200_OK)
+def stats():
+    db_session = SessionLocal()
+    try: 
+        stats = record_service.stats(db=db_session)
+        return stats
+    except Exception as e:
+        print("Error al obtener las estadisticas: ", e)
+        raise HTTPException(
+            status_code= status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno en el servidor al obtener las estadisticas."
+        )
+    finally:
+        db_session.close()
+
 @router.delete("/{id}", status_code=status.HTTP_200_OK)
 def delete_report(id: str):
     db_session = SessionLocal()

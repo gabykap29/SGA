@@ -70,13 +70,23 @@ class RecordService {
   // Crear un nuevo antecedente
   async createRecord(recordData) {
     try {
-      const response = await fetch(`${this.baseURL}/records/create`, {
+      console.log('Creando antecedente con datos:', recordData);
+      
+      const response = await fetch(`${this.baseURL}/records`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(recordData)
       });
 
+      console.log('Respuesta del servidor:', response.status, response.statusText);
+      
+      // Manejo especial de errores HTTP
+      if (!response.ok) {
+        console.error('Error en la respuesta:', response.status, response.statusText);
+      }
+      
       const data = await response.json();
+      console.log('Datos recibidos:', data);
 
       if (response.ok) {
         return { success: true, data };
@@ -92,7 +102,9 @@ class RecordService {
   // Actualizar un antecedente
   async updateRecord(recordId, recordData) {
     try {
-      const response = await fetch(`${this.baseURL}/records/update/${recordId}`, {
+      console.log('Actualizando antecedente con ID:', recordId, 'datos:', recordData);
+      
+      const response = await fetch(`${this.baseURL}/records/${recordId}`, {
         method: 'PUT',
         headers: this.getHeaders(),
         body: JSON.stringify(recordData)
@@ -114,7 +126,9 @@ class RecordService {
   // Eliminar un antecedente
   async deleteRecord(recordId) {
     try {
-      const response = await fetch(`${this.baseURL}/records/delete/${recordId}`, {
+      console.log('Eliminando antecedente con ID:', recordId);
+      
+      const response = await fetch(`${this.baseURL}/records/${recordId}`, {
         method: 'DELETE',
         headers: this.getHeaders()
       });
@@ -145,7 +159,10 @@ class RecordService {
         }
       });
 
-      const url = `${this.baseURL}/records/search${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      // Usamos la ruta principal con parámetros de búsqueda
+      const url = `${this.baseURL}/records${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      
+      console.log('Buscando antecedentes en URL:', url);
       
       const response = await fetch(url, {
         method: 'GET',
@@ -166,19 +183,25 @@ class RecordService {
   }
 
   // Vincular una persona a un antecedente
-  async linkPersonToRecord(personId, recordId) {
+  async linkPersonToRecord(personId, recordId, typeRelationship = "Denunciado") {
     try {
-      const response = await fetch(`${this.baseURL}/records/${recordId}/link-person`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify({ person_id: personId })
+      console.log(`Vinculando persona ${personId} con antecedente ${recordId}, tipo: ${typeRelationship}`);
+      
+      // Usar la URL y método correctos según el controlador del backend
+      const response = await fetch(`${this.baseURL}/persons/${personId}/${recordId}?type_relationship=${typeRelationship}`, {
+        method: 'PATCH',  // Este es el método correcto según el controlador
+        headers: this.getHeaders()
       });
 
+      console.log('Respuesta del servidor:', response.status, response.statusText);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Vinculación exitosa:', data);
         return { success: true, data };
       } else {
         const errorData = await response.json();
+        console.error('Error en la vinculación:', errorData);
         return { success: false, error: errorData.detail || 'Error al vincular antecedente' };
       }
     } catch (error) {

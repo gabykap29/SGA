@@ -1,11 +1,11 @@
 from queue import Empty
 from models.Record import Records
 from sqlalchemy.orm import Session, joinedload
-from datetime import datetime
+from datetime import datetime, timedelta
 from models.Recortds_Persons import RecordsPersons
 import uuid
 from models.Persons import Persons
-from sqlalchemy import func, join
+from sqlalchemy import func
 
 class RecordService:
     def __init__(self) -> None:
@@ -41,6 +41,22 @@ class RecordService:
 
         return True
     
+    def stats(self, db: Session):
+        last_month = datetime.now() - timedelta(days=30)
+        cant_person = db.query(self.personModel).count()
+        cant_record = db.query(self.recordModel).count()
+        cant_month = db.query(self.personModel).filter(self.personModel.created_at >= last_month).count()
+
+        return {
+            "stats": {
+                "cant_person":cant_person,
+                "cant_record": cant_record,
+                "cant_month": cant_month                
+            }   
+        }
+
+
+
     def update_record(self, record_id: str,title: str, date: str, content:str, observations: str, db: Session):
         is_exist = db.query(self.recordModel).filter(self.recordModel.record_id == record_id).first()
 
