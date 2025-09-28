@@ -290,9 +290,10 @@ def add_person_connection(person_id: str, person_to_connect: str, connection_typ
             )
         return True
     except Exception as e:
+        print(f"Error en add_person_connection: {str(e)}")
         raise HTTPException(
-            detail=e,
-            status_code=500
+            status_code=500,
+            detail="Error interno al vincular personas. Por favor, verifica los IDs."
         )
     finally: 
         db_session.close()

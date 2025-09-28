@@ -13,8 +13,19 @@ import {
 import { toast } from 'react-toastify';
 
 const DocumentsList = ({ documents = [], personId, onUpdate }) => {
+  console.log('DocumentsList - Documentos recibidos:', documents);
+  
+  // Filtrar documentos que no tienen propiedades necesarias
+  const validDocuments = Array.isArray(documents) ? documents.filter(doc => {
+    if (!doc || typeof doc !== 'object') return false;
+    // Verificar que tenga un ID de archivo válido
+    return doc.file_id && doc.file_id.trim() !== '';
+  }) : [];
+  
+  console.log('DocumentsList - Documentos válidos:', validDocuments.length);
+  
   const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
+    if (!bytes || bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -40,6 +51,11 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
     // Determinar el tipo de archivo por extensión o mime type
     const extension = filename?.split('.').pop()?.toLowerCase();
     
+    // Si no hay suficiente información para determinar el tipo
+    if (!filename && !mimeType && !fileType) {
+      return { icon: FiFile, color: 'secondary', type: 'Documento' };
+    }
+    
     if (fileType === 'pdf' || mimeType?.includes('pdf') || extension === 'pdf') {
       return { icon: FiFile, color: 'danger', type: 'PDF' };
     }
@@ -61,8 +77,9 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
 
   const downloadDocument = async (document) => {
     try {
-      // En producción, esto debería descargar el archivo del backend
-      const downloadUrl = `http://localhost:8001/files/${document.file_id}/download`;
+      // Usar la URL base de la API configurada o URL por defecto
+      const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const downloadUrl = `${baseURL}/files/${document.file_id}/download`;
       
       // Crear un enlace temporal para descargar
       const link = document.createElement('a');
@@ -81,8 +98,9 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
 
   const viewDocument = async (document) => {
     try {
-      // En producción, esto debería abrir el archivo en una nueva pestaña
-      const viewUrl = `http://localhost:8001/files/${document.file_id}/download`;
+      // Usar la URL base de la API configurada o URL por defecto
+      const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const viewUrl = `${baseURL}/files/${document.file_id}/download`;
       window.open(viewUrl, '_blank');
     } catch (error) {
       console.error('Error viewing document:', error);
@@ -91,18 +109,30 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
   };
 
   const deleteDocument = async (document) => {
-    if (window.confirm(`¿Está seguro de que desea eliminar el documento "${document.original_filename}"?`)) {
+    if (window.confirm(`¿Está seguro de que desea eliminar el documento "${document.original_filename || 'sin nombre'}"?`)) {
       try {
-        // Aquí deberías implementar la eliminación
-        toast.info('Función de eliminación en desarrollo');
-        onUpdate?.();
+        const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const response = await fetch(`${baseURL}/files/${document.file_id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (response.ok) {
+          toast.success('Documento eliminado correctamente');
+          onUpdate?.();
+        } else {
+          throw new Error('Error al eliminar el documento');
+        }
       } catch (error) {
+        console.error('Error eliminando documento:', error);
         toast.error('Error al eliminar el documento');
       }
     }
   };
 
-  if (documents.length === 0) {
+  if (validDocuments.length === 0) {
     return (
       <div style={{ backgroundColor: '#f8f9fa', padding: '0' }}>
         <div className="text-center py-5 mx-3" style={{
@@ -146,7 +176,7 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
       {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-3 p-3">
         <div>
-          <h4 className="mb-1 fw-bold text-dark">Documentos Adjuntos ({documents.length})</h4>
+          <h4 className="mb-1 fw-bold text-dark">Documentos Adjuntos ({validDocuments.length})</h4>
           <small className="text-muted">Archivos y documentos digitales</small>
         </div>
         <div className="d-flex gap-2 align-items-center">
@@ -156,7 +186,7 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
             className="px-3 py-2 shadow-sm"
             style={{ fontSize: '0.9rem' }}
           >
-            {documents.length}
+            {validDocuments.length}
           </Badge>
           <Button 
             variant="dark" 
@@ -198,8 +228,12 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
               </tr>
             </thead>
             <tbody>
-              {documents.map((document, index) => {
-                const fileInfo = getFileIcon(document.original_filename, document.mime_type, document.file_type);
+              {validDocuments.map((document, index) => {
+                const fileInfo = getFileIcon(
+                  document.original_filename || 'unknown', 
+                  document.mimetype || document.mime_type, 
+                  document.file_type
+                );
                 const IconComponent = fileInfo.icon;
 
                 return (
@@ -214,10 +248,11 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
                         </div>
                         <div>
                           <div className="fw-semibold mb-1">
-                            {document.original_filename}
+                            {document.original_filename || document.name || 'Archivo sin nombre'}
                           </div>
                           <small className="text-muted">
-                            ID: {document.file_id?.slice(0, 8)}...
+                            ID: {document.file_id ? document.file_id.slice(0, 8) + '...' : 'N/A'}
+                            {document.file_size ? ` • ${formatFileSize(document.file_size)}` : ''}
                           </small>
                         </div>
                       </div>
@@ -229,7 +264,7 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
                     </td>
                     <td className="py-3">
                       <span className="font-monospace small">
-                        {formatFileSize(document.file_size)}
+                        {document.file_size ? formatFileSize(document.file_size) : 'N/A'}
                       </span>
                     </td>
                     <td className="py-3">
@@ -254,7 +289,7 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
                           variant="dark" 
                           size="sm"
                           title="Ver documento"
-                          onClick={() => viewDocument(document)}
+                          onClick={() => document.file_id ? viewDocument(document) : toast.warning('No se puede visualizar: ID de archivo no válido')}
                           className="shadow-sm"
                           style={{
                             background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
@@ -268,7 +303,7 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
                           variant="dark" 
                           size="sm"
                           title="Descargar"
-                          onClick={() => downloadDocument(document)}
+                          onClick={() => document.file_id ? downloadDocument(document) : toast.warning('No se puede descargar: ID de archivo no válido')}
                           className="shadow-sm"
                           style={{
                             backgroundColor: '#212529',
@@ -283,7 +318,7 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
                           variant="dark" 
                           size="sm"
                           title="Eliminar"
-                          onClick={() => deleteDocument(document)}
+                          onClick={() => document.file_id ? deleteDocument(document) : toast.warning('No se puede eliminar: ID de archivo no válido')}
                           className="shadow-sm"
                           style={{
                             background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
@@ -315,7 +350,7 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
                   background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)'
                 }}>
                   <div className="fw-bold text-primary fs-3">
-                    {documents.length}
+                    {validDocuments.length}
                   </div>
                   <small className="text-dark fw-semibold">Total de documentos</small>
                 </div>

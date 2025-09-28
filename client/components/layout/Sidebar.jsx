@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Nav, Collapse } from 'react-bootstrap';
+import { Nav, Collapse, Badge } from 'react-bootstrap';
 import { 
   FiUsers, 
   FiFileText, 
@@ -76,7 +76,15 @@ const Sidebar = ({ isOpen, toggle, isMobile }) => {
       icon: FiSettings,
       hasSubmenu: true,
       submenu: [
-        { title: 'Logs del Sistema', icon: FiActivity, href: '/dashboard/admin/logs' }
+        { 
+          title: 'Logs del Sistema', 
+          icon: FiActivity, 
+          href: '/dashboard/admin/logs',
+          badge: {
+            text: 'Admin',
+            variant: 'danger'
+          }
+        }
       ]
     }
   ] : [];
@@ -158,6 +166,15 @@ const Sidebar = ({ isOpen, toggle, isMobile }) => {
                         >
                           <subItem.icon size={14} className="me-2" />
                           <span className="small">{subItem.title}</span>
+                          {subItem.badge && (
+                            <Badge 
+                              bg={subItem.badge.variant || 'primary'} 
+                              className="ms-2" 
+                              pill
+                            >
+                              {subItem.badge.text}
+                            </Badge>
+                          )}
                         </Nav.Link>
                       ))}
                     </div>

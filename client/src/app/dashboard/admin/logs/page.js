@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { Card, Row, Col, Form, Button, Table, Spinner, Alert, Badge, InputGroup, Accordion, ListGroup } from 'react-bootstrap';
-import { FiCalendar, FiFilter, FiSearch, FiRefreshCw, FiActivity, FiDatabase, FiUser, FiClock, FiInfo, FiDownload } from 'react-icons/fi';
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import UserActivitySummary from '@/components/dashboard/UserActivitySummary';
-import logsService from '@/services/logsService';
+import { FiCalendar, FiFilter, FiSearch, FiRefreshCw, FiActivity, FiDatabase, FiUser, FiClock, FiInfo } from 'react-icons/fi';
+import DashboardLayout from '../../../../../components/layout/DashboardLayout';
+import UserActivitySummary from '../../../../../components/dashboard/UserActivitySummary';
+import logsService from '../../../../../services/logsService';
 import { toast } from 'react-toastify';
 import { format, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
-import useLogin from '@/hooks/useLogin';
+import { useLogin } from '../../../../../hooks/useLogin';
 
 // Función auxiliar para formatear fechas
 const formatDate = (dateString) => {
@@ -59,18 +59,33 @@ export default function LogsPage() {
   });
   const [isPermissionError, setIsPermissionError] = useState(false);
 
+  // Log para depuración
+  console.log('LogsPage - Estado actual:', { 
+    user, 
+    isAdmin, 
+    isPermissionError
+  });
+
   // Cargar logs al montar el componente
   useEffect(() => {
+    console.log('LogsPage useEffect - isAdmin:', isAdmin);
+    
     if (isAdmin) {
+      console.log('Usuario es admin, cargando logs...');
+      setIsPermissionError(false);  // Establecer explícitamente a false cuando es admin
       loadLogs();
       loadSummary();
     } else {
+      console.log('Usuario NO es admin, mostrando error de permisos');
       setIsPermissionError(true);
     }
   }, [isAdmin]);
 
   const loadLogs = async () => {
+    console.log('Iniciando carga de logs...');
     setLoading(true);
+    // Asegurarse de que no haya falsos positivos en errores de permisos
+    setIsPermissionError(false);
     try {
       // Convertir fechas si están presentes
       const apiFilters = { ...filters };
@@ -86,19 +101,24 @@ export default function LogsPage() {
         apiFilters.end_date = endDate;
       }
       
+      console.log('Llamando a logsService.getLogs con filtros:', apiFilters);
       const result = await logsService.getLogs(apiFilters);
+      console.log('Respuesta de logsService.getLogs:', result);
       
       if (result.success) {
+        console.log('Logs cargados exitosamente:', result.data.length, 'registros');
         setLogs(result.data);
       } else {
         if (result.isPermissionError) {
+          console.error('Error de permisos al cargar logs:', result.error);
           setIsPermissionError(true);
         } else {
+          console.error('Error al cargar logs:', result.error);
           toast.error(result.error || 'Error al cargar los logs');
         }
       }
     } catch (error) {
-      console.error('Error loading logs:', error);
+      console.error('Excepción al cargar logs:', error);
       toast.error('Error inesperado al cargar los logs');
     } finally {
       setLoading(false);
@@ -106,19 +126,28 @@ export default function LogsPage() {
   };
 
   const loadSummary = async () => {
+    console.log('Iniciando carga de resumen de logs...');
     setLoadingSummary(true);
+    // No establecer isPermissionError aquí para evitar conflictos con loadLogs
     try {
+      console.log('Llamando a logsService.getLogsSummary');
       const result = await logsService.getLogsSummary();
+      console.log('Respuesta de logsService.getLogsSummary:', result);
       
       if (result.success) {
+        console.log('Resumen cargado exitosamente:', result.data);
         setSummary(result.data);
       } else {
-        if (!result.isPermissionError) {
+        if (result.isPermissionError) {
+          console.error('Error de permisos al cargar resumen:', result.error);
+          // No establecemos isPermissionError aquí para evitar duplicar mensajes
+        } else {
+          console.error('Error al cargar resumen:', result.error);
           toast.error(result.error || 'Error al cargar el resumen de logs');
         }
       }
     } catch (error) {
-      console.error('Error loading summary:', error);
+      console.error('Excepción al cargar resumen:', error);
       toast.error('Error inesperado al cargar el resumen de logs');
     } finally {
       setLoadingSummary(false);
@@ -149,8 +178,9 @@ export default function LogsPage() {
 
   // Si no es admin, mostrar mensaje de error
   if (isPermissionError) {
+    console.log('Mostrando pantalla de error de permisos - isAdmin:', isAdmin, 'isPermissionError:', isPermissionError);
     return (
-      <DashboardLayout>
+
         <div className="d-flex flex-column justify-content-center align-items-center py-5">
           <div className="text-danger mb-3">
             <FiInfo size={50} />
@@ -159,15 +189,15 @@ export default function LogsPage() {
           <p className="text-muted">No tiene permisos para acceder a esta sección.</p>
           <p className="text-muted">Esta funcionalidad está disponible solo para administradores.</p>
         </div>
-      </DashboardLayout>
+
     );
   }
 
   return (
-    <DashboardLayout>
+      <>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h3 className="mb-1">Registro de Actividades del Sistema</h3>
+          <h3 className="mb-1 text-dark">Registro de Actividades del Sistema</h3>
           <p className="text-muted mb-0">Panel de monitoreo y auditoría de actividades</p>
         </div>
         <Button 
@@ -379,10 +409,6 @@ export default function LogsPage() {
                     <FiRefreshCw className="me-3 text-primary" />
                     Actualizar Registros
                   </ListGroup.Item>
-                  <ListGroup.Item action className="py-3 d-flex align-items-center">
-                    <FiDownload className="me-3 text-success" />
-                    Exportar a Excel
-                  </ListGroup.Item>
                 </ListGroup>
               </Card.Body>
             </Card>
@@ -399,16 +425,6 @@ export default function LogsPage() {
             <Badge bg="primary" pill className="me-2">
               {logs.length} registros
             </Badge>
-          </div>
-          <div className="d-flex">
-            <Button 
-              variant="outline-success" 
-              size="sm"
-              className="me-2"
-              title="Exportar a Excel"
-            >
-              <FiDownload className="me-1" /> Excel
-            </Button>
           </div>
         </Card.Header>
         <Card.Body className="p-0">
@@ -481,6 +497,6 @@ export default function LogsPage() {
           )}
         </Card.Body>
       </Card>
-    </DashboardLayout>
+  </>
   );
 }

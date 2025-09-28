@@ -79,16 +79,34 @@ class PersonService {
   // Obtener una persona por ID
   async getPersonById(personId) {
     try {
+      console.log(`Obteniendo datos de persona con ID: ${personId}`);
       const response = await fetch(`${this.baseURL}/persons/${personId}`, {
         method: 'GET',
         headers: this.getHeaders()
       });
 
+      console.log('Status de respuesta:', response.status);
       const data = await response.json();
+      console.log('Respuesta completa del servidor:', data);
 
       if (response.ok) {
-        return { success: true, data };
+        // Normalizar la estructura de datos para evitar errores en el frontend
+        const normalizedData = {
+          ...data,
+          // Asegurar que files sea siempre un array, incluso si es null o undefined
+          files: Array.isArray(data.files) ? data.files : [],
+          // Asegurar que record_relationships sea siempre un array, incluso si es null o undefined
+          record_relationships: Array.isArray(data.record_relationships) ? data.record_relationships : [],
+          // Asegurar que connections sea siempre un array, incluso si es null o undefined
+          connections: Array.isArray(data.connections) ? data.connections : []
+        };
+        
+        const filesCount = normalizedData.files.length;
+        const recordsCount = normalizedData.record_relationships.length;
+        console.log(`Persona obtenida con ${filesCount} archivos y ${recordsCount} relaciones de antecedentes`);
+        return { success: true, data: normalizedData };
       } else {
+        console.error('Error en respuesta:', data);
         return { success: false, error: data.detail || 'Error al obtener persona' };
       }
     } catch (error) {
@@ -318,20 +336,37 @@ class PersonService {
       const linkedPersons = [];
       const warnings = [];
       
+      console.log(`Vinculando ${personsToLink.length} personas con la persona ID: ${personId}`);
+      
       for (const personToLink of personsToLink) {
-        const response = await fetch(`${this.baseURL}/persons/${personId}/link/${personToLink.person_id}`, {
-          method: 'POST',
-          headers: this.getHeaders(),
-          body: JSON.stringify({ relationship_type: relationshipType })
+        console.log(`Intentando vincular persona: ${personToLink.person_id} - ${personToLink.names}`);
+        
+        const url = `${this.baseURL}/persons/linked-person/${personId}/${personToLink.person_id}?connection_type=${encodeURIComponent(relationshipType)}`;
+        console.log(`URL de petición: ${url}`);
+        
+        const response = await fetch(url, {
+          method: 'PATCH',
+          headers: this.getHeaders()
         });
 
         if (response.ok) {
+          console.log(`Vinculación exitosa para persona: ${personToLink.names}`);
           const data = await response.json();
           // Añadir el tipo de relación a la persona vinculada
           linkedPersons.push({ ...personToLink, relationship: relationshipType });
         } else {
-          const errorData = await response.json();
-          warnings.push(`${personToLink.names} ${personToLink.lastnames}: ${errorData.detail || 'Error desconocido'}`);
+          console.error(`Error al vincular persona ${personToLink.names}:`, response.status);
+          let errorDetail = 'Error desconocido';
+          
+          try {
+            const errorData = await response.json();
+            errorDetail = errorData.detail || 'Error desconocido';
+          } catch (e) {
+            console.error('Error al parsear respuesta de error:', e);
+            errorDetail = `Error ${response.status}: ${response.statusText}`;
+          }
+          
+          warnings.push(`${personToLink.names} ${personToLink.lastnames}: ${errorDetail}`);
         }
       }
 

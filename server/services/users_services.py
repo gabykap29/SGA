@@ -134,10 +134,14 @@ class UserService:
     
     def get_user_username(self, username: str, db: Session):
         try:
-            user = db.query(self.userModel).filter(self.userModel.username == username).first()
+            from sqlalchemy.orm import joinedload
+            # Usar joinedload para cargar la relación roles en la misma consulta
+            user = db.query(self.userModel).options(joinedload(self.userModel.roles)).filter(self.userModel.username == username).first()
             if user == None:
                 print("El usuario no existe!")
                 return False
+            # Acceder a la relación roles para asegurarse de que se carga antes de cerrar la sesión
+            role = user.roles
             return user
         
         except Exception as e:

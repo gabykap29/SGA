@@ -16,10 +16,15 @@ class LogsService {
   // Headers por defecto con autenticación
   getHeaders() {
     const token = this.getAuthToken();
-    return {
+    console.log('logsService - Token disponible:', !!token);
+    
+    const headers = {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` })
     };
+    
+    console.log('logsService - Headers:', headers);
+    return headers;
   }
 
   // Obtener logs con filtros opcionales

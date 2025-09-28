@@ -17,6 +17,22 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
+  console.log('ImageGallery recibió:', images);
+  
+  // Filtrar imágenes válidas
+  const validImages = Array.isArray(images) ? images.filter(img => {
+    if (!img) return false;
+    // Verificar que tenga las propiedades mínimas necesarias
+    return img.file_id && (
+      img.mimetype?.startsWith('image/') || 
+      img.mime_type?.startsWith('image/') || 
+      img.file_type === 'image' || 
+      (img.original_filename && /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(img.original_filename))
+    );
+  }) : [];
+  
+  console.log('Imágenes válidas filtradas:', validImages.length);
+
   const openModal = (image) => {
     setSelectedImage(image);
     setShowModal(true);
@@ -80,7 +96,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
     }
   };
 
-  if (images.length === 0) {
+  if (validImages.length === 0) {
     return (
       <div style={{ backgroundColor: '#f8f9fa', padding: '0' }}>
         <div className="text-center py-5 mx-3" style={{
@@ -123,7 +139,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
     <div style={{ backgroundColor: '#f8f9fa', padding: '0' }}>
       <div className="d-flex justify-content-between align-items-center mb-3 p-3">
         <div>
-          <h4 className="mb-1 fw-bold text-dark">Galería de Imágenes ({images.length})</h4>
+          <h4 className="mb-1 fw-bold text-dark">Galería de Imágenes ({validImages.length})</h4>
           <small className="text-muted">Fotos y documentos visuales</small>
         </div>
         <Button 
@@ -143,7 +159,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
       </div>
 
       <Row className="g-3 px-3">
-        {images.map((image, index) => (
+        {validImages.map((image, index) => (
           <Col md={6} lg={4} key={image.file_id || index} className="mb-4">
             <Card className="h-100" style={{ 
               backgroundColor: 'white',
@@ -160,6 +176,12 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
                   alt={image.description || 'Imagen'}
                   className="w-100 h-100 object-fit-cover"
                   style={{ transition: 'transform 0.3s ease' }}
+                  onError={(e) => {
+                    console.error(`Error cargando imagen ${image.file_id}`);
+                    e.target.src = '/file.svg';
+                    e.target.style.padding = '30px';
+                    e.target.className = 'w-100 h-100 object-fit-contain bg-light';
+                  }}
                   onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
                   onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
                 />
@@ -187,8 +209,11 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
                 <div className="d-flex justify-content-between align-items-center">
                   <div>
                     <Badge bg="secondary" className="me-2">
-                      {image.file_type?.toUpperCase()}
+                      {image.file_type?.toUpperCase() || 'IMAGEN'}
                     </Badge>
+                    <small className="text-muted">
+                      {image.file_size ? `${(image.file_size / 1024).toFixed(0)} KB` : ''}
+                    </small>
                   </div>
                   <div className="d-flex gap-1">
                     <Button 
@@ -264,13 +289,34 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
               </Button>
               <img
                 src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/files/${selectedImage.file_id}/download`}
-                alt={selectedImage.description}
+                alt={selectedImage.description || 'Imagen'}
                 className="w-100"
                 style={{ maxHeight: '70vh', objectFit: 'contain' }}
+                onError={(e) => {
+                  console.error(`Error cargando imagen en modal ${selectedImage.file_id}`);
+                  e.target.src = '/file.svg';
+                  e.target.style.padding = '50px';
+                  e.target.className = 'w-100 bg-light';
+                }}
               />
               <div className="p-3" style={{ backgroundColor: 'white', borderTop: '1px solid #dee2e6' }}>
-                <h5 className="fw-bold mb-2">{selectedImage.original_filename}</h5>
+                <h5 className="fw-bold mb-2">{selectedImage.original_filename || 'Imagen sin nombre'}</h5>
                 <p className="text-muted mb-3">{selectedImage.description || 'Sin descripción'}</p>
+                <div className="d-flex gap-2 mb-3">
+                  <Badge bg="secondary">
+                    {selectedImage.file_type?.toUpperCase() || 'IMAGEN'}
+                  </Badge>
+                  {selectedImage.file_size && (
+                    <Badge bg="info">
+                      {`${(selectedImage.file_size / 1024).toFixed(0)} KB`}
+                    </Badge>
+                  )}
+                  {selectedImage.created_at && (
+                    <Badge bg="dark">
+                      {new Date(selectedImage.created_at).toLocaleDateString()}
+                    </Badge>
+                  )}
+                </div>
                 <div className="d-flex gap-2">
                   <Button 
                     onClick={() => downloadImage(selectedImage)}

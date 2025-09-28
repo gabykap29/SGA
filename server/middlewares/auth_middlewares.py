@@ -23,14 +23,35 @@ async def is_autenticate(token: Annotated[str, Depends(oauth2_scheme)]):
     try: 
         payload = jwt.decode(token, secret_key, algorithms=[hash_algorithm])
         username = payload.get("sub")
+        user_id = payload.get("user_id")
         if username is None:
             raise credential_exception
-        token_data = TokenData(username=username)
+        token_data = TokenData(username=username, user_id=user_id)
     except InvalidTokenError:
         raise credential_exception
     db_session = SessionLocal()
-    user = user_services.get_user_username(username=username, db=db_session)
-    if user is None or not user:
-        raise credential_exception
-    data = {"id": user.id, "username": user.username, "role": user.roles}
-    return data
+    try:
+        # Obtenemos el usuario pero sin cerrar la sesión automáticamente
+        from sqlalchemy.orm import joinedload
+        # En lugar de usar el servicio, hacemos la consulta directamente
+        user = db_session.query(user_services.userModel).options(
+            joinedload(user_services.userModel.roles)
+        ).filter(user_services.userModel.username == username).first()
+        
+        if user is None or not user:
+            raise credential_exception
+        
+        # Creamos el objeto de datos manteniendo la estructura original
+        # pero asegurándonos de que el objeto roles esté completamente cargado
+        data = {
+            "id": user.id,
+            "username": user.username,
+            "role": user.roles,  # Mantenemos el objeto role completo como estaba antes
+            # Agregamos estos campos adicionales por si se necesitan en el futuro
+            "role_id": str(user.roles.id) if user.roles else None,
+            "role_name": user.roles.name if user.roles else None
+        }
+        return data
+    finally:
+        # Siempre cerramos la sesión al terminar
+        db_session.close()

@@ -8,7 +8,31 @@ from middlewares.auth_middlewares import is_autenticate as is_authenticated
 
 # Función auxiliar para verificar si el usuario es administrador
 async def check_rol_admin(current_user: Dict = Depends(is_authenticated)):
-    if current_user["role"].name != "admin":
+    # Verificamos si el rol es de admin con una lógica más robusta
+    is_admin = False
+    
+    try:
+        # Intentar varias formas de verificar si es admin
+        if current_user.get('role'):
+            role = current_user['role']
+            # Si role es un objeto con atributo name
+            if hasattr(role, 'name') and role.name.upper() in ['ADMIN', 'ADMINISTRATOR']:
+                is_admin = True
+            # Si role es un diccionario con clave role_name
+            elif isinstance(role, dict) and role.get('role_name', '').upper() in ['ADMIN', 'ADMINISTRATOR']:
+                is_admin = True
+        
+        # Si current_user tiene role_name directamente
+        if current_user.get('role_name', '').upper() in ['ADMIN', 'ADMINISTRATOR']:
+            is_admin = True
+        
+        # Si current_user tiene role_id y es 1 (típicamente el ID de admin)
+        if current_user.get('role_id') == '1':
+            is_admin = True
+    except Exception as e:
+        print(f"ERROR en check_rol_admin: {e}")
+    
+    if not is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tiene permisos de administrador"

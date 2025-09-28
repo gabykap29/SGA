@@ -51,7 +51,23 @@ export default function PersonView() {
       setLoading(true);
       const result = await personService.getPersonById(personId);
       
+      console.log('Datos de persona recibidos:', result);
+      
       if (result.success) {
+        console.log('Archivos adjuntos:', result.data.files);
+        
+        // Depuración detallada de los archivos
+        if (result.data.files && result.data.files.length > 0) {
+          console.log('Detalle del primer archivo:', {
+            keys: Object.keys(result.data.files[0]),
+            mimetype: result.data.files[0].mimetype,
+            hasOwnMimetype: result.data.files[0].hasOwnProperty('mimetype')
+          });
+        } else {
+          console.log('No hay archivos disponibles');
+        }
+        
+        console.log('Relaciones con antecedentes:', result.data.record_relationships);
         setPerson(result.data);
       } else {
         toast.error(result.error || 'Error al cargar los datos de la persona');
@@ -204,24 +220,30 @@ export default function PersonView() {
               <Tab.Pane eventKey="images" active={activeTab === 'images'}>
                 <ImageGallery 
                   personId={personId} 
+                  images={person.files?.filter(file => file && file.mimetype && file.mimetype.startsWith('image/')) || []} 
                   refreshKey={refreshKey} 
-                  onRefresh={handleRefresh}
+                  onUpdate={handleRefresh}
                 />
               </Tab.Pane>
               
               <Tab.Pane eventKey="documents" active={activeTab === 'documents'}>
                 <DocumentsList 
                   personId={personId} 
+                  documents={person.files?.filter(file => file && file.mimetype && !file.mimetype.startsWith('image/')) || []}
                   refreshKey={refreshKey} 
-                  onRefresh={handleRefresh}
+                  onUpdate={handleRefresh}
                 />
               </Tab.Pane>
               
               <Tab.Pane eventKey="records" active={activeTab === 'records'}>
                 <RecordsSection 
                   personId={personId}
+                  linkedRecords={person.record_relationships?.map(rel => ({
+                    ...rel.record,
+                    type_relationship: rel.type_relationship
+                  })) || []}
                   refreshKey={refreshKey}
-                  onRefresh={handleRefresh}
+                  onUpdate={handleRefresh}
                 />
               </Tab.Pane>
               

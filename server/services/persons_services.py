@@ -161,11 +161,19 @@ class PersonsService:
             
     def add_person_connection(self, person_id: str, person_to_connect:str, connection_type:str, db:Session):
         try:
-            person = db.query(self.personModel).filter(self.personModel.person_id == person_id).first()
+            # Convertir las cadenas de texto a objetos UUID para la consulta
+            try:
+                person_uuid = uuid.UUID(person_id)
+                connect_uuid = uuid.UUID(person_to_connect)
+            except ValueError as e:
+                print(f"Error al convertir UUID: {e}")
+                return False
+                
+            person = db.query(self.personModel).filter(self.personModel.person_id == person_uuid).first()
             if not person:
                 print("LA persona no existe!")
                 return False
-            connection = db.query(self.personModel).filter(self.personModel.person_id == person_to_connect).first()
+            connection = db.query(self.personModel).filter(self.personModel.person_id == connect_uuid).first()
             if not connection:
                 print("La persona a vincular no existe!")
                 return False

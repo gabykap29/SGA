@@ -30,9 +30,20 @@ export const useLogin = () => {
       try {
         const userData = await authService.getCurrentUser();
         if (userData) {
+          console.log('userData:', userData);
           setUser(userData);
-          // Verificar si el usuario tiene rol de admin
-          setIsAdmin(userData.role?.role_name === 'admin' || userData.role?.role_id === 1);
+          // Verificar si el usuario tiene rol de admin - múltiples comprobaciones para ser robustos
+          const isUserAdmin = 
+            // Si role_name está directamente en userData
+            (userData.role_name && userData.role_name.toUpperCase() === 'ADMIN') ||
+            // Si role contiene role_name
+            (userData.role && userData.role.role_name && userData.role.role_name.toUpperCase() === 'ADMIN') ||
+            // Si role_id está directamente o dentro de role
+            userData.role_id === 1 || 
+            (userData.role && userData.role.role_id === 1);
+          
+          setIsAdmin(isUserAdmin);
+          console.log('Estado admin:', isUserAdmin, 'userData:', userData);
         }
       } catch (error) {
         console.error('Error al verificar sesión:', error);
@@ -107,7 +118,19 @@ export const useLogin = () => {
       if (result.success) {
         // Login exitoso - mostrar toast y redirigir al dashboard
         setUser(result.user);
-        setIsAdmin(result.user?.role?.role_name === 'admin' || result.user?.role?.role_id === 1);
+        
+        // Verificar si el usuario tiene rol de admin - múltiples comprobaciones para ser robustos
+        const isUserAdmin = 
+          // Si role_name está directamente en result.user
+          (result.user?.role_name && result.user.role_name.toUpperCase() === 'ADMIN') ||
+          // Si role contiene role_name
+          (result.user?.role?.role_name && result.user.role.role_name.toUpperCase() === 'ADMIN') ||
+          // Si role_id está directamente o dentro de role
+          result.user?.role_id === 1 || 
+          (result.user?.role && result.user.role.role_id === 1);
+        
+        setIsAdmin(isUserAdmin);
+        console.log('Login exitoso - Estado admin:', isUserAdmin, 'userData:', result.user);
         
         toast.success('¡Bienvenido al sistema!', {
           position: "top-right",
