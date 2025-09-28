@@ -13,7 +13,7 @@ const LinkPersonModal = ({ show, onHide, recordId, onPersonLinked, currentLinked
   const [isSearching, setIsSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [linkingPerson, setLinkingPerson] = useState(null);
-  const [typeRelationship, setTypeRelationship] = useState('Denunciado');
+  const [typeRelationship, setTypeRelationship] = useState('Autor_Material');
 
   // Limpiar el estado cuando se abre/cierra el modal
   useEffect(() => {
@@ -126,10 +126,22 @@ const LinkPersonModal = ({ show, onHide, recordId, onPersonLinked, currentLinked
                   onChange={(e) => setTypeRelationship(e.target.value)}
                   className="border-start-0"
                 >
-                  <option value="Denunciado">Denunciado</option>
-                  <option value="Denunciante">Denunciante</option>
-                  <option value="Testigo">Testigo</option>
-                  <option value="Víctima">Víctima</option>
+                  <optgroup label="Relaciones Básicas">
+                    <option value="Denunciado">Denunciado</option>
+                    <option value="Denunciante">Denunciante</option>
+                    <option value="Testigo">Testigo</option>
+                    <option value="Víctima">Víctima</option>
+                  </optgroup>
+                  <optgroup label="Relaciones Criminales">
+                    <option value="Autor_Material">Autor Material</option>
+                    <option value="Autor_Intelectual">Autor Intelectual</option>
+                    <option value="Cómplice">Cómplice</option>
+                    <option value="Encubridor">Encubridor</option>
+                    <option value="Miembro_Grupo_Criminal">Miembro de Grupo Criminal</option>
+                    <option value="Líder_Organización">Líder de Organización</option>
+                    <option value="Informante">Informante</option>
+                    <option value="Sospechoso">Sospechoso</option>
+                  </optgroup>
                   <option value="Otro">Otro</option>
                 </Form.Select>
               </InputGroup>

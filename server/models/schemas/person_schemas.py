@@ -14,6 +14,7 @@ class PersonSchema(BaseModel):
     address: str
     province: str
     country: str
+    observations: str = None
     
 
 class RecordSchema(BaseModel):
@@ -59,6 +60,7 @@ class PersonResponse(BaseModel):
     address: str
     province: str
     country: str
+    observations: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     created_by: UUID

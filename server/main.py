@@ -9,6 +9,7 @@ from controllers.auth_controllers import auth_router
 from controllers.persons_controllers import router as person_router
 from controllers.records_controolers import router as record_router
 from controllers.files_controllers import router as files_router
+from controllers.logs_controllers import router as logs_router
 
 # Importar todos los modelos para que SQLAlchemy pueda mapear las relaciones
 # Importar todos los modelos para que SQLAlchemy pueda mapear las relaciones
@@ -32,6 +33,7 @@ app.include_router(auth_router)
 app.include_router(person_router)
 app.include_router(record_router)
 app.include_router(files_router)
+app.include_router(logs_router)
 
 @app.get("/")
 def root():

@@ -322,6 +322,7 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
                   </tr>
                 </thead>
                 <tbody>
+
                   {filteredAntecedents.map((antecedent) => (
                     <tr key={antecedent.record_id || antecedent.id}>
                       <td>

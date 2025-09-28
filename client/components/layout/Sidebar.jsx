@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Nav, Collapse } from 'react-bootstrap';
 import { 
   FiUsers, 
@@ -10,13 +10,18 @@ import {
   FiFilter, 
   FiChevronDown,
   FiChevronRight,
-  FiSearch
+  FiSearch,
+  FiActivity,
+  FiSettings
 } from 'react-icons/fi';
+import { useLogin } from '../../hooks/useLogin';
 
 const Sidebar = ({ isOpen, toggle, isMobile }) => {
+  const { isAdmin } = useLogin();
   const [openMenus, setOpenMenus] = useState({
     personas: false,
-    antecedentes: false
+    antecedentes: false,
+    admin: false
   });
 
   const toggleMenu = (menu) => {
@@ -33,7 +38,7 @@ const Sidebar = ({ isOpen, toggle, isMobile }) => {
     }
   };
 
-  const sidebarItems = [
+  const baseItems = [
     {
       id: 'personas',
       title: 'Personas',
@@ -62,6 +67,21 @@ const Sidebar = ({ isOpen, toggle, isMobile }) => {
       href: '/dashboard/usuarios'
     }
   ];
+  
+  // Si el usuario es administrador, añadir el menú de administración
+  const adminItem = isAdmin ? [
+    {
+      id: 'admin',
+      title: 'Administración',
+      icon: FiSettings,
+      hasSubmenu: true,
+      submenu: [
+        { title: 'Logs del Sistema', icon: FiActivity, href: '/dashboard/admin/logs' }
+      ]
+    }
+  ] : [];
+  
+  const sidebarItems = [...baseItems, ...adminItem];
 
   return (
     <>

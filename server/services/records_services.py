@@ -1,4 +1,3 @@
-from queue import Empty
 from models.Record import Records
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime, timedelta
@@ -27,19 +26,20 @@ class RecordService:
         
         return record
 
-    def create_record(self,title: str, date: datetime, content:str, observations: str, db: Session):
+    def create_record(self, title: str, date: datetime, content: str, observations: str, db: Session, type_record: str = "PENAL"):
         is_exist = db.query(self.recordModel).filter(
             func.upper(self.recordModel.title) == func.upper(title)
         ).first()
 
-        if is_exist is Empty:
-            return "EL antecedente a cargar ya existe! {title}"
+        if is_exist is not None:
+            return f"EL antecedente a cargar ya existe! {title}"
 
-        new_record = self.recordModel(title=title, date= date, content= content, observations= observations)
+        new_record = self.recordModel(title=title, date=date, content=content, observations=observations, type_record=type_record)
         db.add(new_record)
         db.commit()
+        db.refresh(new_record)  # Refrescamos para obtener el objeto con todos sus atributos
 
-        return True
+        return new_record
     
     def stats(self, db: Session):
         last_month = datetime.now() - timedelta(days=30)

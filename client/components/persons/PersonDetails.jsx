@@ -7,10 +7,11 @@ import {
   FiCalendar, 
   FiEdit2,
   FiGlobe,
-  FiCreditCard
+  FiCreditCard,
+  FiTrash2
 } from 'react-icons/fi';
 
-const PersonDetails = ({ person, onUpdate }) => {
+const PersonDetails = ({ person, onUpdate, onDelete }) => {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {

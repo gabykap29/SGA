@@ -7,6 +7,7 @@ class RecordSchema(BaseModel):
     date: datetime
     content: str
     observations: str
+    type_record: str = 'PENAL'
 
 
 class RecordResponse(BaseModel):
@@ -14,6 +15,7 @@ class RecordResponse(BaseModel):
     title: str
     date: datetime
     observations: str
+    type_record: str
 
     class Config:
         orm_mode =  True

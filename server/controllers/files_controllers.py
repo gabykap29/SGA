@@ -10,6 +10,7 @@ from models.schemas.file_schemas import (
 from typing import List, Optional, Dict
 import io
 from dependencies.is_auth import is_authenticated
+from dependencies.checked_role import check_rol_all
 
 router = APIRouter(tags=["Files"], prefix="/files")
 files_service = FilesService()
@@ -31,8 +32,14 @@ async def upload_file(
     record_id: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     current_user: Dict = Depends(is_authenticated),
+    is_authorized: bool = Depends(check_rol_all),
     db: Session = Depends(get_db)
 ):
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para subir archivos"
+        )
     """
     Sube un archivo al sistema
     """
@@ -87,8 +94,14 @@ async def upload_file(
 def get_file_info(
     file_id: str,
     current_user: Dict = Depends(is_authenticated),
+    is_authorized: bool = Depends(check_rol_all),
     db: Session = Depends(get_db)
 ):
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para ver información de archivos"
+        )
     """
     Obtiene información de un archivo por su ID
     """
@@ -106,8 +119,14 @@ def get_file_info(
 def download_file(
     file_id: str,
     current_user: Dict = Depends(is_authenticated),
+    is_authorized: bool = Depends(check_rol_all),
     db: Session = Depends(get_db)
 ):
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para descargar archivos"
+        )
     """
     Descarga un archivo del sistema
     """
@@ -146,8 +165,14 @@ def download_file(
 def get_files_by_person(
     person_id: str,
     current_user: Dict = Depends(is_authenticated),
+    is_authorized: bool = Depends(check_rol_all),
     db: Session = Depends(get_db)
 ):
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para ver archivos de personas"
+        )
     """
     Obtiene todos los archivos de una persona específica
     """
@@ -158,8 +183,14 @@ def get_files_by_person(
 def get_files_by_record(
     record_id: str,
     current_user: Dict = Depends(is_authenticated),
+    is_authorized: bool = Depends(check_rol_all),
     db: Session = Depends(get_db)
 ):
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para ver archivos de registros"
+        )
     """
     Obtiene todos los archivos asociados a un record específico
     """
@@ -170,9 +201,15 @@ def get_files_by_record(
 def update_file_metadata(
     file_id: str,
     update_data: FileUpdateRequest,
-    db: Session = Depends(get_db),
-    current_user: Dict = Depends(is_authenticated)
+    current_user: Dict = Depends(is_authenticated),
+    is_authorized: bool = Depends(check_rol_all),
+    db: Session = Depends(get_db)
 ):
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para actualizar archivos"
+        )
     """
     Actualiza los metadatos de un archivo
     """
@@ -193,9 +230,15 @@ def update_file_metadata(
 @router.delete("/{file_id}", status_code=status.HTTP_200_OK)
 def delete_file(
     file_id: str,
-    db: Session = Depends(get_db),
-    current_user: Dict = Depends(is_authenticated)
+    current_user: Dict = Depends(is_authenticated),
+    is_authorized: bool = Depends(check_rol_all),
+    db: Session = Depends(get_db)
 ):
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para eliminar archivos"
+        )
     """
     Elimina lógicamente un archivo del sistema
     """
@@ -215,9 +258,15 @@ def delete_file(
 @router.delete("/{file_id}/permanent", status_code=status.HTTP_200_OK)
 def permanently_delete_file(
     file_id: str,
-    db: Session = Depends(get_db),
-    current_user: Dict = Depends(is_authenticated)
+    current_user: Dict = Depends(is_authenticated),
+    is_authorized: bool = Depends(check_rol_all),
+    db: Session = Depends(get_db)
 ):
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para eliminar archivos permanentemente"
+        )
     """
     Elimina permanentemente un archivo del sistema
     ¡USAR CON PRECAUCIÓN! Esta acción no se puede deshacer.
@@ -244,9 +293,15 @@ def permanently_delete_file(
 
 @router.get("/stats/summary")
 def get_file_stats(
-    db: Session = Depends(get_db),
-    current_user: Dict = Depends(is_authenticated)
+    current_user: Dict = Depends(is_authenticated),
+    is_authorized: bool = Depends(check_rol_all),
+    db: Session = Depends(get_db)
 ):
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para ver estadísticas de archivos"
+        )
     """
     Obtiene estadísticas generales de archivos del sistema
     """

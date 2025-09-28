@@ -1,3 +1,4 @@
+import uuid
 from models.Users import Users
 from utils.hash_pass import hash_pass
 from config.config import pass_admin
@@ -79,33 +80,49 @@ class UserService:
         
     def get_user(self, id: str, db: Session):
         try:
+            from models.schemas.user_schema import UserResponses
+            import uuid
+            
+            # Asegurarse de que el ID sea un objeto UUID válido
+            try:
+                # Si id ya es un UUID, lo usamos directamente
+                if isinstance(id, uuid.UUID):
+                    user_id = id
+                else:
+                    # Si es un string, intentamos convertirlo a UUID
+                    user_id = uuid.UUID(id)
+            except (ValueError, TypeError) as e:
+                print(f"Error al convertir ID a UUID: {e}, id={id}, type={type(id)}")
+                return None
+                
             user = db.query(self.userModel.id,
                           self.userModel.names,
                           self.userModel.lastname,
                           self.userModel.username,
                           self.userModel.last_login,
-                          self.roleModel.name.label("role_name")).join(self.roleModel).filter(self.userModel.id == id).first()
+                          self.roleModel.name.label("role_name")).join(self.roleModel).filter(self.userModel.id == user_id).first()
             if user:
-                return {
-                    "id": user.id,
-                    "names": user.names,
-                    "lastname": user.lastname,
-                    "username": user.username,
-                    "last_login": user.last_login,
-                    "role_name": user.role_name
-                }
+                # Crear objeto UserResponses con los datos del usuario
+                return UserResponses(
+                    id=user.id,
+                    names=user.names,
+                    lastname=user.lastname,
+                    username=user.username,
+                    last_login=user.last_login,
+                    role_name=user.role_name
+                )
             else: 
                 return None
         except Exception as e:
             print("Error al obtener los usuarios", e)
-            return False
+            return None  # Cambiado de False a None
         finally:
             db.close()
             
     def create_user(self, names: str, lastname: str, username: str, passwd: str, role: str, db:Session):
         try:
             hashed_pass = hash_pass(passwd)
-            new_user = self.userModel(names=names, lastname=lastname, username=username, passwd=hashed_pass, role_id=role)
+            new_user = self.userModel(names=names, lastname=lastname, username=username, passwd=hashed_pass, role_id=uuid.UUID(role))
             db.add(new_user)
             db.commit()
             return new_user

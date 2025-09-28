@@ -6,6 +6,7 @@ from .Record import Records
 from .Connection_Type import ConnectionType
 from .Recortds_Persons import RecordsPersons
 from .Files import Files
+from .Logs import Logs
 
 # Hacer que los modelos estén disponibles cuando se importe el paquete models
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     "Records",
     "ConnectionType",
     "RecordsPersons",
-    "Files"
+    "Files",
+    "Logs"
 ]

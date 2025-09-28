@@ -19,3 +19,4 @@ class Users(Base):
     
     roles = relationship("Roles", back_populates="users")
     persons = relationship("Persons", back_populates="users")
+    logs = relationship("Logs", back_populates="user", cascade="all, delete-orphan")

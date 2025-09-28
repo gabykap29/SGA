@@ -1,4 +1,5 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey
+from typing import Text
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text
 from database.db import Base
 from sqlalchemy.types import UUID
 from sqlalchemy.orm import relationship
@@ -15,6 +16,7 @@ class Persons(Base):
     address = Column(String(255), nullable=True)
     province = Column(String(255), nullable=False)
     country = Column(String(255), nullable=False)
+    observations = Column(Text, nullable=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     created_at = Column(DateTime, default= lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default= lambda: datetime.now(timezone.utc))

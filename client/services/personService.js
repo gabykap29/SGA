@@ -1,7 +1,7 @@
 // Servicio para gestión de personas
 class PersonService {
   constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   }
 
   // Obtener token del localStorage
@@ -40,7 +40,8 @@ class PersonService {
         lastnames: personData.lastnames,
         address: personData.address || '',
         province: personData.province,
-        country: personData.country
+        country: personData.country,
+        observations: personData.observations || ''
       };
 
       console.log('Sending to backend:', backendData); // Para debug
@@ -57,6 +58,16 @@ class PersonService {
         return { success: true, data };
       } else {
         console.error('Backend error:', data);
+        
+        // Manejar específicamente el error 422 (persona ya existe)
+        if (response.status === 422) {
+          return { 
+            success: false, 
+            error: data.detail || 'La persona ya existe en el sistema', 
+            isDuplicate: true 
+          };
+        }
+        
         return { success: false, error: data.detail || 'Error al crear persona' };
       }
     } catch (error) {
@@ -138,10 +149,11 @@ class PersonService {
       });
 
       if (response.ok) {
-        return { success: true };
-      } else {
         const data = await response.json();
-        return { success: false, error: data.detail || 'Error al eliminar persona' };
+        return { success: true, data };
+      } else {
+        const errorData = await response.json();
+        return { success: false, error: errorData.detail || 'Error al eliminar la persona' };
       }
     } catch (error) {
       console.error('PersonService.deletePerson error:', error);
@@ -248,7 +260,7 @@ class PersonService {
       // Vincular cada record individualmente
       for (const recordId of recordIds) {
         try {
-          const response = await fetch(`${this.baseURL}/persons/${personId}/${recordId}?type_relationship=${typeRelationship}`, {
+          const response = await fetch(`${this.baseURL}/persons/${personId}/record/${recordId}?type_relationship=${typeRelationship}`, {
             method: 'PATCH',
             headers: this.getHeaders()
           });
@@ -283,14 +295,98 @@ class PersonService {
   // Desvincular un antecedente de una persona
   async unlinkRecord(personId, recordId) {
     try {
-      // Nota: Necesitaríamos un endpoint DELETE en el backend para desvincular
-      // Por ahora, retornamos un error indicando que no está implementado
-      return { 
-        success: false, 
-        error: 'La funcionalidad de desvincular antecedentes no está implementada en el backend' 
-      };
+      const response = await fetch(`${this.baseURL}/records/unlink/${recordId}/${personId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders()
+      });
+
+      if (response.ok) {
+        return { success: true };
+      } else {
+        const errorData = await response.json();
+        return { success: false, error: errorData.detail || 'Error al desvincular antecedente' };
+      }
     } catch (error) {
       console.error('PersonService.unlinkRecord error:', error);
+      return { success: false, error: 'Error de conexión' };
+    }
+  }
+
+  // Vincular personas con otras personas
+  async linkPersons(personId, personsToLink, relationshipType) {
+    try {
+      const linkedPersons = [];
+      const warnings = [];
+      
+      for (const personToLink of personsToLink) {
+        const response = await fetch(`${this.baseURL}/persons/${personId}/link/${personToLink.person_id}`, {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify({ relationship_type: relationshipType })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Añadir el tipo de relación a la persona vinculada
+          linkedPersons.push({ ...personToLink, relationship: relationshipType });
+        } else {
+          const errorData = await response.json();
+          warnings.push(`${personToLink.names} ${personToLink.lastnames}: ${errorData.detail || 'Error desconocido'}`);
+        }
+      }
+
+      return { 
+        success: linkedPersons.length > 0, 
+        data: linkedPersons,
+        warnings: warnings.length > 0 ? warnings : null
+      };
+    } catch (error) {
+      console.error('PersonService.linkPersons error:', error);
+      return { success: false, error: 'Error de conexión' };
+    }
+  }
+
+  // Desvincular personas
+  async unlinkPerson(personId, linkedPersonId) {
+    try {
+      const response = await fetch(`${this.baseURL}/persons/${personId}/unlink/${linkedPersonId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders()
+      });
+
+      if (response.ok) {
+        return { success: true };
+      } else {
+        const errorData = await response.json();
+        return { success: false, error: errorData.detail || 'Error al desvincular persona' };
+      }
+    } catch (error) {
+      console.error('PersonService.unlinkPerson error:', error);
+      return { success: false, error: 'Error de conexión' };
+    }
+  }
+  
+  // Obtener personas vinculadas
+  async getLinkedPersons(personId) {
+    try {
+      const response = await fetch(`${this.baseURL}/persons/${personId}/linked`, {
+        method: 'GET',
+        headers: this.getHeaders()
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return { success: true, data };
+      } else {
+        // Si es 404, devolver array vacío
+        if (response.status === 404) {
+          return { success: true, data: [] };
+        }
+        const errorData = await response.json();
+        return { success: false, error: errorData.detail || 'Error al obtener personas vinculadas' };
+      }
+    } catch (error) {
+      console.error('PersonService.getLinkedPersons error:', error);
       return { success: false, error: 'Error de conexión' };
     }
   }
@@ -368,7 +464,7 @@ class PersonService {
   // Obtener personas recientes
   async getRecentPersons(limit = 5) {
     try {
-      const response = await fetch(`${this.baseURL}/persons`, {
+      const response = await fetch(`${this.baseURL}/persons/recent?limit=${limit}`, {
         method: 'GET',
         headers: this.getHeaders()
       });
@@ -387,7 +483,4 @@ class PersonService {
   }
 }
 
-// Crear instancia única del servicio
-const personService = new PersonService();
-
-export default personService;
+export default new PersonService();

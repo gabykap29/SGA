@@ -4,7 +4,7 @@
  * Responsabilidad única: Manejar toda la lógica de autenticación
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 class AuthService {
   /**
@@ -84,6 +84,47 @@ class AuthService {
    */
   isAuthenticated() {
     return !!this.getAccessToken();
+  }
+  
+  /**
+   * Obtiene los datos del usuario actual
+   * @returns {Promise<Object|null>}
+   */
+  async getCurrentUser() {
+    if (!this.isAuthenticated()) {
+      return null;
+    }
+    
+    const cachedUser = this.getUserData();
+    
+    // Si tenemos datos en cache, los devolvemos
+    if (cachedUser) {
+      return cachedUser;
+    }
+    
+    // Si no tenemos datos en cache, pero sí tenemos token, intentamos obtener el usuario
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/me`, {
+        headers: {
+          'Authorization': `Bearer ${this.getAccessToken()}`
+        }
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        localStorage.setItem('user', JSON.stringify(userData));
+        return userData;
+      } else {
+        // Si hay error, limpiamos el token (posiblemente caducado)
+        if (response.status === 401) {
+          this.logout();
+        }
+        return null;
+      }
+    } catch (error) {
+      console.error('Error al obtener usuario actual:', error);
+      return null;
+    }
   }
 
   /**

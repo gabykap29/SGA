@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Container, Row, Col, Card, Nav, Button, ProgressBar } from 'react-bootstrap';
-import { FiUser, FiFileText, FiImage, FiSave, FiArrowLeft, FiCheck } from 'react-icons/fi';
+import { FiUser, FiFileText, FiImage, FiSave, FiArrowLeft, FiCheck, FiUsers, FiPlus } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 
@@ -11,6 +11,8 @@ import DashboardLayout from '../../../../../components/layout/DashboardLayout';
 import PersonForm from '../../../../../components/persons/PersonForm';
 import FileManager from '../../../../../components/persons/FileManager';
 import AntecedentLinker from '../../../../../components/persons/AntecedentLinker';
+import CreateRecordModal from '../../../../../components/persons/CreateRecordModal';
+import PersonLinker from '../../../../../components/persons/PersonLinker';
 
 // Servicios
 import personService from '../../../../../services/personService';
@@ -21,8 +23,11 @@ export default function CreatePerson() {
   const [personData, setPersonData] = useState(null);
   const [files, setFiles] = useState([]);
   const [linkedRecords, setLinkedRecords] = useState([]);
+  const [linkedPersons, setLinkedPersons] = useState([]);
   const [loading, setLoading] = useState(false);
   const [completedSteps, setCompletedSteps] = useState(new Set());
+  const [isDuplicateError, setIsDuplicateError] = useState(false);
+  const [showCreateRecordModal, setShowCreateRecordModal] = useState(false);
 
   const steps = [
     { 
@@ -45,6 +50,13 @@ export default function CreatePerson() {
       subtitle: 'Vincular registros existentes',
       icon: FiFileText, 
       component: 'records' 
+    },
+    { 
+      id: 4, 
+      title: 'Vínculos Personales', 
+      subtitle: 'Relaciones con otras personas',
+      icon: FiUsers, 
+      component: 'persons' 
     }
   ];
 
@@ -52,8 +64,20 @@ export default function CreatePerson() {
     try {
       setLoading(true);
       const result = await personService.createPerson(formData);
+      console.log(result);
       
-      if (result.success) {
+      if (result.data.status_code == 422 || result.data.status_code == 400) {
+        // Mensaje específico para personas duplicadas
+        if (result.data.status_code == 422 ) {
+          setIsDuplicateError(true);
+          toast.error('La persona ya existe en el sistema. Verifique el número de identificación.');
+        } else {
+          setIsDuplicateError(false);
+          toast.error(result.error || 'Error al crear la persona');
+        }
+
+      } else {
+
         setPersonData(result.data);
         setCompletedSteps(prev => new Set([...prev, 1]));
         
@@ -68,9 +92,7 @@ export default function CreatePerson() {
         }
         
         toast.success('Persona creada exitosamente');
-        setActiveStep(2); // Avanzar al siguiente paso
-      } else {
-        toast.error(result.error || 'Error al crear la persona');
+        setActiveStep(2); // Avanzar al siguiente paso        
       }
     } catch (error) {
       console.error('Error creating person:', error);
@@ -186,6 +208,87 @@ export default function CreatePerson() {
     }
   };
 
+  // Manejar creación de antecedente desde el modal
+  const handleRecordCreated = (record) => {
+    toast.success(`Antecedente "${record.title}" creado exitosamente`);
+    setShowCreateRecordModal(false);
+    
+    // Si estamos en el paso de antecedentes, vincular automáticamente
+    if (activeStep === 3 && personData) {
+      handleRecordsLink([record]);
+    }
+  };
+
+  // Manejar vinculación de personas
+  const handlePersonsLink = async (persons, relationshipType) => {
+    if (!personData?.person_id) {
+      toast.error('Debe crear la persona primero');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const result = await personService.linkPersons(personData.person_id, persons, relationshipType);
+      
+      if (result.success) {
+        // Agregar las nuevas personas a la lista existente
+        const linkedCount = result.data.length;
+        const totalCount = persons.length;
+        
+        setLinkedPersons(prev => [...prev, ...result.data]);
+        setCompletedSteps(prev => new Set([...prev, 4]));
+        
+        if (linkedCount === totalCount) {
+          toast.success(`${linkedCount} persona(s) vinculada(s) exitosamente`);
+        } else {
+          toast.success(`${linkedCount} de ${totalCount} persona(s) vinculadas exitosamente`);
+          if (result.warnings && result.warnings.length > 0) {
+            toast.warning(`Algunos vínculos no se pudieron crear: ${result.warnings.join(', ')}`);
+          }
+        }
+      } else {
+        toast.error(result.error || 'Error al vincular personas');
+      }
+    } catch (error) {
+      console.error('Error linking persons:', error);
+      toast.error('Error inesperado al vincular personas');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Manejar desvinculación de personas
+  const handlePersonUnlink = async (person) => {
+    if (!personData?.person_id) {
+      toast.error('Debe crear la persona primero');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const result = await personService.unlinkPerson(personData.person_id, person.person_id);
+      
+      if (result.success) {
+        setLinkedPersons(prev => prev.filter(p => p.person_id !== person.person_id));
+        if (linkedPersons.length === 1) {
+          setCompletedSteps(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(4);
+            return newSet;
+          });
+        }
+        toast.success('Persona desvinculada exitosamente');
+      } else {
+        toast.error(result.error || 'Error al desvincular persona');
+      }
+    } catch (error) {
+      console.error('Error unlinking person:', error);
+      toast.error('Error inesperado al desvincular persona');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFinish = () => {
     toast.success('Persona creada y configurada completamente');
     // Redirect to the person detail page using the person ID
@@ -221,6 +324,8 @@ export default function CreatePerson() {
             onSave={handlePersonSave}
             loading={loading}
             initialData={personData}
+            isDuplicateError={isDuplicateError}
+            onDuplicateErrorChange={(val) => setIsDuplicateError(val)}
           />
         );
       case 2:
@@ -234,11 +339,33 @@ export default function CreatePerson() {
         );
       case 3:
         return (
-          <AntecedentLinker
+          <>
+            <div className="d-flex justify-content-end mb-3">
+              <Button
+                variant="success"
+                size="sm"
+                className="d-flex align-items-center"
+                onClick={() => setShowCreateRecordModal(true)}
+              >
+                <FiPlus className="me-1" /> Crear Nuevo Antecedente
+              </Button>
+            </div>
+            <AntecedentLinker
+              personId={personData?.person_id}
+              linkedAntecedents={linkedRecords}
+              onLink={handleRecordsLink}
+              onUnlink={handleRecordUnlink}
+              loading={loading}
+            />
+          </>
+        );
+      case 4:
+        return (
+          <PersonLinker
             personId={personData?.person_id}
-            linkedAntecedents={linkedRecords}
-            onLink={handleRecordsLink}
-            onUnlink={handleRecordUnlink}
+            linkedPersons={linkedPersons}
+            onLink={handlePersonsLink}
+            onUnlink={handlePersonUnlink}
             loading={loading}
           />
         );
@@ -506,11 +633,11 @@ export default function CreatePerson() {
                   </div>
                   
                   <div className="d-flex gap-2">
-                    {activeStep < 3 ? (
+                    {activeStep < 4 ? (
                       <Button
                         variant="dark"
                         disabled={!personData && activeStep > 1 || loading}
-                        onClick={() => setActiveStep(prev => Math.min(3, prev + 1))}
+                        onClick={() => setActiveStep(prev => Math.min(4, prev + 1))}
                         className="px-4"
                       >
                         Siguiente
@@ -533,6 +660,13 @@ export default function CreatePerson() {
             </Card>
           </Col>
         </Row>
+        
+        {/* Modal para crear antecedentes */}
+        <CreateRecordModal
+          show={showCreateRecordModal}
+          onHide={() => setShowCreateRecordModal(false)}
+          onRecordCreated={handleRecordCreated}
+        />
       </Container>
     </DashboardLayout>
   );

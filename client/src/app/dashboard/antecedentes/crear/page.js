@@ -67,7 +67,16 @@ export default function CreateRecord() {
         toast.success('Antecedente creado exitosamente');
         router.push('/dashboard/antecedentes');
       } else {
-        toast.error(result.error || 'Error al crear el antecedente');
+        // Mensaje específico para antecedentes duplicados
+        if (result.isDuplicate) {
+          toast.error('El antecedente con este título ya existe en el sistema. Por favor utilice un título diferente.');
+          setErrors({
+            ...errors,
+            title: 'Este título ya existe en el sistema. Intente con otro título.'
+          });
+        } else {
+          toast.error(result.error || 'Error al crear el antecedente');
+        }
       }
     } catch (error) {
       console.error('Error creating record:', error);

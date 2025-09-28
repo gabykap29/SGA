@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Form, Row, Col, Button, Card, InputGroup, Alert } from 'react-bootstrap';
 import { FiUser, FiMapPin, FiSave, FiFlag, FiCreditCard, FiHome, FiCheck, FiAlertCircle } from 'react-icons/fi';
 
-const PersonForm = ({ onSave, loading = false, initialData = null }) => {
+const PersonForm = ({ onSave, loading = false, initialData = null, isDuplicateError = false, onDuplicateErrorChange }) => {
   const [formData, setFormData] = useState({
     identification: '',
     identification_type: 'DNI',
@@ -12,7 +12,8 @@ const PersonForm = ({ onSave, loading = false, initialData = null }) => {
     lastnames: '',
     address: '',
     province: 'Buenos Aires',
-    country: 'Argentina'
+    country: 'Argentina',
+    observations: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -31,17 +32,21 @@ const PersonForm = ({ onSave, loading = false, initialData = null }) => {
     const completed = new Set();
     
     // Validar sección personal
-    if (data.names.trim() && data.lastnames.trim() && data.identification.trim() && data.identification_type) {
+    if (data && 
+        data.names && typeof data.names === 'string' && data.names.trim() && 
+        data.lastnames && typeof data.lastnames === 'string' && data.lastnames.trim() && 
+        data.identification && typeof data.identification === 'string' && data.identification.trim() && 
+        data.identification_type) {
       completed.add('personal');
     }
     
     // Validar sección ubicación (dirección es opcional pero provincia es requerida)
-    if (data.province) {
+    if (data && data.province) {
       completed.add('location');
     }
     
     // Validar sección adicional
-    if (data.country) {
+    if (data && data.country) {
       completed.add('additional');
     }
     
@@ -56,7 +61,15 @@ const PersonForm = ({ onSave, loading = false, initialData = null }) => {
     };
     
     setFormData(newFormData);
-    validateAllSections(newFormData);
+    
+    // Asegurarnos de que newFormData está correctamente definido antes de validar
+    if (newFormData) {
+      try {
+        validateAllSections(newFormData);
+      } catch (error) {
+        console.error('Error validating form sections:', error);
+      }
+    }
 
     // Limpiar error del campo cuando el usuario empiece a escribir
     if (errors[name]) {
@@ -65,34 +78,51 @@ const PersonForm = ({ onSave, loading = false, initialData = null }) => {
         [name]: ''
       }));
     }
+    
+    // Si el campo es identificación, también limpiamos el error de duplicado
+    if (name === 'identification' || name === 'identification_type') {
+      // Si hay una función callback para el error de duplicado, la llamamos
+      if (isDuplicateError && typeof onDuplicateErrorChange === 'function') {
+        onDuplicateErrorChange(false);
+      }
+    }
+    
+    // Si el campo es identificación, también limpiamos el error de duplicado
+    if (name === 'identification' || name === 'identification_type') {
+      // Lógicamente, si cambia la identificación ya no es un duplicado
+      if (isDuplicateError) {
+        // Usamos una función vacía si onDuplicateErrorChange no está definida
+        (onDuplicateErrorChange || (() => {}))();
+      }
+    }
   };
 
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.names.trim()) {
+    if (!formData.names || !formData.names.trim()) {
       newErrors.names = 'Los nombres son requeridos';
     }
 
-    if (!formData.lastnames.trim()) {
+    if (!formData.lastnames || !formData.lastnames.trim()) {
       newErrors.lastnames = 'Los apellidos son requeridos';
     }
 
-    if (!formData.identification.trim()) {
+    if (!formData.identification || !formData.identification.trim()) {
       newErrors.identification = 'La identificación es requerida';
     } else if (!/^\d{7,8}$/.test(formData.identification.trim())) {
       newErrors.identification = 'La identificación debe tener 7 u 8 dígitos';
     }
 
-    if (!formData.identification_type.trim()) {
+    if (!formData.identification_type || !formData.identification_type.trim()) {
       newErrors.identification_type = 'El tipo de identificación es requerido';
     }
 
-    if (!formData.province.trim()) {
+    if (!formData.province || !formData.province.trim()) {
       newErrors.province = 'La provincia es requerida';
     }
 
-    if (!formData.country.trim()) {
+    if (!formData.country || !formData.country.trim()) {
       newErrors.country = 'El país es requerido';
     }
 
@@ -106,13 +136,14 @@ const PersonForm = ({ onSave, loading = false, initialData = null }) => {
     if (validateForm()) {
       // Limpiar datos antes de enviar
       const cleanData = {
-        identification: formData.identification.trim(),
-        identification_type: formData.identification_type,
-        names: formData.names.trim(),
-        lastnames: formData.lastnames.trim(),
-        address: formData.address.trim() || '',
-        province: formData.province,
-        country: formData.country
+        identification: formData.identification ? formData.identification.trim() : '',
+        identification_type: formData.identification_type || 'DNI',
+        names: formData.names ? formData.names.trim() : '',
+        lastnames: formData.lastnames ? formData.lastnames.trim() : '',
+        address: (formData.address ? formData.address.trim() : '') || '',
+        province: formData.province || 'Buenos Aires',
+        country: formData.country || 'Argentina',
+        observations: formData.observations ? formData.observations.trim() : ''
       };
 
       onSave(cleanData);
@@ -166,6 +197,17 @@ const PersonForm = ({ onSave, loading = false, initialData = null }) => {
 
   return (
     <div>
+      {/* Alerta de persona duplicada */}
+      {isDuplicateError && (
+        <Alert variant="danger" className="mb-4 d-flex align-items-center">
+          <FiAlertCircle size={20} className="me-2" />
+          <div>
+            <strong>Persona duplicada detectada!</strong> El número de identificación ya existe en el sistema. 
+            Por favor, verifique el número de documento o utilice otro.
+          </div>
+        </Alert>
+      )}
+
       {/* Header con progreso */}
       <div className="mb-4">
         <div className="d-flex justify-content-between align-items-center mb-3">
@@ -235,7 +277,7 @@ const PersonForm = ({ onSave, loading = false, initialData = null }) => {
                         value={formData.names}
                         onChange={handleInputChange}
                         isInvalid={!!errors.names}
-                        isValid={!errors.names && formData.names.trim()}
+                        isValid={!errors.names && formData.names && formData.names.trim() ? true : false}
                         placeholder="Ej: Juan Carlos"
                         className="border-start-0 ps-0"
                         style={{ boxShadow: 'none' }}
@@ -260,7 +302,7 @@ const PersonForm = ({ onSave, loading = false, initialData = null }) => {
                         value={formData.lastnames}
                         onChange={handleInputChange}
                         isInvalid={!!errors.lastnames}
-                        isValid={!errors.lastnames && formData.lastnames.trim()}
+                        isValid={!errors.lastnames && formData.lastnames && formData.lastnames.trim() ? true : false}
                         placeholder="Ej: Pérez González"
                         className="border-start-0 ps-0"
                         style={{ boxShadow: 'none' }}
@@ -310,15 +352,15 @@ const PersonForm = ({ onSave, loading = false, initialData = null }) => {
                         name="identification"
                         value={formData.identification}
                         onChange={handleInputChange}
-                        isInvalid={!!errors.identification}
-                        isValid={!errors.identification && formData.identification.trim()}
+                        isInvalid={!!errors.identification || isDuplicateError}
+                        isValid={!isDuplicateError && !errors.identification && formData.identification && formData.identification.trim() ? true : false}
                         placeholder="12345678"
                         maxLength={8}
                         className="border-start-0 ps-2"
-                        style={{ boxShadow: 'none' }}
+                        style={{ boxShadow: isDuplicateError ? '0 0 0 0.25rem rgba(220, 53, 69, 0.25)' : 'none' }}
                       />
                       <Form.Control.Feedback type="invalid">
-                        {errors.identification}
+                        {isDuplicateError ? 'Este número de identificación ya existe en el sistema' : errors.identification}
                       </Form.Control.Feedback>
                     </InputGroup>
                     <Form.Text className="text-muted">
@@ -491,6 +533,21 @@ const PersonForm = ({ onSave, loading = false, initialData = null }) => {
                         </div>
                       </div>
                     </div>
+                  </Col>
+                  
+                  <Col md={12} className="mt-3">
+                    <Form.Label className="fw-medium text-dark">
+                      Observaciones <span className="text-muted">(Opcional)</span>
+                    </Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={3}
+                      name="observations"
+                      value={formData.observations}
+                      onChange={handleInputChange}
+                      placeholder="Telefonos, redes sociales, u observaciones extras"
+                      style={{ resize: 'vertical' }}
+                    />
                   </Col>
                 </Row>
               </Card.Body>

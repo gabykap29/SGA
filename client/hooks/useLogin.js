@@ -4,7 +4,7 @@
  * Separación de responsabilidades: lógica de estado y UI
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { authService } from '../services/authService';
@@ -19,8 +19,28 @@ export const useLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   const router = useRouter();
+  
+  // Verificar si hay un usuario logueado al cargar el componente
+  useEffect(() => {
+    const checkUserSession = async () => {
+      try {
+        const userData = await authService.getCurrentUser();
+        if (userData) {
+          setUser(userData);
+          // Verificar si el usuario tiene rol de admin
+          setIsAdmin(userData.role?.role_name === 'admin' || userData.role?.role_id === 1);
+        }
+      } catch (error) {
+        console.error('Error al verificar sesión:', error);
+      }
+    };
+    
+    checkUserSession();
+  }, []);
 
   /**
    * Maneja los cambios en los inputs del formulario
@@ -86,6 +106,9 @@ export const useLogin = () => {
 
       if (result.success) {
         // Login exitoso - mostrar toast y redirigir al dashboard
+        setUser(result.user);
+        setIsAdmin(result.user?.role?.role_name === 'admin' || result.user?.role?.role_id === 1);
+        
         toast.success('¡Bienvenido al sistema!', {
           position: "top-right",
           autoClose: 2000,
@@ -125,6 +148,8 @@ export const useLogin = () => {
     isLoading,
     error,
     showPassword,
+    user,
+    isAdmin,
     
     // Acciones
     handleInputChange,

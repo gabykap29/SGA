@@ -1,7 +1,7 @@
 // Servicio para gestión de antecedentes
 class RecordService {
   constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   }
 
   // Obtener token del localStorage
@@ -70,12 +70,16 @@ class RecordService {
   // Crear un nuevo antecedente
   async createRecord(recordData) {
     try {
-      console.log('Creando antecedente con datos:', recordData);
+      // Extraemos solo los campos que el backend espera
+      const { title, date, content, observations, type_record, category } = recordData;
+      const recordDataToSend = { title, date, content, observations, type_record, category };
       
-      const response = await fetch(`${this.baseURL}/records`, {
+      console.log('Creando antecedente con datos:', recordDataToSend);
+      
+      const response = await fetch(`${this.baseURL}/records/create`, {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify(recordData)
+        body: JSON.stringify(recordDataToSend)
       });
 
       console.log('Respuesta del servidor:', response.status, response.statusText);
@@ -83,15 +87,34 @@ class RecordService {
       // Manejo especial de errores HTTP
       if (!response.ok) {
         console.error('Error en la respuesta:', response.status, response.statusText);
+        
+        try {
+          const errorData = await response.json();
+          console.log('Error data:', errorData);
+          
+          // Manejar específicamente el error 422 (antecedente ya existe)
+          if (response.status === 422) {
+            return { 
+              success: false, 
+              error: errorData.detail || 'Este antecedente ya existe en el sistema', 
+              isDuplicate: true 
+            };
+          }
+          
+          return { success: false, error: errorData.detail || 'Error al crear antecedente' };
+        } catch (parseError) {
+          console.error('Error al parsear respuesta de error:', parseError);
+          return { success: false, error: `Error al crear antecedente (${response.status}: ${response.statusText})` };
+        }
       }
       
-      const data = await response.json();
-      console.log('Datos recibidos:', data);
-
-      if (response.ok) {
+      try {
+        const data = await response.json();
+        console.log('Datos recibidos:', data);
         return { success: true, data };
-      } else {
-        return { success: false, error: data.detail || 'Error al crear antecedente' };
+      } catch (parseError) {
+        console.error('Error al parsear respuesta:', parseError);
+        return { success: false, error: 'Error al procesar la respuesta del servidor' };
       }
     } catch (error) {
       console.error('RecordService.createRecord error:', error);
@@ -188,7 +211,7 @@ class RecordService {
       console.log(`Vinculando persona ${personId} con antecedente ${recordId}, tipo: ${typeRelationship}`);
       
       // Usar la URL y método correctos según el controlador del backend
-      const response = await fetch(`${this.baseURL}/persons/${personId}/${recordId}?type_relationship=${typeRelationship}`, {
+      const response = await fetch(`${this.baseURL}/persons/${personId}/record/${recordId}?type_relationship=${typeRelationship}`, {
         method: 'PATCH',  // Este es el método correcto según el controlador
         headers: this.getHeaders()
       });

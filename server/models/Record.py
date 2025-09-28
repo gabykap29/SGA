@@ -10,6 +10,7 @@ class Records(Base):
     record_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     title = Column(String(255), nullable= False)
     date = Column(Date, nullable= False)
+    type_record = Column(String(55),nullable=False)
     content = Column(Text, nullable= False)
     observations = Column(Text, nullable=True)
     create_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

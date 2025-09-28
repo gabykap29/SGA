@@ -29,7 +29,8 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
 
   const deleteImage = async (imageToDelete) => {
     try {
-      const response = await fetch(`http://localhost:8001/files/${imageToDelete.file_id}`, {
+      const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${baseURL}/files/${imageToDelete.file_id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -51,7 +52,8 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
 
   const downloadImage = async (image) => {
     try {
-      const response = await fetch(`http://localhost:8001/files/${image.file_id}/download`, {
+      const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${baseURL}/files/${image.file_id}/download`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -154,7 +156,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
                 onClick={() => openModal(image)}
               >
                 <img
-                  src={`http://localhost:8001/files/${image.file_id}/download`}
+                  src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/files/${image.file_id}/download`}
                   alt={image.description || 'Imagen'}
                   className="w-100 h-100 object-fit-cover"
                   style={{ transition: 'transform 0.3s ease' }}
@@ -261,7 +263,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
                 <FiX size={16} />
               </Button>
               <img
-                src={`http://localhost:8001/files/${selectedImage.file_id}/download`}
+                src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/files/${selectedImage.file_id}/download`}
                 alt={selectedImage.description}
                 className="w-100"
                 style={{ maxHeight: '70vh', objectFit: 'contain' }}
