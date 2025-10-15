@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Modal, Badge } from 'react-bootstrap';
 import { 
   FiImage, 
@@ -16,6 +16,7 @@ import { toast } from 'react-toastify';
 const ImageGallery = ({ images = [], personId, onUpdate }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [imageUrls, setImageUrls] = useState({});
 
   console.log('ImageGallery recibió:', images);
   
@@ -96,6 +97,42 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
     }
   };
 
+  // Cargar blobs protegidos para cada imagen
+  useEffect(() => {
+    let isMounted = true;
+    const fetchImages = async () => {
+      const urls = {};
+      for (const img of validImages) {
+        try {
+          const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+          const response = await fetch(`${baseURL}/files/${img.file_id}/download`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          if (response.ok) {
+            const blob = await response.blob();
+            urls[img.file_id] = URL.createObjectURL(blob);
+          } else {
+            urls[img.file_id] = '/file.svg';
+          }
+        } catch {
+          urls[img.file_id] = '/file.svg';
+        }
+      }
+      if (isMounted) setImageUrls(urls);
+    };
+    fetchImages();
+    return () => {
+      isMounted = false;
+      // Liberar blobs
+      Object.values(imageUrls).forEach(url => {
+        if (url && url.startsWith('blob:')) URL.revokeObjectURL(url);
+      });
+    };
+    // eslint-disable-next-line
+  }, [images]);
+
   if (validImages.length === 0) {
     return (
       <div style={{ backgroundColor: '#f8f9fa', padding: '0' }}>
@@ -172,7 +209,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
                 onClick={() => openModal(image)}
               >
                 <img
-                  src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/files/${image.file_id}/download`}
+                  src={imageUrls[image.file_id] || '/file.svg'}
                   alt={image.description || 'Imagen'}
                   className="w-100 h-100 object-fit-cover"
                   style={{ transition: 'transform 0.3s ease' }}
@@ -288,7 +325,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
                 <FiX size={16} />
               </Button>
               <img
-                src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/files/${selectedImage.file_id}/download`}
+                src={imageUrls[selectedImage.file_id] || '/file.svg'}
                 alt={selectedImage.description || 'Imagen'}
                 className="w-100"
                 style={{ maxHeight: '70vh', objectFit: 'contain' }}

@@ -142,6 +142,8 @@ export const useLogin = () => {
       } else {
         // Mostrar error del servidor
         setError(result.error);
+        console.log(result);
+        
         toast.error(result.error || 'Error al iniciar sesión');
       }
     } catch (error) {

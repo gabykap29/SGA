@@ -147,10 +147,10 @@ export default function RecordDetail() {
                 <FiArrowLeft size={20} />
               </Button>
               <div>
-                <h2 className="display-6 fw-bold text-dark mb-0">{record.title}</h2>
+                <h2 className="display-6 fw-bold text-dark mb-0">{record.record_number}</h2>
                 <p className="lead text-muted mb-0">
                   <FiCalendar className="me-2" />
-                  {formatDate(record.date)}
+                  {formatDate(record.record_date)}
                 </p>
               </div>
             </div>
@@ -194,9 +194,8 @@ export default function RecordDetail() {
                     <Tab.Pane eventKey="details">
                       <h5 className="fw-bold text-dark mb-3">Contenido</h5>
                       <p className="text-dark" style={{ whiteSpace: 'pre-wrap' }}>
-                        {record.content || 'No hay contenido disponible.'}
+                        {record.description || 'No hay contenido disponible.'}
                       </p>
-                      
                       {record.observations && (
                         <>
                           <h5 className="fw-bold text-dark mb-3 mt-4">Observaciones</h5>
@@ -237,6 +236,7 @@ export default function RecordDetail() {
                               <tr>
                                 <th className="fw-bold">Nombre</th>
                                 <th className="fw-bold">Identificación</th>
+                                <th className="fw-bold">Relación</th>
                                 <th className="fw-bold">Acciones</th>
                               </tr>
                             </thead>
@@ -249,6 +249,11 @@ export default function RecordDetail() {
                                   <td className="align-middle">
                                     <Badge bg="dark">
                                       {relationship.person?.identification}
+                                    </Badge>
+                                  </td>
+                                  <td className="align-middle">
+                                    <Badge bg="secondary">
+                                      {relationship.type_relationship || 'No especificado'}
                                     </Badge>
                                   </td>
                                   <td className="align-middle">
@@ -282,21 +287,21 @@ export default function RecordDetail() {
               </Card.Header>
               <Card.Body>
                 <div className="mb-3">
-                  <div className="small text-muted mb-1">Identificador</div>
-                  <div className="fw-medium text-dark">{record.record_id}</div>
-                </div>
-                <div className="mb-3">
-                  <div className="small text-muted mb-1">Fecha de Registro</div>
-                  <div className="fw-medium text-dark">
-                    {formatDate(record.created_at || record.date)}
-                  </div>
-                </div>
-                <div className="mb-3">
-                  <div className="small text-muted mb-1">Última Actualización</div>
-                  <div className="fw-medium text-dark">
-                    {formatDate(record.updated_at || record.date)}
-                  </div>
-                </div>
+                          <div className="small text-muted mb-1">Identificador</div>
+                          <div className="fw-medium text-dark">{record.record_id}</div>
+                        </div>
+                        <div className="mb-3">
+                          <div className="small text-muted mb-1">Fecha de Registro</div>
+                          <div className="fw-medium text-dark">
+                            {formatDate(record.create_at || record.record_date)}
+                          </div>
+                        </div>
+                        <div className="mb-3">
+                          <div className="small text-muted mb-1">Última Actualización</div>
+                          <div className="fw-medium text-dark">
+                            {formatDate(record.updated_at || record.record_date)}
+                          </div>
+                        </div>
                 <div className="mb-3">
                   <div className="small text-muted mb-1">Estado</div>
                   <Badge bg="success" className="py-1 px-2">Activo</Badge>

@@ -10,8 +10,15 @@ import {
   FiCreditCard,
   FiTrash2
 } from 'react-icons/fi';
+import AddImageModal from './AddImageModal';
+import personService from '../../services/personService';
+import { toast } from 'react-toastify';
+import { useState } from 'react';
 
 const PersonDetails = ({ person, onUpdate, onDelete }) => {
+  const [showAddImage, setShowAddImage] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
@@ -42,12 +49,33 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
     return names[type] || type;
   };
 
+  const handleAddImage = async ({ file, description }) => {
+    setUploading(true);
+    try {
+      await personService.uploadFiles(person.person_id, [{ file, description }]);
+      toast.success('Imagen subida correctamente');
+      setShowAddImage(false);
+      if (onUpdate) onUpdate();
+    } catch (e) {
+      toast.error('Error al subir la imagen');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div style={{ 
       backgroundColor: '#f5f5f5',
       minHeight: '400px',
       padding: '0'
     }}>
+      {/* Botón para añadir imagen */}
+      <div className="mb-3 text-end">
+        <Button variant="dark" onClick={() => setShowAddImage(true)}>
+          Añadir Imagen
+        </Button>
+      </div>
+
       {/* Información básica */}
       <div className="mb-4 p-3" style={{
         backgroundColor: 'white',
@@ -97,17 +125,6 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
                 <label className="form-label text-muted small">Apellidos</label>
                 <div className="fw-semibold text-dark">{person.lastnames || 'N/A'}</div>
               </div>
-              <div className="mb-3">
-                <label className="form-label text-muted small">Fecha de Nacimiento</label>
-                <div className="fw-semibold text-dark">
-                  <FiCalendar className="me-2" size={14} />
-                  {person.birth_date ? formatDate(person.birth_date) : 'N/A'}
-                </div>
-              </div>
-              <div className="mb-3">
-                <label className="form-label text-muted small">Estado Civil</label>
-                <div className="fw-semibold text-dark">{person.civil_status || 'N/A'}</div>
-              </div>
             </Card.Body>
           </Card>
         </Col>
@@ -137,10 +154,6 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
                 <label className="form-label text-muted small">Número de Documento</label>
                 <div className="fw-bold text-dark font-monospace">{person.identification || 'N/A'}</div>
               </div>
-              <div className="mb-3">
-                <label className="form-label text-muted small">Nacionalidad</label>
-                <div className="fw-semibold text-dark">{person.nationality || 'N/A'}</div>
-              </div>
             </Card.Body>
           </Card>
         </Col>
@@ -165,10 +178,6 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
               <div className="mb-3">
                 <label className="form-label text-muted small">Provincia</label>
                 <div className="fw-semibold text-dark">{person.province || 'N/A'}</div>
-              </div>
-              <div className="mb-3">
-                <label className="form-label text-muted small">Ciudad</label>
-                <div className="fw-semibold text-dark">{person.city || 'N/A'}</div>
               </div>
               <div className="mb-3">
                 <label className="form-label text-muted small">Dirección</label>
@@ -223,6 +232,13 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
           </Card>
         </Col>
       </Row>
+
+      <AddImageModal 
+        show={showAddImage} 
+        onHide={() => setShowAddImage(false)} 
+        onUpload={handleAddImage} 
+        isLoading={uploading} 
+      />
     </div>
   );
 };

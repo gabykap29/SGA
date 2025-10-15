@@ -14,7 +14,12 @@ person_service = PersonsService()
 
 
 @router.get("", status_code=status.HTTP_200_OK, response_model=List[PersonResponse])
-def get_persons(current_user: Dict = Depends(is_authenticated)):
+def get_persons(current_user: Dict = Depends(is_authenticated),is_authorized: bool = Depends(check_rol_all)):
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para ver esta persona" 
+        )
     # Primero verificamos que el usuario esté autenticado
     if not current_user or "user_id" not in current_user:
         raise HTTPException(
@@ -78,14 +83,26 @@ def get_person(id: str, current_user: Dict = Depends(is_authenticated), is_autho
     db_session = SessionLocal()
     try:
         person = person_service.get_person(person_id=id, db=db_session)
-        
         if not person:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="La persona no existe!"
             )
-        
-        return person
+        # Serializar archivos con mime_type
+        files = []
+        for f in getattr(person, 'files', []):
+            files.append({
+                'file_id': f.file_id,
+                'original_filename': f.original_filename,
+                'file_type': f.file_type,
+                'file_size': f.file_size,
+                'mime_type': getattr(f, 'mime_type', None),
+                'created_at': f.created_at
+            })
+        # Construir respuesta serializada
+        person_dict = person.__dict__.copy()
+        person_dict['files'] = files
+        return person_dict
     except Exception as e:
         print("Error critico al obtener la persona", e)
         raise HTTPException(

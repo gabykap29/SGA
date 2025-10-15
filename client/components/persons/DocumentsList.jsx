@@ -77,19 +77,27 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
 
   const downloadDocument = async (document) => {
     try {
-      // Usar la URL base de la API configurada o URL por defecto
       const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const downloadUrl = `${baseURL}/files/${document.file_id}/download`;
-      
-      // Crear un enlace temporal para descargar
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = document.original_filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast.success('Descarga iniciada');
+      const response = await fetch(`${baseURL}/files/${document.file_id}/download`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = document.original_filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        toast.success('Descarga iniciada');
+      } else {
+        throw new Error('Error al descargar');
+      }
     } catch (error) {
       console.error('Error downloading document:', error);
       toast.error('Error al descargar el documento');

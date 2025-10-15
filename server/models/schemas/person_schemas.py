@@ -47,8 +47,9 @@ class FileMinimalForPersonResponse(BaseModel):
     original_filename: str
     file_type: str
     file_size: int
+    mime_type: str  # Campo agregado para que el frontend pueda filtrar imágenes
     created_at: datetime
-    
+
     model_config = {"from_attributes": True}
 
 class PersonResponse(BaseModel):

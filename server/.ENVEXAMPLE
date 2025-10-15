@@ -1,5 +1,5 @@
-DATABASE_URL="mysql+pymysql://usuario:contraseña@localhost:3306/mi_base"
+DATABASE_URL="mysql+pymysql://USER:PASS@localhost:3306/sga_db"
 PASS_ADMIN="admin"
 SECRET_KEY="klajshdlkasjdlk"
-HASH_ALGORITHM = "H256"
+HASH_ALGORITHM = "HS256"
 TOKEN_EXPIRATION_MINUTES= 2000

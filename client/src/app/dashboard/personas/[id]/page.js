@@ -220,16 +220,16 @@ export default function PersonView() {
               <Tab.Pane eventKey="images" active={activeTab === 'images'}>
                 <ImageGallery 
                   personId={personId} 
-                  images={person.files?.filter(file => file && file.mimetype && file.mimetype.startsWith('image/')) || []} 
+                  images={person.files?.filter(file => file && file.mime_type && file.mime_type.startsWith('image/')) || []} 
                   refreshKey={refreshKey} 
                   onUpdate={handleRefresh}
                 />
               </Tab.Pane>
-              
+
               <Tab.Pane eventKey="documents" active={activeTab === 'documents'}>
                 <DocumentsList 
                   personId={personId} 
-                  documents={person.files?.filter(file => file && file.mimetype && !file.mimetype.startsWith('image/')) || []}
+                  documents={person.files?.filter(file => file && file.mime_type && !file.mime_type.startsWith('image/')) || []}
                   refreshKey={refreshKey} 
                   onUpdate={handleRefresh}
                 />

@@ -14,8 +14,8 @@ auth_router = APIRouter()
 
 @auth_router.post("/login")
 async def login(request: Request, formdata: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    db_session = SessionLocal()
     try:
-        db_session = SessionLocal()
         user = user_service.login(formdata.username, formdata.password, db=db_session)
         if not user:
             # Registrar intento fallido de inicio de sesión
@@ -42,14 +42,13 @@ async def login(request: Request, formdata: Annotated[OAuth2PasswordRequestForm,
             except Exception as log_error:
                 print(f"Error al registrar log de intento fallido: {log_error}")
                 db_session.rollback()
-            finally:
-                db_session.close()
                 
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Usuario o contraseña incorrectos!",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        
         access_token_expires = timedelta(minutes=token_expires_minutes)
         # Asegurarse de que el ID sea un string válido
         try:
@@ -108,14 +107,20 @@ async def login(request: Request, formdata: Annotated[OAuth2PasswordRequestForm,
             # Hacer rollback en caso de error pero continuar
             db_session.rollback()
         
-        # Cerrar la sesión después de todas las operaciones
-        db_session.close()
-        
         return response_data
 
+    except HTTPException:
+        # Re-lanzar HTTPException sin modificarla para que FastAPI la maneje correctamente
+        raise
     except Exception as e:
-        print(e)
-        raise HTTPException (
-            status_code= status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail= "Error al intentar inciar sesion, comuniquese con el administrador!"
+        # Solo atrapar excepciones inesperadas (no HTTPException)
+        print(f"Error inesperado en login: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al intentar iniciar sesión, comuníquese con el administrador!"
         )
+    finally:
+        # Siempre cerrar la sesión
+        db_session.close()

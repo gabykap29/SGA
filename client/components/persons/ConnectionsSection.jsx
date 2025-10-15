@@ -230,23 +230,23 @@ const ConnectionsSection = ({ personId, refreshKey, onRefresh }) => {
                 <Badge 
                   bg={
                     // Relaciones personales
-                    person.relationship === 'FAMILIAR' ? 'info' : 
-                    person.relationship === 'AMIGO' ? 'success' : 
-                    person.relationship === 'COLEGA' ? 'primary' :
-                    person.relationship === 'SOCIO' ? 'secondary' :
+                    person.connection_type === 'FAMILIAR' ? 'info' : 
+                    person.connection_type === 'AMIGO' ? 'success' : 
+                    person.connection_type === 'COLEGA' ? 'primary' :
+                    person.connection_type === 'SOCIO' ? 'secondary' :
                     // Relaciones criminales 
-                    person.relationship === 'GRUPO_CRIMINAL' ? 'danger' :
-                    person.relationship === 'JEFE_BANDA' ? 'danger' :
-                    person.relationship === 'MIEMBRO_ORGANIZACION' ? 'danger' :
-                    person.relationship === 'COMPLICE' ? 'dark' :
-                    person.relationship === 'LIDER_PANDILLA' ? 'danger' :
-                    person.relationship === 'VICTIMA' ? 'warning' :
-                    person.relationship === 'TESTIGO' ? 'info' :
+                    person.connection_type === 'GRUPO_CRIMINAL' ? 'danger' :
+                    person.connection_type === 'JEFE_BANDA' ? 'danger' :
+                    person.connection_type === 'MIEMBRO_ORGANIZACION' ? 'danger' :
+                    person.connection_type === 'COMPLICE' ? 'dark' :
+                    person.connection_type === 'LIDER_PANDILLA' ? 'danger' :
+                    person.connection_type === 'VICTIMA' ? 'warning' :
+                    person.connection_type === 'TESTIGO' ? 'info' :
                     'secondary'
                   }
                   className="text-white"
                 >
-                  {person.relationship || 'No especificado'}
+                  {person.connection_type || 'No especificado'}
                 </Badge>
               </td>
               <td>

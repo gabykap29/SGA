@@ -50,13 +50,45 @@ def get_record_by_id(id: str, current_user: Dict = Depends(is_authenticated), is
     db_session = SessionLocal()
     try:
         record = record_service.get_record(record_id=id, db=db_session)
-        if not record : 
+        if not record:
             return JSONResponse(
                 content="El antecedente no existe!",
                 status_code=status.HTTP_200_OK
             )
-        # Usar nuestra respuesta personalizada para manejar la serialización de dates y UUIDs
-        return CustomJSONResponse(content=record)
+        # Serializar personas vinculadas
+        # Serializar manualmente solo los campos necesarios para evitar referencias circulares
+        record_dict = {
+            'record_id': str(record.record_id),
+            'record_number': getattr(record, 'title', None),
+            'record_date': getattr(record, 'date', None),
+            'description': getattr(record, 'content', None),
+            'observations': getattr(record, 'observations', None),
+            'record_type': getattr(record, 'type_record', None),
+            'create_at': getattr(record, 'create_at', None),
+            'updated_at': getattr(record, 'updated_at', None),
+        }
+        person_relationships = []
+        for rel in getattr(record, 'person_relationships', []):
+            person_obj = getattr(rel, 'person', None)
+            person_data = None
+            if person_obj:
+                person_data = {
+                    'person_id': str(person_obj.person_id),
+                    'names': person_obj.names,
+                    'lastnames': person_obj.lastnames,
+                    'identification': person_obj.identification,
+                    'identification_type': person_obj.identification_type,
+                    'province': person_obj.province,
+                    'country': person_obj.country
+                }
+            person_relationships.append({
+                'id': str(rel.id),
+                'person_id': str(rel.person_id),
+                'type_relationship': rel.type_relationship,
+                'person': person_data
+            })
+        record_dict['person_relationships'] = person_relationships
+        return CustomJSONResponse(content=record_dict)
     except Exception as e:
         print("Error interno en el servidor al obtener el antecedente", e) 
         return JSONResponse(

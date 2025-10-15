@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "SGA Sistema - Login",
+  title: "SGA - Sistema de Gestión Administrativa",
   description: "Sistema de Gestión Administrativa",
 };
 

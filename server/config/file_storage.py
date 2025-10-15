@@ -7,7 +7,7 @@ class FileStorageConfig:
     """
     
     # Directorio base para almacenar archivos
-    BASE_STORAGE_DIR = os.getenv('FILE_STORAGE_PATH', '/home/gabrielacosta/Escritorio/SGA/storage')
+    BASE_STORAGE_DIR = "./storage"
     
     # Subdirectorios por tipo de archivo
     STORAGE_SUBDIRS = {

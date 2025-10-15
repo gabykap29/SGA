@@ -33,12 +33,11 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
     setLoading(true);
     try {
       // Obtener todos los antecedentes disponibles
-      const allRecords = await recordService.getRecords();
-      
+      const result = await recordService.getRecords();
+      const allRecords = result && result.success ? result.data : [];
       // Filtrar los que ya están vinculados
       const linkedIds = linkedRecords.map(r => r.record_id);
       const available = allRecords.filter(record => !linkedIds.includes(record.record_id));
-      
       setAvailableRecords(available);
     } catch (error) {
       console.error('Error loading available records:', error);
@@ -174,6 +173,21 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
           >
             <FiLink className="me-2" size={16} />
             Vincular antecedente
+          </Button>
+          <Button 
+            variant="primary"
+            size="sm"
+            className="px-3 py-2"
+            onClick={() => window.location.href = '/dashboard/antecedentes/crear'}
+            style={{
+              backgroundColor: '#007bff',
+              border: 'none',
+              borderRadius: '4px',
+              color: 'white'
+            }}
+          >
+            <FiPlus className="me-2" size={16} />
+            Crear antecedente
           </Button>
         </div>
       </div>

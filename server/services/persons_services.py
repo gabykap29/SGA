@@ -295,17 +295,16 @@ class PersonsService:
                 if relation.record:
                     record_data = {
                         "record_id": str(relation.record.record_id),
-                        "title": relation.record.title,
-                        "date": relation.record.date,
-                        "content": relation.record.content,
-                        "observations": relation.record.observations,
-                        "type": relation.record.type,
-                        "create_at": relation.record.create_at,
-                        "updated_at": relation.record.updated_at,
+                        "record_number": getattr(relation.record, "title", None),
+                        "record_date": getattr(relation.record, "date", None),
+                        "description": getattr(relation.record, "content", None),
+                        "observations": getattr(relation.record, "observations", None),
+                        "record_type": getattr(relation.record, "type_record", None),
+                        "create_at": getattr(relation.record, "create_at", None),
+                        "updated_at": getattr(relation.record, "updated_at", None),
                         "type_relationship": relation.type_relationship
                     }
                     results.append(record_data)
-            
             return results
             
         except Exception as e:
