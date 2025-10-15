@@ -244,7 +244,7 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
                       className="text-white px-3 py-2 shadow-sm"
                       style={{ fontSize: '0.8rem', borderRadius: '8px' }}
                     >
-                      {record.record_type || 'Sin tipo'}
+                      {record.title || 'Sin tipo'} ({record.type_relationship  || 'N/A'}) 
                     </Badge>
                     <Button
                       variant="dark"
@@ -274,14 +274,14 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden'
                     }}>
-                      {record.description || 'Sin descripción disponible'}
+                      {record.observations || 'Sin descripción disponible'}
                     </p>
                   </div>
 
                   <div className="mb-3">
                     <div className="d-flex align-items-center mb-2 text-muted small">
                       <FiCalendar className="me-2" size={14} />
-                      <span>Fecha: {formatDate(record.record_date)}</span>
+                      <span>Fecha: {formatDate(record.date)}</span>
                     </div>
                     
                     {record.court && (

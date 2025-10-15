@@ -64,8 +64,8 @@ class PersonResponse(BaseModel):
     observations: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-    created_by: UUID
-    users: UserResponse
+    created_by: UUID | None = None
+    users: UserResponse | None = None  # Información del usuario que creó la persona
     record_relationships: List[RecordRelationshipSchema] = []
     files: List[FileMinimalForPersonResponse] = []  # Lista opcional de archivos (puede estar vacía)
     

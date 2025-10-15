@@ -7,7 +7,7 @@ from models.schemas.person_schemas import PersonSchema, PersonResponse
 from database.db import SessionLocal
 from typing import List, Dict
 from dependencies.is_auth import is_authenticated
-from dependencies.checked_role import check_rol_all
+from dependencies.checked_role import check_rol_all, check_rol_admin
 
 router = APIRouter(tags=["Persons"], prefix="/persons")
 person_service = PersonsService()
@@ -219,6 +219,36 @@ def update_person(id: str, body: PersonSchema, current_user: Dict = Depends(is_a
         )
     finally:
         db_session.close()
+
+@router.get("/load-csv/", status_code=status.HTTP_200_OK)
+def load_persons_from_csv(current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_admin)):
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para cargar personas desde CSV"
+        )
+    db_session = SessionLocal()
+    try:
+        result = person_service.load_persons(db=db_session)
+        if result is True:
+            return {
+                "status": "success",
+                "message": "Personas cargadas desde CSV correctamente!"
+            }
+        else:
+            return {
+                "status": "info",
+                "message": "Ya hay suficientes personas en la base de datos. No se cargaron nuevas personas."
+            }
+    except Exception as e:
+        print("Error critico al cargar personas desde CSV", e)
+        raise HTTPException(
+            status_code= status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error en el servidor al cargar personas desde CSV"
+        )
+    finally:
+        db_session.close()
+
 
 @router.delete("/delete/{id}", status_code=status.HTTP_200_OK)
 def delete_person(id: str, current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all)):

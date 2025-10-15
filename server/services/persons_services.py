@@ -7,6 +7,7 @@ from sqlalchemy import or_
 from typing import Optional, List, Dict
 from models.Connection_Type import ConnectionType
 import uuid
+import pandas
 class PersonsService:
     def __init__(self):
         self.personModel = Persons
@@ -17,7 +18,7 @@ class PersonsService:
         persons = db.query(self.personModel).options(
             joinedload(self.personModel.record_relationships).joinedload(RecordsPersons.record),
             joinedload(self.personModel.files)  # Cargar archivos (puede ser lista vacía)
-        ).all()
+        ).limit(10).all()
         if not persons:
             return []
         return persons
@@ -310,3 +311,47 @@ class PersonsService:
         except Exception as e:
             print(f"Error al obtener antecedentes de la persona: {e}")
             raise e
+        
+    def load_persons(self, db: Session):
+            try: 
+                count = db.query(self.personModel).count()
+                print("Cantidad de personas en la base de datos:", count)
+                if count < 5:
+                    df = pandas.read_csv("padron_25_filtrado.csv", encoding='latin-1', sep=',')
+                    for index, row in df.iterrows():
+                        identification = str(row['identification']).strip()
+                        type_identification = str(row["identification_type"]).strip()
+                        names = str(row['names']).strip().title()
+                        lastnames = str(row['lastnames']).strip().title()
+                        address = str(row['address']).strip().title()
+                        province = str(row['province']).strip().title()
+                        country = "country"
+                        
+                        existing_person = db.query(self.personModel).filter(self.personModel.identification == identification).first()
+                        if existing_person:
+                            print(f"La persona con DNI {identification} ya existe. Saltando...")
+                            continue
+                        
+                        new_person = self.personModel(
+                            identification=identification,
+                            identification_type=type_identification,
+                            names=names,
+                            lastnames=lastnames,
+                            address=address,
+                            province=province,
+                            country=country,
+                        )
+                        db.add(new_person)
+                        
+                        if index % 100 == 0:
+                            db.commit()
+                            print(f"{index} personas procesadas...")
+                    db.commit()
+                    print("Carga de personas completada.")
+                    return True
+                else:
+                    print("Ya hay suficientes personas en la base de datos. No se cargaron nuevas personas.")
+                    return False
+            except Exception as e:
+                print(f"Error al cargar personas desde CSV: {e}")
+                db.rollback()

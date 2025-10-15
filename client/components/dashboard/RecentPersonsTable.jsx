@@ -280,7 +280,7 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
         <Card.Footer className="border-0 p-3 text-center">
           <Button 
             variant="dark"
-            onClick={() => router.push('/dashboard/personas')}
+            onClick={() => router.push('/dashboard/personas/buscar')}
           >
             <FiUser className="me-2" size={16} />
             Ver todas las personas

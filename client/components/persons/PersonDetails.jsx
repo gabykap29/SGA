@@ -211,6 +211,14 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
                 <div className="fw-semibold text-dark">
                   {person.updated_at ? formatDate(person.updated_at) : 'N/A'}
                 </div>
+                
+              </div>
+              <div className="mb-3">
+                <label className="form-label text-muted small">Observaciones</label>
+                <div className="fw-semibold text-dark">
+                  {person.observations ? person.observations : 'N/A'}
+                </div>
+                
               </div>
               <div className="mb-3">
                 <Button 

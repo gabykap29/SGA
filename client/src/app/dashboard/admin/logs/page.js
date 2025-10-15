@@ -5,6 +5,7 @@ import { Card, Row, Col, Form, Button, Table, Spinner, Alert, Badge, InputGroup,
 import { FiCalendar, FiFilter, FiSearch, FiRefreshCw, FiActivity, FiDatabase, FiUser, FiClock, FiInfo } from 'react-icons/fi';
 import DashboardLayout from '../../../../../components/layout/DashboardLayout';
 import UserActivitySummary from '../../../../../components/dashboard/UserActivitySummary';
+import LoadPersonsFromCSV from '../../../../../components/admin/LoadPersonsFromCSV';
 import logsService from '../../../../../services/logsService';
 import { toast } from 'react-toastify';
 import { format, parseISO, isValid } from 'date-fns';
@@ -180,7 +181,7 @@ export default function LogsPage() {
   if (isPermissionError) {
     console.log('Mostrando pantalla de error de permisos - isAdmin:', isAdmin, 'isPermissionError:', isPermissionError);
     return (
-
+      <DashboardLayout>
         <div className="d-flex flex-column justify-content-center align-items-center py-5">
           <div className="text-danger mb-3">
             <FiInfo size={50} />
@@ -189,11 +190,12 @@ export default function LogsPage() {
           <p className="text-muted">No tiene permisos para acceder a esta sección.</p>
           <p className="text-muted">Esta funcionalidad está disponible solo para administradores.</p>
         </div>
-
+      </DashboardLayout>
     );
   }
 
   return (
+    <DashboardLayout>
       <>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -398,6 +400,15 @@ export default function LogsPage() {
         <Col lg={3}>
           <UserActivitySummary summary={summary} loading={loadingSummary} />
           
+          {/* Componente de carga de personas desde CSV */}
+          <div className="mb-4">
+            <LoadPersonsFromCSV onSuccess={() => {
+              // Recargar logs cuando se carguen personas exitosamente
+              loadLogs();
+              loadSummary();
+            }} />
+          </div>
+          
           {!loadingSummary && summary && (
             <Card className="border-0 shadow-sm">
               <Card.Header className="bg-white py-3">
@@ -497,6 +508,7 @@ export default function LogsPage() {
           )}
         </Card.Body>
       </Card>
-  </>
+      </>
+    </DashboardLayout>
   );
 }

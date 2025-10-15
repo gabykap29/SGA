@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Container, Row, Col, Card, Button, Nav, Tab, Spinner, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Nav, Tab, Spinner, Alert, Modal } from 'react-bootstrap';
 import { 
   FiUser, 
   FiImage, 
@@ -24,6 +24,7 @@ import DocumentsList from '../../../../../components/persons/DocumentsList';
 import RecordsSection from '../../../../../components/persons/RecordsSection';
 import ConnectionsSection from '../../../../../components/persons/ConnectionsSection';
 import DeletePersonModal from '../../../../../components/persons/DeletePersonModal';
+import EditPersonModal from '../../../../../components/persons/EditPersonModal';
 
 // Servicios
 import personService from '../../../../../services/personService';
@@ -38,7 +39,10 @@ export default function PersonView() {
   const [activeTab, setActiveTab] = useState('details');
   const [refreshKey, setRefreshKey] = useState(0);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+
 
   useEffect(() => {
     if (personId) {
@@ -88,7 +92,12 @@ export default function PersonView() {
   };
 
   const handleEdit = () => {
-    router.push(`/dashboard/personas/${personId}/editar`);
+    console.log('Opening edit modal for person:', person?.names);
+    setShowEditModal(true);
+  };
+
+  const handleEditSuccess = () => {
+    handleRefresh(); // Recargar los datos de la persona
   };
 
   const handleBack = () => {
@@ -155,19 +164,9 @@ export default function PersonView() {
             <Button variant="outline-secondary" className="me-3" onClick={handleBack}>
               <FiArrowLeft /> Volver
             </Button>
-            <h2 className="m-0">
-              {person.names} {person.lastnames}
-            </h2>
           </div>
           
           <div className="d-flex mt-2 mt-md-0">
-            <Button 
-              variant="primary" 
-              className="me-2"
-              onClick={handleEdit}
-            >
-              <FiEdit className="me-1" /> Editar
-            </Button>
             <Button 
               variant="danger" 
               onClick={() => setShowDeleteModal(true)}
@@ -214,6 +213,7 @@ export default function PersonView() {
                 <PersonDetails 
                   person={person} 
                   onRefresh={handleRefresh}
+                  onUpdate={handleEdit}
                 />
               </Tab.Pane>
               
@@ -267,6 +267,16 @@ export default function PersonView() {
         isLoading={deleteLoading}
         personName={person ? `${person.names} ${person.lastnames}` : ''}
       />
+
+      {/* Modal para editar persona */}
+      {person && (
+        <EditPersonModal
+          show={showEditModal}
+          onHide={() => setShowEditModal(false)}
+          person={person}
+          onSuccess={handleEditSuccess}
+        />
+      )}
     </DashboardLayout>
   );
 }

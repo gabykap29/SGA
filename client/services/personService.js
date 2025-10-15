@@ -140,7 +140,7 @@ class PersonService {
   async updatePerson(personId, personData) {
     try {
       const response = await fetch(`${this.baseURL}/persons/update/${personId}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: this.getHeaders(),
         body: JSON.stringify(personData)
       });
@@ -514,6 +514,33 @@ class PersonService {
     } catch (error) {
       console.error('PersonService.getRecentPersons error:', error);
       return { success: false, error: 'Error de conexión' };
+    }
+  }
+
+  // Cargar personas desde CSV (solo para administradores)
+  async loadPersonsFromCSV() {
+    try {
+      const response = await fetch(`${this.baseURL}/persons/load-csv/`, {
+        method: 'GET',
+        headers: this.getHeaders()
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        return { 
+          success: true, 
+          data: {
+            message: data.message,
+            status: data.status
+          }
+        };
+      } else {
+        return { success: false, error: data.detail || 'Error al cargar personas desde CSV' };
+      }
+    } catch (error) {
+      console.error('PersonService.loadPersonsFromCSV error:', error);
+      return { success: false, error: 'Error de conexión al cargar personas desde CSV' };
     }
   }
 }
