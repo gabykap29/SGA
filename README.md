@@ -57,7 +57,7 @@ server/
 ### 1. Clonar el repositorio
 
 ```bash
-git clone <url-del-repositorio>
+git clone https://github.com/gabykap29/SGA.git
 cd SGAP
 ```
 
