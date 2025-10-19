@@ -60,30 +60,18 @@ export default function LogsPage() {
   });
   const [isPermissionError, setIsPermissionError] = useState(false);
 
-  // Log para depuración
-  console.log('LogsPage - Estado actual:', { 
-    user, 
-    isAdmin, 
-    isPermissionError
-  });
-
   // Cargar logs al montar el componente
   useEffect(() => {
-    console.log('LogsPage useEffect - isAdmin:', isAdmin);
-    
     if (isAdmin) {
-      console.log('Usuario es admin, cargando logs...');
       setIsPermissionError(false);  // Establecer explícitamente a false cuando es admin
       loadLogs();
       loadSummary();
     } else {
-      console.log('Usuario NO es admin, mostrando error de permisos');
       setIsPermissionError(true);
     }
   }, [isAdmin]);
 
   const loadLogs = async () => {
-    console.log('Iniciando carga de logs...');
     setLoading(true);
     // Asegurarse de que no haya falsos positivos en errores de permisos
     setIsPermissionError(false);
@@ -102,12 +90,9 @@ export default function LogsPage() {
         apiFilters.end_date = endDate;
       }
       
-      console.log('Llamando a logsService.getLogs con filtros:', apiFilters);
       const result = await logsService.getLogs(apiFilters);
-      console.log('Respuesta de logsService.getLogs:', result);
       
       if (result.success) {
-        console.log('Logs cargados exitosamente:', result.data.length, 'registros');
         setLogs(result.data);
       } else {
         if (result.isPermissionError) {
@@ -127,16 +112,12 @@ export default function LogsPage() {
   };
 
   const loadSummary = async () => {
-    console.log('Iniciando carga de resumen de logs...');
     setLoadingSummary(true);
     // No establecer isPermissionError aquí para evitar conflictos con loadLogs
     try {
-      console.log('Llamando a logsService.getLogsSummary');
       const result = await logsService.getLogsSummary();
-      console.log('Respuesta de logsService.getLogsSummary:', result);
       
       if (result.success) {
-        console.log('Resumen cargado exitosamente:', result.data);
         setSummary(result.data);
       } else {
         if (result.isPermissionError) {
@@ -179,7 +160,6 @@ export default function LogsPage() {
 
   // Si no es admin, mostrar mensaje de error
   if (isPermissionError) {
-    console.log('Mostrando pantalla de error de permisos - isAdmin:', isAdmin, 'isPermissionError:', isPermissionError);
     return (
       <DashboardLayout>
         <div className="d-flex flex-column justify-content-center align-items-center py-5">

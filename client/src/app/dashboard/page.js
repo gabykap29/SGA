@@ -52,12 +52,9 @@ export default function Dashboard() {
       // Obtener personas recientes para la tabla
       const personsResult = await dashboardService.getRecentPersons(5);
       
-      console.log('Stats result:', statsResult);
-      
       if (statsResult.success && personsResult.success) {
         // Verificar la estructura de datos recibida
         if (statsResult.data && statsResult.data.stats) {
-          console.log('Estadísticas encontradas:', statsResult.data.stats);
           
           // Combinar datos de estadísticas y personas recientes
           setDashboardData({

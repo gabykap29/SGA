@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from models.Recortds_Persons import RecordsPersons
 import uuid
 from models.Persons import Persons
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 class RecordService:
     def __init__(self) -> None:
@@ -80,3 +80,29 @@ class RecordService:
         db.commit()
 
         return True
+        
+    def search_records(self, db: Session, search_term: str):
+        """
+        Busca antecedentes por término en título, contenido y observaciones.
+        
+        Args:
+            db: Sesión de base de datos
+            search_term: Término de búsqueda
+        
+        Returns:
+            Lista de antecedentes que coinciden con el término de búsqueda
+        """
+        search_pattern = f"%{search_term}%"
+        
+        records = db.query(self.recordModel).filter(
+            or_(
+                self.recordModel.title.ilike(search_pattern),
+                self.recordModel.content.ilike(search_pattern),
+                self.recordModel.observations.ilike(search_pattern),
+                self.recordModel.type_record.ilike(search_pattern)
+            )
+        ).options(
+            joinedload(self.recordModel.person_relationships).joinedload(RecordsPersons.person)
+        ).all()
+        
+        return records

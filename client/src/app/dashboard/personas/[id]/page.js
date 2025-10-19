@@ -55,23 +55,7 @@ export default function PersonView() {
       setLoading(true);
       const result = await personService.getPersonById(personId);
       
-      console.log('Datos de persona recibidos:', result);
-      
       if (result.success) {
-        console.log('Archivos adjuntos:', result.data.files);
-        
-        // Depuración detallada de los archivos
-        if (result.data.files && result.data.files.length > 0) {
-          console.log('Detalle del primer archivo:', {
-            keys: Object.keys(result.data.files[0]),
-            mimetype: result.data.files[0].mimetype,
-            hasOwnMimetype: result.data.files[0].hasOwnProperty('mimetype')
-          });
-        } else {
-          console.log('No hay archivos disponibles');
-        }
-        
-        console.log('Relaciones con antecedentes:', result.data.record_relationships);
         setPerson(result.data);
       } else {
         toast.error(result.error || 'Error al cargar los datos de la persona');
@@ -92,7 +76,6 @@ export default function PersonView() {
   };
 
   const handleEdit = () => {
-    console.log('Opening edit modal for person:', person?.names);
     setShowEditModal(true);
   };
 

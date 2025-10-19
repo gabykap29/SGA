@@ -56,21 +56,17 @@ export default function RecordDetail() {
   const handleCreateAndLinkPerson = async (personData) => {
     try {
       setLinkLoading(true);
-      console.log('Datos de persona creada recibidos:', personData);
       
-      // Extraer el ID de la persona de la respuesta
-      const personId = personData.person_id || personData.id;
+      // Extraer el ID de la persona de la respuesta con más opciones
+      const personId = personData.person_id || personData.id || personData.personId;
       
       if (!personId) {
-        console.error('No se pudo encontrar el ID de la persona en:', personData);
         toast.error('No se pudo obtener el ID de la persona creada');
         return;
       }
       
-      console.log(`Vinculando persona ID ${personId} con antecedente ID ${recordId}, tipo: ${personData.type_relationship}`);
-      
       // La persona ya fue creada en el modal, solo necesitamos vincularla
-      const result = await recordService.linkPersonToRecord(personId, recordId, personData.type_relationship);
+      const result = await recordService.linkPersonToRecord(personId, recordId, personData.type_relationship || 'Denunciado');
       
       if (result.success) {
         toast.success('Persona creada y vinculada exitosamente');
@@ -263,7 +259,7 @@ export default function RecordDetail() {
                                       onClick={() => router.push(`/dashboard/personas/${relationship.person_id}`)}
                                     >
                                       <FiUser size={14} className="me-1" />
-                                      Ver Perfil
+                                      Ver
                                     </Button>
                                   </td>
                                 </tr>

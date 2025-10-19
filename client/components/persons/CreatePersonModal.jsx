@@ -104,7 +104,13 @@ const CreatePersonModal = ({ show, onHide, onPersonCreated }) => {
           
           // Notificar al componente padre
           if (onPersonCreated) {
-            onPersonCreated(result.data);
+            // Agregar el tipo de relación a la respuesta para que esté disponible en handleCreateAndLinkPerson
+            const personDataWithRelation = {
+              ...result.data,
+              person_id: result.data.person_id || result.data.data?.person_id,
+              type_relationship: formData.type_relationship
+            };
+            onPersonCreated(personDataWithRelation);
           }
           
           // Cerrar el modal

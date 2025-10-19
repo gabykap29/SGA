@@ -16,8 +16,6 @@ class DashboardService {
         throw new Error('No hay token de autenticación');
       }
 
-      console.log('Solicitando estadísticas a:', `${API_BASE_URL}/records/stats/`);
-      
       const response = await fetch(`${API_BASE_URL}/records/stats/`, {
         method: 'GET',
         headers: {
@@ -32,7 +30,6 @@ class DashboardService {
       }
 
       const data = await response.json();
-      console.log('Datos recibidos de estadísticas:', data);
       
       return {
         success: true,
@@ -109,11 +106,8 @@ class DashboardService {
       const statsResult = await this.getStats();
       const personsResult = await this.getRecentPersons(5);
       
-      console.log('getDashboardData - statsResult:', statsResult);
-      
       if (statsResult.success && personsResult.success && statsResult.data && statsResult.data.stats) {
         const stats = statsResult.data.stats;
-        console.log('getDashboardData - stats procesados:', stats);
         
         return {
           success: true,

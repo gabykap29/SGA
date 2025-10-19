@@ -21,6 +21,7 @@ export const useLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isView, setIsView] = useState(false);
   
   const router = useRouter();
   
@@ -30,8 +31,8 @@ export const useLogin = () => {
       try {
         const userData = await authService.getCurrentUser();
         if (userData) {
-          console.log('userData:', userData);
           setUser(userData);
+          
           // Verificar si el usuario tiene rol de admin - múltiples comprobaciones para ser robustos
           const isUserAdmin = 
             // Si role_name está directamente en userData
@@ -42,8 +43,15 @@ export const useLogin = () => {
             userData.role_id === 1 || 
             (userData.role && userData.role.role_id === 1);
           
+          // Verificar si el usuario tiene rol VIEW
+          const isUserView = 
+            // Si role_name está directamente en userData
+            (userData.role_name && userData.role_name.toUpperCase() === 'VIEW') ||
+            // Si role contiene role_name
+            (userData.role && userData.role.role_name && userData.role.role_name.toUpperCase() === 'VIEW');
+          
           setIsAdmin(isUserAdmin);
-          console.log('Estado admin:', isUserAdmin, 'userData:', userData);
+          setIsView(isUserView);
         }
       } catch (error) {
         console.error('Error al verificar sesión:', error);
@@ -128,21 +136,32 @@ export const useLogin = () => {
           // Si role_id está directamente o dentro de role
           result.user?.role_id === 1 || 
           (result.user?.role && result.user.role.role_id === 1);
+          
+        // Verificar si el usuario tiene rol VIEW
+        const isUserView = 
+          // Si role_name está directamente en result.user
+          (result.user?.role_name && result.user.role_name.toUpperCase() === 'VIEW') ||
+          // Si role contiene role_name
+          (result.user?.role?.role_name && result.user.role.role_name.toUpperCase() === 'VIEW');
         
         setIsAdmin(isUserAdmin);
-        console.log('Login exitoso - Estado admin:', isUserAdmin, 'userData:', result.user);
+        setIsView(isUserView);
         
         toast.success('¡Bienvenido al sistema!', {
           position: "top-right",
           autoClose: 2000,
         });
         setTimeout(() => {
-          router.push('/dashboard');
+          // Si es usuario VIEW, redirigir a la vista especial
+          if (isUserView) {
+            router.push('/dashboard/view');
+          } else {
+            router.push('/dashboard');
+          }
         }, 500);
       } else {
         // Mostrar error del servidor
         setError(result.error);
-        console.log(result);
         
         toast.error(result.error || 'Error al iniciar sesión');
       }
@@ -175,6 +194,7 @@ export const useLogin = () => {
     showPassword,
     user,
     isAdmin,
+    isView,
     
     // Acciones
     handleInputChange,

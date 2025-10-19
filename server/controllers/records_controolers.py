@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi import APIRouter, HTTPException, status, Depends, Request, Query
 from fastapi.responses import JSONResponse
 from services.records_services import RecordService
 from database.db import SessionLocal
@@ -14,20 +14,30 @@ record_service = RecordService()
 
 @router.get("", status_code=status.HTTP_200_OK)
 def get_records(current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all)):
+    print(f"🔍 GET /records - Usuario: {current_user.get('sub', 'unknown')}")
+    print(f"🔍 Autorización: {is_authorized}")
+    
     if not is_authorized:
+        print("❌ Usuario no autorizado")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para listar registros"
         )
     db_session = SessionLocal()
     try: 
+        print("📋 Obteniendo records de la base de datos...")
         records = record_service.get_records(db=db_session)
         records_list = list(records)
+        print(f"📊 Records encontrados: {len(records_list)}")
+        
         if len(records_list) == 0: 
+            print("⚠️  No hay records, retornando 404")
             return JSONResponse(
                 content="Aun no se han cargado antecedentes",
                 status_code=status.HTTP_404_NOT_FOUND
             )
+        
+        print("✅ Enviando respuesta con CustomJSONResponse")
         # Usar nuestra respuesta personalizada para manejar la serialización de dates y UUIDs
         return CustomJSONResponse(content=records_list)
 
@@ -304,6 +314,52 @@ def delete_report(id: str, request: Request, current_user: Dict = Depends(is_aut
         return HTTPException(
             status_code=500,
             detail="Error al intentar eliminar un antecedente!"
+        )
+    finally:
+        db_session.close()
+        
+# Endpoint para buscar antecedentes por término de búsqueda
+@router.get("/search", status_code=status.HTTP_200_OK)
+def search_records(
+    query: str = Query(..., description="Término de búsqueda"),
+    current_user: Dict = Depends(is_authenticated),
+    is_authorized: bool = Depends(check_rol_all)
+):
+    print(f"🔍 GET /records/search - Query: {query} - Usuario: {current_user.get('sub', 'unknown')}")
+    
+    if not is_authorized:
+        print("❌ Usuario no autorizado para buscar antecedentes")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para buscar antecedentes"
+        )
+    
+    db_session = SessionLocal()
+    try:
+        print(f"🔎 Buscando antecedentes que coincidan con: '{query}'")
+        records = record_service.search_records(db=db_session, search_term=query)
+        records_list = list(records)
+        print(f"📊 Antecedentes encontrados: {len(records_list)}")
+        
+        # Registrar búsqueda en logs
+        try:
+            logs_service.create_logs(
+                action=f"Búsqueda de antecedentes con término: '{query}'",
+                user_id=current_user.get("user_id"),
+                db=db_session
+            )
+        except Exception as log_error:
+            print(f"Error al registrar log de búsqueda: {log_error}")
+        
+        # Retornar resultados
+        print("✅ Enviando respuesta de búsqueda con CustomJSONResponse")
+        return CustomJSONResponse(content=records_list)
+
+    except Exception as e:
+        print(f"Error interno al buscar antecedentes: {e}")
+        return JSONResponse(
+            content="Error interno al buscar antecedentes",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
     finally:
         db_session.close()

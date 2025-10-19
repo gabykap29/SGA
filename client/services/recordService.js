@@ -24,20 +24,34 @@ class RecordService {
   // Obtener todos los antecedentes
   async getRecords() {
     try {
-      const response = await fetch(`${this.baseURL}/records`, {
+      const token = this.getAuthToken();
+      const url = `${this.baseURL}/records`;
+      const headers = this.getHeaders();
+      
+      console.log('RecordService: Making request to:', url);
+      console.log('RecordService: Token present:', !!token);
+      console.log('RecordService: Headers:', headers);
+      
+      const response = await fetch(url, {
         method: 'GET',
-        headers: this.getHeaders()
+        headers: headers
       });
+
+      console.log('RecordService: Response status:', response.status);
+      console.log('RecordService: Response ok:', response.ok);
 
       if (response.ok) {
         const data = await response.json();
+        console.log('RecordService: Response data:', data);
         return { success: true, data };
       } else {
         // Si es 404, devolver array vacío
         if (response.status === 404) {
+          console.log('RecordService: 404 response, returning empty array');
           return { success: true, data: [] };
         }
         const errorData = await response.json();
+        console.log('RecordService: Error response:', errorData);
         return { success: false, error: errorData.detail || 'Error al obtener antecedentes' };
       }
     } catch (error) {
@@ -74,15 +88,11 @@ class RecordService {
       const { title, date, content, observations, type_record, category } = recordData;
       const recordDataToSend = { title, date, content, observations, type_record, category };
       
-      console.log('Creando antecedente con datos:', recordDataToSend);
-      
       const response = await fetch(`${this.baseURL}/records/create`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(recordDataToSend)
       });
-
-      console.log('Respuesta del servidor:', response.status, response.statusText);
       
       // Manejo especial de errores HTTP
       if (!response.ok) {
@@ -90,7 +100,6 @@ class RecordService {
         
         try {
           const errorData = await response.json();
-          console.log('Error data:', errorData);
           
           // Manejar específicamente el error 422 (antecedente ya existe)
           if (response.status === 422) {
@@ -110,7 +119,6 @@ class RecordService {
       
       try {
         const data = await response.json();
-        console.log('Datos recibidos:', data);
         return { success: true, data };
       } catch (parseError) {
         console.error('Error al parsear respuesta:', parseError);
@@ -125,7 +133,6 @@ class RecordService {
   // Actualizar un antecedente
   async updateRecord(recordId, recordData) {
     try {
-      console.log('Actualizando antecedente con ID:', recordId, 'datos:', recordData);
       
       const response = await fetch(`${this.baseURL}/records/${recordId}`, {
         method: 'PUT',
@@ -149,7 +156,6 @@ class RecordService {
   // Eliminar un antecedente
   async deleteRecord(recordId) {
     try {
-      console.log('Eliminando antecedente con ID:', recordId);
       
       const response = await fetch(`${this.baseURL}/records/${recordId}`, {
         method: 'DELETE',
@@ -185,8 +191,6 @@ class RecordService {
       // Usamos la ruta principal con parámetros de búsqueda
       const url = `${this.baseURL}/records${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
       
-      console.log('Buscando antecedentes en URL:', url);
-      
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders()
@@ -208,19 +212,14 @@ class RecordService {
   // Vincular una persona a un antecedente
   async linkPersonToRecord(personId, recordId, typeRelationship = "Denunciado") {
     try {
-      console.log(`Vinculando persona ${personId} con antecedente ${recordId}, tipo: ${typeRelationship}`);
-      
       // Usar la URL y método correctos según el controlador del backend
       const response = await fetch(`${this.baseURL}/persons/${personId}/record/${recordId}?type_relationship=${typeRelationship}`, {
         method: 'PATCH',  // Este es el método correcto según el controlador
         headers: this.getHeaders()
       });
-
-      console.log('Respuesta del servidor:', response.status, response.statusText);
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Vinculación exitosa:', data);
         return { success: true, data };
       } else {
         const errorData = await response.json();
@@ -252,6 +251,50 @@ class RecordService {
     } catch (error) {
       console.error('RecordService.unlinkPersonFromRecord error:', error);
       return { success: false, error: 'Error de conexión' };
+    }
+  }
+  
+  // Método para buscar antecedentes
+  async searchRecords(searchTerm) {
+    try {
+      const token = this.getAuthToken();
+      const url = `${this.baseURL}/records/search?query=${encodeURIComponent(searchTerm)}`;
+      const headers = this.getHeaders();
+      
+      console.log('RecordService.searchRecords: Making request to:', url);
+      console.log('RecordService.searchRecords: Token present:', !!token);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers
+      });
+
+      console.log('RecordService.searchRecords: Response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('RecordService.searchRecords: Response data count:', data.length);
+        return { success: true, data };
+      } else {
+        // Si es 404, devolver array vacío
+        if (response.status === 404) {
+          console.log('RecordService.searchRecords: 404 response, returning empty array');
+          return { success: true, data: [] };
+        }
+        
+        const errorData = await response.json().catch(() => ({}));
+        console.error('RecordService.searchRecords: Error response:', errorData);
+        return { 
+          success: false, 
+          error: errorData.detail || `Error al buscar antecedentes: ${response.status}`
+        };
+      }
+    } catch (error) {
+      console.error('RecordService.searchRecords error:', error);
+      return { 
+        success: false, 
+        error: `Error de conexión al buscar antecedentes: ${error.message}` 
+      };
     }
   }
 }

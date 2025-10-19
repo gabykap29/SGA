@@ -44,8 +44,6 @@ class PersonService {
         observations: personData.observations || ''
       };
 
-      console.log('Sending to backend:', backendData); // Para debug
-
       const response = await fetch(`${this.baseURL}/persons/create`, {
         method: 'POST',
         headers: this.getHeaders(),

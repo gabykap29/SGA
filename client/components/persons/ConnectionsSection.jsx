@@ -22,10 +22,11 @@ const ConnectionsSection = ({ personId, refreshKey, onRefresh }) => {
   const [loading, setLoading] = useState(false);
   const [linkedPersons, setLinkedPersons] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [availablePersons, setAvailablePersons] = useState([]);
+  const [searchResults, setSearchResults] = useState([]);
   const [filteredPersons, setFilteredPersons] = useState([]);
   const [selectedPersons, setSelectedPersons] = useState([]);
-  const [loadingPersons, setLoadingPersons] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchPerformed, setSearchPerformed] = useState(false);
   const [relationshipType, setRelationshipType] = useState('GRUPO_CRIMINAL');
   const [showLinkForm, setShowLinkForm] = useState(false);
   const [unlinkLoading, setUnlinkLoading] = useState({});
@@ -34,14 +35,13 @@ const ConnectionsSection = ({ personId, refreshKey, onRefresh }) => {
   useEffect(() => {
     if (personId) {
       loadLinkedPersons();
-      loadAvailablePersons();
     }
   }, [personId, refreshKey]);
 
-  // Filtrar personas disponibles cuando cambie el término de búsqueda
+  // Filtrar personas disponibles cuando cambien los resultados de búsqueda
   useEffect(() => {
     filterPersons();
-  }, [searchTerm, availablePersons, linkedPersons]);
+  }, [searchResults, linkedPersons]);
 
   const loadLinkedPersons = async () => {
     setLoading(true);
@@ -62,40 +62,43 @@ const ConnectionsSection = ({ personId, refreshKey, onRefresh }) => {
     }
   };
 
-  const loadAvailablePersons = async () => {
-    setLoadingPersons(true);
+  const handleSearch = async (searchQuery = searchTerm) => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setSearchPerformed(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchPerformed(true);
+    
     try {
-      const result = await personService.getPersons();
+      const result = await personService.searchPersons(searchQuery);
       if (result.success) {
         // Filtrar la propia persona
         const filtered = result.data.filter(person => 
           person.person_id !== personId
         );
-        setAvailablePersons(filtered);
+        setSearchResults(filtered);
+        
+        if (filtered.length === 0) {
+          toast.info('No se encontraron personas con ese criterio de búsqueda');
+        }
       } else {
-        toast.error(result.error || 'Error al cargar personas');
-        setAvailablePersons([]);
+        toast.error(result.error || 'Error al buscar personas');
+        setSearchResults([]);
       }
     } catch (error) {
-      console.error('Error loading persons:', error);
-      toast.error('Error al cargar personas');
-      setAvailablePersons([]);
+      console.error('Error searching persons:', error);
+      toast.error('Error al buscar personas');
+      setSearchResults([]);
     } finally {
-      setLoadingPersons(false);
+      setIsSearching(false);
     }
   };
 
   const filterPersons = () => {
-    let filtered = availablePersons;
-
-    // Filtrar por término de búsqueda
-    if (searchTerm) {
-      filtered = filtered.filter(person => 
-        person.names?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        person.lastnames?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        person.identification?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+    let filtered = searchResults;
 
     // Filtrar personas ya vinculadas
     const linkedIds = linkedPersons.map(person => person.person_id);
@@ -302,23 +305,36 @@ const ConnectionsSection = ({ personId, refreshKey, onRefresh }) => {
           {/* Buscador */}
           <Row className="mb-3">
             <Col md={7}>
-              <InputGroup>
-                <InputGroup.Text>
-                  <FiSearch />
-                </InputGroup.Text>
-                <Form.Control
-                  placeholder="Buscar por nombre o DNI..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <Button
-                  variant="outline-secondary"
-                  onClick={() => setSearchTerm('')}
-                  disabled={!searchTerm}
-                >
-                  <FiXCircle />
-                </Button>
-              </InputGroup>
+              <Form onSubmit={(e) => { e.preventDefault(); handleSearch(); }}>
+                <InputGroup>
+                  <InputGroup.Text>
+                    <FiSearch />
+                  </InputGroup.Text>
+                  <Form.Control
+                    placeholder="Buscar por nombre, apellido o documento..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  <Button
+                    variant="dark"
+                    type="submit"
+                    disabled={isSearching}
+                  >
+                    {isSearching ? 'Buscando...' : 'Buscar'}
+                  </Button>
+                  <Button
+                    variant="outline-secondary"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setSearchResults([]);
+                      setSearchPerformed(false);
+                    }}
+                    disabled={!searchTerm}
+                  >
+                    <FiXCircle />
+                  </Button>
+                </InputGroup>
+              </Form>
             </Col>
             <Col md={5}>
               <Form.Select
@@ -347,14 +363,18 @@ const ConnectionsSection = ({ personId, refreshKey, onRefresh }) => {
 
           {/* Lista de personas disponibles */}
           <div className="border rounded overflow-auto mb-3" style={{ maxHeight: '300px' }}>
-            {loadingPersons ? (
+            {isSearching ? (
               <div className="text-center py-5">
                 <Spinner animation="border" variant="primary" />
-                <p className="text-muted mt-2">Cargando personas...</p>
+                <p className="text-muted mt-2">Buscando personas...</p>
               </div>
-            ) : filteredPersons.length === 0 ? (
+            ) : !searchPerformed ? (
               <Alert variant="info" className="m-3">
-                No se encontraron personas disponibles para vincular
+                Ingrese un criterio de búsqueda para encontrar personas y vincularlas.
+              </Alert>
+            ) : filteredPersons.length === 0 ? (
+              <Alert variant="warning" className="m-3">
+                No se encontraron personas que coincidan con la búsqueda "{searchTerm}".
               </Alert>
             ) : (
               <Table hover className="mb-0">

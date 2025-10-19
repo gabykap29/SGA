@@ -170,7 +170,11 @@ def create_person(body: PersonSchema, current_user: Dict = Depends(is_authentica
                 status_code=422,
                 detail="La persona ya existe!"
             )
-        return person
+        return {
+            "message": "Persona creada exitosamente",
+            "person_id": str(person.person_id),
+            "data": person
+        }
     except Exception as e:
         print("Error critico al crear la persona", e)
         raise HTTPException(

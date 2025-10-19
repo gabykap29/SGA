@@ -48,10 +48,30 @@ class CustomJSONEncoder(json.JSONEncoder):
     def _sqlalchemy_to_dict(self, obj):
         """Convierte un objeto SQLAlchemy a diccionario."""
         data = {}
+        
+        # Serializar columnas de la tabla
         for column in obj.__table__.columns:
             value = getattr(obj, column.name)
             # Ya estamos manejando la conversión en el método default
             data[column.name] = value
+        
+        # Serializar relaciones específicas que sabemos que existen
+        if hasattr(obj, 'person_relationships'):
+            try:
+                relationships = getattr(obj, 'person_relationships')
+                if relationships is not None:
+                    data['person_relationships'] = [self.default(rel) for rel in relationships]
+            except:
+                pass
+                
+        if hasattr(obj, 'files'):
+            try:
+                files = getattr(obj, 'files')
+                if files is not None:
+                    data['files'] = [self.default(file) for file in files]
+            except:
+                pass
+                
         return data
 
 def json_dumps(obj: Any) -> str:

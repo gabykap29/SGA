@@ -12,14 +12,16 @@ import {
   FiPlus
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
+import AddImageModal from './AddImageModal';
+import personService from '../../services/personService';
 
 const ImageGallery = ({ images = [], personId, onUpdate }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showAddImageModal, setShowAddImageModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [imageUrls, setImageUrls] = useState({});
 
-  console.log('ImageGallery recibió:', images);
-  
   // Filtrar imágenes válidas
   const validImages = Array.isArray(images) ? images.filter(img => {
     if (!img) return false;
@@ -31,8 +33,6 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
       (img.original_filename && /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(img.original_filename))
     );
   }) : [];
-  
-  console.log('Imágenes válidas filtradas:', validImages.length);
 
   const openModal = (image) => {
     setSelectedImage(image);
@@ -42,6 +42,20 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
   const closeModal = () => {
     setSelectedImage(null);
     setShowModal(false);
+  };
+
+  const handleAddImage = async ({ file, description }) => {
+    setUploading(true);
+    try {
+      await personService.uploadFiles(personId, [{ file, description }]);
+      toast.success('Imagen subida correctamente');
+      setShowAddImageModal(false);
+      if (onUpdate) onUpdate();
+    } catch (e) {
+      toast.error('Error al subir la imagen');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const deleteImage = async (imageToDelete) => {
@@ -154,19 +168,6 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
           </div>
           <h5 className="fw-bold text-dark mb-2">No hay imágenes</h5>
           <p className="text-muted mb-4">Esta persona no tiene imágenes adjuntas.</p>
-          <Button 
-            variant="dark" 
-            className="px-4 py-2"
-            style={{
-              backgroundColor: '#212529',
-              border: '1px solid #000',
-              borderRadius: '4px',
-              color: 'white'
-            }}
-          >
-            <FiPlus className="me-2" size={16} />
-            Subir primera imagen
-          </Button>
         </div>
       </div>
     );
@@ -182,6 +183,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
         <Button 
           variant="dark" 
           size="sm"
+          onClick={() => setShowAddImageModal(true)}
           className="px-3 py-2"
           style={{
             backgroundColor: '#212529',
@@ -385,6 +387,17 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
           )}
         </Modal.Body>
       </Modal>
+
+
+      {/* Modal para añadir imagen */}
+      <AddImageModal 
+        show={showAddImageModal} 
+        onHide={() => {
+          setShowAddImageModal(false);
+        }} 
+        onUpload={handleAddImage} 
+        isLoading={uploading} 
+      />
     </div>
   );
 };

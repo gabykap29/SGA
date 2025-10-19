@@ -10,7 +10,8 @@ class RolesService:
             roles_list = [
                 self.roleModel(name="ADMIN"),
                 self.roleModel(name="MODERATE"),
-                self.roleModel(name="USERS")
+                self.roleModel(name="USERS"),
+                self.roleModel(name="VIEW")
             ]
             db.add_all(roles_list)
             db.commit()

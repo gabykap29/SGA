@@ -59,7 +59,6 @@ export default function SearchPersons() {
       
       // Llamar al servicio de búsqueda usando solo el término de búsqueda
       const result = await personService.searchPersons(searchQuery);
-      console.log('Resultado de búsqueda:', result);
       
       if (result.success) {
         setSearchResults(result.data || []);

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Table, Card, Button, Badge, Alert } from 'react-bootstrap';
 import { 
   FiFile, 
@@ -11,8 +12,12 @@ import {
   FiCalendar
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
+import AddDocumentModal from './AddDocumentModal';
+import personService from '../../services/personService';
 
 const DocumentsList = ({ documents = [], personId, onUpdate }) => {
+  const [showAddDocumentModal, setShowAddDocumentModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
   console.log('DocumentsList - Documentos recibidos:', documents);
   
   // Filtrar documentos que no tienen propiedades necesarias
@@ -140,6 +145,26 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
     }
   };
 
+  const handleAddDocument = async ({ file, description }) => {
+    try {
+      setUploading(true);
+      const result = await personService.uploadFiles(personId, [{ file, description }]);
+      
+      if (result.success) {
+        toast.success('Documento subido exitosamente');
+        setShowAddDocumentModal(false);
+        onUpdate?.(); // Actualizar la lista de documentos
+      } else {
+        toast.error(result.error || 'Error al subir el documento');
+      }
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      toast.error('Error inesperado al subir el documento');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (validDocuments.length === 0) {
     return (
       <div style={{ backgroundColor: '#f8f9fa', padding: '0' }}>
@@ -161,20 +186,28 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
         </div>
         <h5 className="fw-bold text-dark mb-2">No hay documentos</h5>
         <p className="text-muted mb-4">Esta persona no tiene documentos adjuntos.</p>
-          <Button 
-            variant="dark" 
-            className="px-4 py-2"
-            style={{
-              backgroundColor: '#212529',
-              border: '1px solid #000',
-              borderRadius: '4px',
-              color: 'white'
-            }}
-          >
-            <FiFilePlus className="me-2" size={16} />
-            Subir primer documento
-          </Button>
+        <Button 
+          variant="dark" 
+          onClick={() => setShowAddDocumentModal(true)}
+          className="px-4 py-2 shadow-sm"
+          style={{
+            background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+            border: 'none',
+            borderRadius: '8px'
+          }}
+        >
+          <FiFilePlus className="me-2" />
+          Subir primer documento
+        </Button>
         </div>
+
+        {/* Modal para añadir documento cuando no hay documentos */}
+        <AddDocumentModal 
+          show={showAddDocumentModal} 
+          onHide={() => setShowAddDocumentModal(false)} 
+          onUpload={handleAddDocument} 
+          isLoading={uploading} 
+        />
       </div>
     );
   }
@@ -200,6 +233,7 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
             variant="dark" 
             size="sm"
             className="px-3 py-2 shadow-sm"
+            onClick={() => setShowAddDocumentModal(true)}
             style={{
               background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
               border: 'none',
@@ -397,6 +431,14 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
           </Card.Body>
         </Card>
       </div>
+
+      {/* Modal para añadir documento */}
+      <AddDocumentModal 
+        show={showAddDocumentModal} 
+        onHide={() => setShowAddDocumentModal(false)} 
+        onUpload={handleAddDocument} 
+        isLoading={uploading} 
+      />
     </div>
   );
 };

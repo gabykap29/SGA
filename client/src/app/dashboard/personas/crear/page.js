@@ -64,7 +64,6 @@ export default function CreatePerson() {
     try {
       setLoading(true);
       const result = await personService.createPerson(formData);
-      console.log(result);
       
       if (result.data.status_code == 422 || result.data.status_code == 400) {
         // Mensaje específico para personas duplicadas
@@ -88,7 +87,7 @@ export default function CreatePerson() {
             setFiles(filesResult.data);
           }
         } catch (fileError) {
-          console.log('No se pudieron cargar archivos existentes:', fileError);
+          // Error silencioso al cargar archivos
         }
         
         toast.success('Persona creada exitosamente');

@@ -70,7 +70,7 @@ const LinkPersonModal = ({ show, onHide, recordId, onPersonLinked, currentLinked
       if (result.success) {
         toast.success('Persona vinculada exitosamente');
         // Actualizar la lista de personas
-        setPersons(prev => prev.filter(p => p.id !== personId));
+        setPersons(prev => prev.filter(p => (p.person_id || p.id) !== personId));
         // Notificar al componente padre
         if (onPersonLinked) {
           onPersonLinked();
@@ -213,10 +213,10 @@ const LinkPersonModal = ({ show, onHide, recordId, onPersonLinked, currentLinked
                           <Button
                             variant="dark"
                             size="sm"
-                            onClick={() => handleLinkPerson(person.id)}
-                            disabled={linkingPerson === person.id}
+                            onClick={() => handleLinkPerson(person.person_id || person.id)}
+                            disabled={linkingPerson === (person.person_id || person.id)}
                           >
-                            {linkingPerson === person.id ? (
+                            {linkingPerson === (person.person_id || person.id) ? (
                               <Spinner animation="border" size="sm" />
                             ) : (
                               <>

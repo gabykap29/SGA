@@ -212,20 +212,6 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
           </div>
           <h5 className="fw-bold text-dark mb-2">Sin antecedentes vinculados</h5>
           <p className="text-muted mb-4">Esta persona no tiene antecedentes vinculados.</p>
-          <Button 
-            variant="dark" 
-            className="px-4 py-2"
-            onClick={() => setShowLinkModal(true)}
-            style={{
-              backgroundColor: '#212529',
-              border: '1px solid #000',
-              borderRadius: '4px',
-              color: 'white'
-            }}
-          >
-            <FiLink className="me-2" size={16} />
-            Vincular primer antecedente
-          </Button>
         </div>
       ) : (
         <Row>

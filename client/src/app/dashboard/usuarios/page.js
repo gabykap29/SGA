@@ -452,6 +452,7 @@ export default function UsersPage() {
                       if (role.name === 'ADMIN') label = 'Administrador';
                       else if (role.name === 'MODERATE') label = 'Moderador';
                       else if (role.name === 'USER') label = 'Usuario';
+                      else if (role.name === 'VIEW') label = 'Solo Consulta';
                       return (
                         <option key={role.id} value={role.id}>
                           {label}
@@ -590,11 +591,18 @@ export default function UsersPage() {
                     isInvalid={!!errors.role_id}
                   >
                     <option value="">Seleccionar Rol</option>
-                    {roles.map(role => (
-                      <option key={role.id} value={role.id}>
-                        {role.name}
-                      </option>
-                    ))}
+                    {roles.map(role => {
+                      let label = role.name;
+                      if (role.name === 'ADMIN') label = 'Administrador';
+                      else if (role.name === 'MODERATE') label = 'Moderador';
+                      else if (role.name === 'USER') label = 'Usuario';
+                      else if (role.name === 'VIEW') label = 'Solo Consulta';
+                      return (
+                        <option key={role.id} value={role.id}>
+                          {label}
+                        </option>
+                      );
+                    })}
                   </Form.Select>
                   <Form.Control.Feedback type="invalid">
                     {errors.role_id}
