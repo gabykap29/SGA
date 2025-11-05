@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Form, Row, Col, Button, Card, InputGroup, Alert } from 'react-bootstrap';
+import { useState, useEffect, useRef } from 'react';
+import { Form, Row, Col, Button, Card, InputGroup, Alert, Spinner } from 'react-bootstrap';
 import { FiUser, FiMapPin, FiSave, FiFlag, FiCreditCard, FiHome, FiCheck, FiAlertCircle } from 'react-icons/fi';
+import { toast } from 'react-toastify';
+import personService from '../../services/personService';
 
 const PersonForm = ({ onSave, loading = false, initialData = null, isDuplicateError = false, onDuplicateErrorChange }) => {
   const [formData, setFormData] = useState({
@@ -19,6 +21,9 @@ const PersonForm = ({ onSave, loading = false, initialData = null, isDuplicateEr
   const [errors, setErrors] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [completedSections, setCompletedSections] = useState(new Set());
+  const [searchingDNI, setSearchingDNI] = useState(false);
+  const [personFound, setPersonFound] = useState(null);
+  const dniSearchTimeout = useRef(null);
 
   useEffect(() => {
     if (initialData) {
@@ -27,6 +32,57 @@ const PersonForm = ({ onSave, loading = false, initialData = null, isDuplicateEr
       validateAllSections(initialData);
     }
   }, [initialData]);
+
+  // Cleanup del timeout cuando se desmonta el componente
+  useEffect(() => {
+    return () => {
+      if (dniSearchTimeout.current) {
+        clearTimeout(dniSearchTimeout.current);
+      }
+    };
+  }, []);
+
+  // Función para buscar persona por DNI
+  const searchPersonByDNI = async (dni) => {
+    if (!dni || dni.length < 7) {
+      setPersonFound(null);
+      return;
+    }
+
+    try {
+      setSearchingDNI(true);
+      const result = await personService.searchPersons({
+        identification: dni
+      });
+
+      if (result.success && result.data && result.data.length > 0) {
+        const person = result.data[0];
+        setPersonFound(person);
+
+        // Auto-llenar los campos
+        const updatedFormData = {
+          ...formData,
+          names: person.names || '',
+          lastnames: person.lastnames || '',
+          province: person.province || 'Buenos Aires',
+          country: person.country || 'Argentina',
+          address: person.address || '',
+          identification_type: person.identification_type || 'DNI'
+        };
+        setFormData(updatedFormData);
+        validateAllSections(updatedFormData);
+
+        toast.success('Persona encontrada. Información completada automáticamente.');
+      } else {
+        setPersonFound(null);
+      }
+    } catch (error) {
+      console.error('Error al buscar persona:', error);
+      setPersonFound(null);
+    } finally {
+      setSearchingDNI(false);
+    }
+  };
 
   const validateAllSections = (data) => {
     const completed = new Set();
@@ -86,13 +142,19 @@ const PersonForm = ({ onSave, loading = false, initialData = null, isDuplicateEr
         onDuplicateErrorChange(false);
       }
     }
-    
-    // Si el campo es identificación, también limpiamos el error de duplicado
-    if (name === 'identification' || name === 'identification_type') {
-      // Lógicamente, si cambia la identificación ya no es un duplicado
-      if (isDuplicateError) {
-        // Usamos una función vacía si onDuplicateErrorChange no está definida
-        (onDuplicateErrorChange || (() => {}))();
+
+    // Si es el campo de DNI, buscar persona después de 500ms sin escribir
+    if (name === 'identification') {
+      if (dniSearchTimeout.current) {
+        clearTimeout(dniSearchTimeout.current);
+      }
+
+      if (value.trim().length >= 7) {
+        dniSearchTimeout.current = setTimeout(() => {
+          searchPersonByDNI(value.trim());
+        }, 500);
+      } else {
+        setPersonFound(null);
       }
     }
   };
@@ -359,13 +421,19 @@ const PersonForm = ({ onSave, loading = false, initialData = null, isDuplicateEr
                         className="border-start-0 ps-2"
                         style={{ boxShadow: isDuplicateError ? '0 0 0 0.25rem rgba(220, 53, 69, 0.25)' : 'none' }}
                       />
+                      {searchingDNI && <InputGroup.Text><Spinner size="sm" animation="border" /></InputGroup.Text>}
                       <Form.Control.Feedback type="invalid">
                         {isDuplicateError ? 'Este número de identificación ya existe en el sistema' : errors.identification}
                       </Form.Control.Feedback>
                     </InputGroup>
                     <Form.Text className="text-muted">
-                      Ingrese solo números, sin puntos ni espacios
+                      Ingrese solo números, sin puntos ni espacios. Se verificará si la persona existe.
                     </Form.Text>
+                    {personFound && (
+                      <Alert variant="success" className="mt-2 mb-0 py-2">
+                        ✓ Persona encontrada. Información completada automáticamente.
+                      </Alert>
+                    )}
                   </Col>
 
                   <Col md={3}>
