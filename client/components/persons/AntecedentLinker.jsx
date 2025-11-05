@@ -99,10 +99,30 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
     }
 
     try {
-      await onLink(selectedAntecedents);
+      // Vincular cada antecedente uno por uno en lugar de enviar todos juntos
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const antecedent of selectedAntecedents) {
+        try {
+          await onLink(antecedent);
+          successCount++;
+        } catch (error) {
+          console.error('Error vinculando antecedente:', error);
+          errorCount++;
+        }
+      }
+
       setSelectedAntecedents([]);
-      toast.success(`${selectedAntecedents.length} antecedente(s) vinculado(s) exitosamente`);
+      
+      if (successCount > 0) {
+        toast.success(`${successCount} antecedente(s) vinculado(s) exitosamente`);
+      }
+      if (errorCount > 0) {
+        toast.error(`Error al vincular ${errorCount} antecedente(s)`);
+      }
     } catch (error) {
+      console.error('Error general al vincular antecedentes:', error);
       toast.error('Error al vincular antecedentes');
     }
   };

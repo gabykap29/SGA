@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Modal, Form, Button, Row, Col, InputGroup, Spinner, Alert } from 'react-bootstrap';
 import { FiUser, FiMapPin, FiSave, FiFlag, FiCreditCard, FiHome, FiX, FiTag } from 'react-icons/fi';
 import personService from '../../services/personService';
@@ -20,6 +20,76 @@ const CreatePersonModal = ({ show, onHide, onPersonCreated }) => {
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [searchingDNI, setSearchingDNI] = useState(false);
+  const [personFound, setPersonFound] = useState(null);
+  const dniSearchTimeout = useRef(null);
+
+  // Cleanup del timeout cuando el modal se cierra
+  useEffect(() => {
+    return () => {
+      if (dniSearchTimeout.current) {
+        clearTimeout(dniSearchTimeout.current);
+      }
+    };
+  }, []);
+
+  // Limpiar el formulario y estados cuando se cierra el modal
+  useEffect(() => {
+    if (!show) {
+      setFormData({
+        identification: '',
+        identification_type: 'DNI',
+        names: '',
+        lastnames: '',
+        address: '',
+        province: 'Buenos Aires',
+        country: 'Argentina',
+        type_relationship: 'Denunciado'
+      });
+      setPersonFound(null);
+      setErrors({});
+    }
+  }, [show]);
+
+  // Función para buscar persona por DNI
+  const searchPersonByDNI = async (dni) => {
+    if (!dni || dni.length < 7) {
+      setPersonFound(null);
+      return;
+    }
+
+    try {
+      setSearchingDNI(true);
+      const result = await personService.searchPersons({
+        identification: dni
+      });
+
+      if (result.success && result.data && result.data.length > 0) {
+        const person = result.data[0];
+        setPersonFound(person);
+
+        // Auto-llenar los campos
+        setFormData(prev => ({
+          ...prev,
+          names: person.names || '',
+          lastnames: person.lastnames || '',
+          province: person.province || 'Buenos Aires',
+          country: person.country || 'Argentina',
+          address: person.address || '',
+          identification_type: person.identification_type || 'DNI'
+        }));
+
+        toast.success('Persona encontrada. Información completada automáticamente.');
+      } else {
+        setPersonFound(null);
+      }
+    } catch (error) {
+      console.error('Error al buscar persona:', error);
+      setPersonFound(null);
+    } finally {
+      setSearchingDNI(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -34,6 +104,19 @@ const CreatePersonModal = ({ show, onHide, onPersonCreated }) => {
         ...prev,
         [name]: ''
       }));
+    }
+
+    // Si es el campo de DNI, buscar persona después de 500ms sin escribir
+    if (name === 'identification') {
+      if (dniSearchTimeout.current) {
+        clearTimeout(dniSearchTimeout.current);
+      }
+
+      if (value.trim().length >= 7) {
+        dniSearchTimeout.current = setTimeout(() => {
+          searchPersonByDNI(value.trim());
+        }, 500);
+      }
     }
   };
 
@@ -89,18 +172,6 @@ const CreatePersonModal = ({ show, onHide, onPersonCreated }) => {
         
         if (result.success) {
           toast.success('Persona creada exitosamente');
-          // Resetear el formulario
-          setFormData({
-            identification: '',
-            identification_type: 'DNI',
-            names: '',
-            lastnames: '',
-            address: '',
-            province: 'Buenos Aires',
-            country: 'Argentina',
-            type_relationship: 'Denunciado'
-          });
-          setErrors({});
           
           // Notificar al componente padre
           if (onPersonCreated) {
@@ -113,7 +184,7 @@ const CreatePersonModal = ({ show, onHide, onPersonCreated }) => {
             onPersonCreated(personDataWithRelation);
           }
           
-          // Cerrar el modal
+          // Cerrar el modal (que disparará el useEffect para limpiar)
           onHide();
         } else {
           toast.error(result.error || 'Error al crear la persona');
@@ -197,46 +268,6 @@ const CreatePersonModal = ({ show, onHide, onPersonCreated }) => {
             
             <h6 className="fw-bold mb-3">Información Personal</h6>
             <Row className="g-3">
-              <Col md={6}>
-                <Form.Label className="fw-medium text-dark">
-                  Nombres <span className="text-danger">*</span>
-                </Form.Label>
-                <InputGroup>
-                  <InputGroup.Text className="bg-white border-end-0">
-                    <FiUser className="text-muted" size={16} />
-                  </InputGroup.Text>
-                  <Form.Control
-                    type="text"
-                    name="names"
-                    value={formData.names}
-                    onChange={handleInputChange}
-                    isInvalid={!!errors.names}
-                    placeholder="Ej: Juan Carlos"
-                    className="border-start-0 ps-0"
-                  />
-                </InputGroup>
-              </Col>
-
-              <Col md={6}>
-                <Form.Label className="fw-medium text-dark">
-                  Apellidos <span className="text-danger">*</span>
-                </Form.Label>
-                <InputGroup>
-                  <InputGroup.Text className="bg-white border-end-0">
-                    <FiUser className="text-muted" size={16} />
-                  </InputGroup.Text>
-                  <Form.Control
-                    type="text"
-                    name="lastnames"
-                    value={formData.lastnames}
-                    onChange={handleInputChange}
-                    isInvalid={!!errors.lastnames}
-                    placeholder="Ej: Pérez González"
-                    className="border-start-0 ps-0"
-                  />
-                </InputGroup>
-              </Col>
-
               <Col md={4}>
                 <Form.Label className="fw-medium text-dark">
                   Tipo de Documento <span className="text-danger">*</span>
@@ -280,10 +311,56 @@ const CreatePersonModal = ({ show, onHide, onPersonCreated }) => {
                     maxLength={8}
                     className="border-start-0 ps-2"
                   />
+                  {searchingDNI && <InputGroup.Text><Spinner size="sm" animation="border" /></InputGroup.Text>}
                 </InputGroup>
                 <Form.Text className="text-muted">
-                  Ingrese solo números, sin puntos ni espacios
+                  Ingrese solo números, sin puntos ni espacios. Se verificará si la persona existe.
                 </Form.Text>
+                {personFound && (
+                  <Alert variant="success" className="mt-2 mb-0 py-2">
+                    ✓ Persona encontrada. Información completada automáticamente.
+                  </Alert>
+                )}
+              </Col>
+
+              <Col md={6}>
+                <Form.Label className="fw-medium text-dark">
+                  Nombres <span className="text-danger">*</span>
+                </Form.Label>
+                <InputGroup>
+                  <InputGroup.Text className="bg-white border-end-0">
+                    <FiUser className="text-muted" size={16} />
+                  </InputGroup.Text>
+                  <Form.Control
+                    type="text"
+                    name="names"
+                    value={formData.names}
+                    onChange={handleInputChange}
+                    isInvalid={!!errors.names}
+                    placeholder="Ej: Juan Carlos"
+                    className="border-start-0 ps-0"
+                  />
+                </InputGroup>
+              </Col>
+
+              <Col md={6}>
+                <Form.Label className="fw-medium text-dark">
+                  Apellidos <span className="text-danger">*</span>
+                </Form.Label>
+                <InputGroup>
+                  <InputGroup.Text className="bg-white border-end-0">
+                    <FiUser className="text-muted" size={16} />
+                  </InputGroup.Text>
+                  <Form.Control
+                    type="text"
+                    name="lastnames"
+                    value={formData.lastnames}
+                    onChange={handleInputChange}
+                    isInvalid={!!errors.lastnames}
+                    placeholder="Ej: Pérez González"
+                    className="border-start-0 ps-0"
+                  />
+                </InputGroup>
               </Col>
             </Row>
           </div>
