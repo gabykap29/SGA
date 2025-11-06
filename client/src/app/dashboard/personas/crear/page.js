@@ -263,7 +263,8 @@ export default function CreatePerson() {
     
     // Si estamos en el paso de antecedentes, vincular automáticamente
     if (activeStep === 3 && personData) {
-      handleRecordsLink([record]);
+      // handleRecordsLink espera un objeto 'antecedent', no un array
+      handleRecordsLink(record);
     }
   };
 

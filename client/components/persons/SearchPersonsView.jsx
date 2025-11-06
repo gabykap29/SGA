@@ -354,18 +354,17 @@ const SearchPersonsView = () => {
                           <td>
                             <div className="d-flex align-items-center">
                               <div className="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center me-3" style={{ width: '40px', height: '40px', fontSize: '16px' }}>
-                                {person.name?.charAt(0)?.toUpperCase() || '?'}
-                                {person.lastname?.charAt(0)?.toUpperCase() || ''}
+                                {person.names?.charAt(0)?.toUpperCase() || '?'}
+                                {person.lastnames?.charAt(0)?.toUpperCase() || ''}
                               </div>
                               <div>
-                                <div className="fw-bold">{person.name} {person.lastname}</div>
+                                <div className="fw-bold">{person.names} {person.lastnames}</div>
                               </div>
                             </div>
                           </td>
                           <td>
                             <div className="d-flex flex-column">
-                              <span>{person.document_type ? `${person.document_type}:` : ''} <strong>{person.document_number || 'N/A'}</strong></span>
-                              {person.alias && <small className="text-muted">Alias: {person.alias}</small>}
+                              <span>{person.identification_type ? `${person.identification_type}:` : ''} <strong>{person.identification || 'N/A'}</strong></span>
                             </div>
                           </td>
                           {!isMobile && (

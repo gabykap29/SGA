@@ -50,6 +50,81 @@ def get_records(current_user: Dict = Depends(is_authenticated), is_authorized: b
     finally:
         db_session.close()
 
+@router.get("/search", status_code=status.HTTP_200_OK)
+def search_records(
+    query: str = Query(None, description="Término de búsqueda genérico"),
+    title: str = Query(None, description="Buscar por título"),
+    content: str = Query(None, description="Buscar por contenido"),
+    observations: str = Query(None, description="Buscar por observaciones"),
+    type_record: str = Query(None, description="Buscar por tipo de registro"),
+    date_from: str = Query(None, description="Fecha inicial (YYYY-MM-DD)"),
+    date_to: str = Query(None, description="Fecha final (YYYY-MM-DD)"),
+    person_name: str = Query(None, description="Buscar por nombre de persona relacionada"),
+    current_user: Dict = Depends(is_authenticated),
+    is_authorized: bool = Depends(check_rol_all_or_viewer)
+):
+    print(f"🔍 GET /records/search - Query: {query} - Usuario: {current_user.get('sub', 'unknown')}")
+    
+    if not is_authorized:
+        print("❌ Usuario no autorizado para buscar antecedentes")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para buscar antecedentes"
+        )
+    
+    db_session = SessionLocal()
+    try:
+        # Preparar filtros
+        filters = {}
+        if title:
+            filters['title'] = title
+        if content:
+            filters['content'] = content
+        if observations:
+            filters['observations'] = observations
+        if type_record:
+            filters['type_record'] = type_record
+        if date_from:
+            filters['date_from'] = date_from
+        if date_to:
+            filters['date_to'] = date_to
+        if person_name:
+            filters['person_name'] = person_name
+        
+        print(f"🔎 Buscando antecedentes con filtros: query={query}, filters={filters}")
+        records = record_service.search_records(db=db_session, search_term=query, **filters)
+        records_list = list(records) if records else []
+        print(f"📊 Antecedentes encontrados: {len(records_list)}")
+        
+        # Registrar búsqueda en logs
+        try:
+            search_desc = query or ', '.join([f"{k}:{v}" for k, v in filters.items() if v])
+            logs_service.create_log(
+                db=db_session,
+                user_id=current_user.get("user_id"),
+                action="SEARCH",
+                entity_type="RECORD",
+                entity_id=None,
+                description=f"Búsqueda de antecedentes: {search_desc}"
+            )
+        except Exception as log_error:
+            print(f"Error al registrar log de búsqueda: {log_error}")
+        
+        # Retornar resultados
+        print("✅ Enviando respuesta de búsqueda con CustomJSONResponse")
+        return CustomJSONResponse(content=records_list)
+
+    except Exception as e:
+        print(f"❌ Error interno al buscar antecedentes: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            content={"error": "Error interno al buscar antecedentes", "detail": str(e)},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    finally:
+        db_session.close()
+
 @router.get("/{id}")
 def get_record_by_id(id: str, current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all_or_viewer)):
     if not is_authorized:
@@ -314,82 +389,6 @@ def delete_report(id: str, request: Request, current_user: Dict = Depends(is_aut
         return HTTPException(
             status_code=500,
             detail="Error al intentar eliminar un antecedente!"
-        )
-    finally:
-        db_session.close()
-        
-# Endpoint para buscar antecedentes por término de búsqueda o campos específicos
-@router.get("/search", status_code=status.HTTP_200_OK)
-def search_records(
-    query: str = Query(None, description="Término de búsqueda genérico"),
-    title: str = Query(None, description="Buscar por título"),
-    content: str = Query(None, description="Buscar por contenido"),
-    observations: str = Query(None, description="Buscar por observaciones"),
-    type_record: str = Query(None, description="Buscar por tipo de registro"),
-    date_from: str = Query(None, description="Fecha inicial (YYYY-MM-DD)"),
-    date_to: str = Query(None, description="Fecha final (YYYY-MM-DD)"),
-    person_name: str = Query(None, description="Buscar por nombre de persona relacionada"),
-    current_user: Dict = Depends(is_authenticated),
-    is_authorized: bool = Depends(check_rol_all_or_viewer)
-):
-    print(f"🔍 GET /records/search - Query: {query} - Usuario: {current_user.get('sub', 'unknown')}")
-    
-    if not is_authorized:
-        print("❌ Usuario no autorizado para buscar antecedentes")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tienes permiso para buscar antecedentes"
-        )
-    
-    db_session = SessionLocal()
-    try:
-        # Preparar filtros
-        filters = {}
-        if title:
-            filters['title'] = title
-        if content:
-            filters['content'] = content
-        if observations:
-            filters['observations'] = observations
-        if type_record:
-            filters['type_record'] = type_record
-        if date_from:
-            filters['date_from'] = date_from
-        if date_to:
-            filters['date_to'] = date_to
-        if person_name:
-            filters['person_name'] = person_name
-        
-        print(f"🔎 Buscando antecedentes con filtros: query={query}, filters={filters}")
-        records = record_service.search_records(db=db_session, search_term=query, **filters)
-        records_list = list(records) if records else []
-        print(f"📊 Antecedentes encontrados: {len(records_list)}")
-        
-        # Registrar búsqueda en logs
-        try:
-            search_desc = query or ', '.join([f"{k}:{v}" for k, v in filters.items() if v])
-            logs_service.create_log(
-                db=db_session,
-                user_id= None,
-                action="SEARCH",
-                entity_type="RECORD",
-                entity_id=None,
-                description=f"Búsqueda de antecedentes: {search_desc}"
-            )
-        except Exception as log_error:
-            print(f"Error al registrar log de búsqueda: {log_error}")
-        
-        # Retornar resultados
-        print("✅ Enviando respuesta de búsqueda con CustomJSONResponse")
-        return CustomJSONResponse(content=records_list)
-
-    except Exception as e:
-        print(f"❌ Error interno al buscar antecedentes: {e}")
-        import traceback
-        traceback.print_exc()
-        return JSONResponse(
-            content={"error": "Error interno al buscar antecedentes", "detail": str(e)},
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
     finally:
         db_session.close()
