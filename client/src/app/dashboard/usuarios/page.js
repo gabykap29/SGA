@@ -22,6 +22,18 @@ import roleService from '../../../../services/roleService';
 export default function UsersPage() {
   const router = useRouter();
   
+  // Función helper para traducir nombres de roles
+  const translateRoleName = (roleName) => {
+    const roleTranslations = {
+      'ADMIN': 'Administrador',
+      'MODERATE': 'Moderador',
+      'USER': 'Usuario',
+      'USERS': 'Usuario',
+      'VIEW': 'Solo Consulta'
+    };
+    return roleTranslations[roleName] || roleName;
+  };
+  
   // Estados para la lista de usuarios
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -333,7 +345,7 @@ export default function UsersPage() {
                             <div>
                               <div className="fw-bold">{user.names} {user.lastname}</div>
                               {isMobile && (
-                                <Badge bg="secondary" className="mt-1">{user.role_name}</Badge>
+                                <Badge bg="secondary" className="mt-1">{translateRoleName(user.role_name)}</Badge>
                               )}
                             </div>
                           </div>
@@ -341,7 +353,7 @@ export default function UsersPage() {
                         <td>{user.username}</td>
                         {!isMobile && (
                           <td>
-                            <Badge bg="secondary">{user.role_name}</Badge>
+                            <Badge bg="secondary">{translateRoleName(user.role_name)}</Badge>
                           </td>
                         )}
                         <td>
@@ -447,18 +459,11 @@ export default function UsersPage() {
                     isInvalid={!!errors.role_id}
                   >
                     <option value="">Seleccionar Rol</option>
-                    {roles.map(role => {
-                      let label = role.name;
-                      if (role.name === 'ADMIN') label = 'Administrador';
-                      else if (role.name === 'MODERATE') label = 'Moderador';
-                      else if (role.name === 'USER') label = 'Usuario';
-                      else if (role.name === 'VIEW') label = 'Solo Consulta';
-                      return (
-                        <option key={role.id} value={role.id}>
-                          {label}
-                        </option>
-                      );
-                    })}
+                    {roles.map(role => (
+                      <option key={role.id} value={role.id}>
+                        {translateRoleName(role.name)}
+                      </option>
+                    ))}
                   </Form.Select>
                   <Form.Control.Feedback type="invalid">
                     {errors.role_id}
@@ -591,18 +596,11 @@ export default function UsersPage() {
                     isInvalid={!!errors.role_id}
                   >
                     <option value="">Seleccionar Rol</option>
-                    {roles.map(role => {
-                      let label = role.name;
-                      if (role.name === 'ADMIN') label = 'Administrador';
-                      else if (role.name === 'MODERATE') label = 'Moderador';
-                      else if (role.name === 'USER') label = 'Usuario';
-                      else if (role.name === 'VIEW') label = 'Solo Consulta';
-                      return (
-                        <option key={role.id} value={role.id}>
-                          {label}
-                        </option>
-                      );
-                    })}
+                    {roles.map(role => (
+                      <option key={role.id} value={role.id}>
+                        {translateRoleName(role.name)}
+                      </option>
+                    ))}
                   </Form.Select>
                   <Form.Control.Feedback type="invalid">
                     {errors.role_id}
