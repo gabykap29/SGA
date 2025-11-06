@@ -21,6 +21,7 @@ export const useLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isUser, setIsUser] = useState(false);
   const [isView, setIsView] = useState(false);
   
   const router = useRouter();
@@ -50,6 +51,14 @@ export const useLogin = () => {
             // Si role contiene role_name
             (userData.role && userData.role.role_name && userData.role.role_name.toUpperCase() === 'VIEW');
           
+          // Verificar si el usuario tiene rol USER
+          const isRoleUser = 
+            // Si role_name está directamente en userData
+            (userData.role_name && (userData.role_name.toUpperCase() === 'USER' || userData.role_name.toUpperCase() === 'USERS')) ||
+            // Si role contiene role_name
+            (userData.role && userData.role.role_name && (userData.role.role_name.toUpperCase() === 'USER' || userData.role.role_name.toUpperCase() === 'USERS'));
+
+          setIsUser(isRoleUser);
           setIsAdmin(isUserAdmin);
           setIsView(isUserView);
         }
@@ -144,6 +153,8 @@ export const useLogin = () => {
           // Si role contiene role_name
           (result.user?.role?.role_name && result.user.role.role_name.toUpperCase() === 'VIEW');
         
+        
+
         setIsAdmin(isUserAdmin);
         setIsView(isUserView);
         
@@ -195,6 +206,7 @@ export const useLogin = () => {
     user,
     isAdmin,
     isView,
+    isUser,
     
     // Acciones
     handleInputChange,

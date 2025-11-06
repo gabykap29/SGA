@@ -347,6 +347,67 @@ const PersonForm = ({ onSave, loading = false, initialData = null, isDuplicateEr
                 )}
                 
                 <Row className="g-3">
+                  
+                  <Col md={6}>
+                    <Form.Label className="fw-medium text-dark">
+                      Tipo de Documento <span className="text-danger">*</span>
+                    </Form.Label>
+                    <InputGroup>
+                      <InputGroup.Text className="bg-light border-end-0">
+                        <FiCreditCard className="text-muted" size={16} />
+                      </InputGroup.Text>
+                      <Form.Select
+                        name="identification_type"
+                        value={formData.identification_type}
+                        onChange={handleInputChange}
+                        className="border-start-0"
+                        style={{ boxShadow: 'none' }}
+                      >
+                        <option value="DNI">DNI - Documento Nacional</option>
+                        <option value="CI">CI - Cédula de Identidad</option>
+                        <option value="PASAPORTE">Pasaporte</option>
+                        <option value="LIBRETA_CIVICA">L.C. - Libreta Cívica</option>
+                        <option value="LIBRETA_ENROLAMIENTO">L.E. - Libreta Enrolamiento</option>
+                      </Form.Select>
+                    </InputGroup>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Label className="fw-medium text-dark">
+                      Número de Documento <span className="text-danger">*</span>
+                    </Form.Label>
+                    <InputGroup>
+                      <InputGroup.Text className="bg-light border-end-0">
+                        <span className="text-muted fw-medium" style={{ fontSize: '14px' }}>
+                          {formData.identification_type}
+                        </span>
+                      </InputGroup.Text>
+                      <Form.Control
+                        type="text"
+                        name="identification"
+                        value={formData.identification}
+                        onChange={handleInputChange}
+                        isInvalid={!!errors.identification || isDuplicateError}
+                        isValid={!isDuplicateError && !errors.identification && formData.identification && formData.identification.trim() ? true : false}
+                        placeholder="12345678"
+                        maxLength={8}
+                        className="border-start-0 ps-2"
+                        style={{ boxShadow: isDuplicateError ? '0 0 0 0.25rem rgba(220, 53, 69, 0.25)' : 'none' }}
+                      />
+                      {searchingDNI && <InputGroup.Text><Spinner size="sm" animation="border" /></InputGroup.Text>}
+                      <Form.Control.Feedback type="invalid">
+                        {isDuplicateError ? 'Este número de identificación ya existe en el sistema' : errors.identification}
+                      </Form.Control.Feedback>
+                    </InputGroup>
+                    <Form.Text className="text-muted">
+                      Ingrese solo números, sin puntos ni espacios. Se verificará si la persona existe.
+                    </Form.Text>
+                    {personFound && (
+                      <Alert variant="success" className="mt-2 mb-0 py-2">
+                        ✓ Persona encontrada. Información completada automáticamente.
+                      </Alert>
+                    )}
+                  </Col>
                   <Col md={6}>
                     <Form.Label className="fw-medium text-dark">
                       Nombres <span className="text-danger">*</span>
@@ -397,77 +458,6 @@ const PersonForm = ({ onSave, loading = false, initialData = null, isDuplicateEr
                     </InputGroup>
                   </Col>
 
-                  <Col md={4}>
-                    <Form.Label className="fw-medium text-dark">
-                      Tipo de Documento <span className="text-danger">*</span>
-                    </Form.Label>
-                    <InputGroup>
-                      <InputGroup.Text className="bg-light border-end-0">
-                        <FiCreditCard className="text-muted" size={16} />
-                      </InputGroup.Text>
-                      <Form.Select
-                        name="identification_type"
-                        value={formData.identification_type}
-                        onChange={handleInputChange}
-                        className="border-start-0"
-                        style={{ boxShadow: 'none' }}
-                      >
-                        <option value="DNI">DNI - Documento Nacional</option>
-                        <option value="CI">CI - Cédula de Identidad</option>
-                        <option value="PASAPORTE">Pasaporte</option>
-                        <option value="LIBRETA_CIVICA">L.C. - Libreta Cívica</option>
-                        <option value="LIBRETA_ENROLAMIENTO">L.E. - Libreta Enrolamiento</option>
-                      </Form.Select>
-                    </InputGroup>
-                  </Col>
-
-                  <Col md={5}>
-                    <Form.Label className="fw-medium text-dark">
-                      Número de Documento <span className="text-danger">*</span>
-                    </Form.Label>
-                    <InputGroup>
-                      <InputGroup.Text className="bg-light border-end-0">
-                        <span className="text-muted fw-medium" style={{ fontSize: '14px' }}>
-                          {formData.identification_type}
-                        </span>
-                      </InputGroup.Text>
-                      <Form.Control
-                        type="text"
-                        name="identification"
-                        value={formData.identification}
-                        onChange={handleInputChange}
-                        isInvalid={!!errors.identification || isDuplicateError}
-                        isValid={!isDuplicateError && !errors.identification && formData.identification && formData.identification.trim() ? true : false}
-                        placeholder="12345678"
-                        maxLength={8}
-                        className="border-start-0 ps-2"
-                        style={{ boxShadow: isDuplicateError ? '0 0 0 0.25rem rgba(220, 53, 69, 0.25)' : 'none' }}
-                      />
-                      {searchingDNI && <InputGroup.Text><Spinner size="sm" animation="border" /></InputGroup.Text>}
-                      <Form.Control.Feedback type="invalid">
-                        {isDuplicateError ? 'Este número de identificación ya existe en el sistema' : errors.identification}
-                      </Form.Control.Feedback>
-                    </InputGroup>
-                    <Form.Text className="text-muted">
-                      Ingrese solo números, sin puntos ni espacios. Se verificará si la persona existe.
-                    </Form.Text>
-                    {personFound && (
-                      <Alert variant="success" className="mt-2 mb-0 py-2">
-                        ✓ Persona encontrada. Información completada automáticamente.
-                      </Alert>
-                    )}
-                  </Col>
-
-                  <Col md={3}>
-                    <div className="h-100 d-flex align-items-end">
-                      <div className="w-100 text-center p-3 bg-light rounded border">
-                        <div className="small text-muted mb-1">Vista previa</div>
-                        <div className="fw-bold text-dark">
-                          {formData.identification_type} {formData.identification || '########'}
-                        </div>
-                      </div>
-                    </div>
-                  </Col>
                 </Row>
               </Card.Body>
             </Card>

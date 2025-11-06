@@ -107,7 +107,7 @@ def check_rol_moderate_or_admin(token: Annotated[str, Depends(oauth_scheme)]):
 def check_rol_all(token: Annotated[str, Depends(oauth_scheme)]):
     try:
         role = get_role(token=token)
-        if role == "ADMIN" or role == "MODERATE" or role == "USERS":
+        if role == "ADMIN" or role == "MODERATE" or role == "USERS" or role == "USER":
             return True
         return False
     except HTTPException as http_ex:

@@ -55,7 +55,7 @@ def get_persons(current_user: Dict = Depends(is_authenticated),is_authorized: bo
             )
 
         # Verificar el rol directamente
-        if user_data.role_name not in ["ADMIN", "MODERATE", "USER"]:
+        if user_data.role_name not in ["ADMIN", "MODERATE", "USER", "USERS"]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Rol no autorizado: {user_data.role_name}"
