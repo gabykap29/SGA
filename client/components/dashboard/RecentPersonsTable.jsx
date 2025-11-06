@@ -3,9 +3,22 @@
 import { Card, Table, Badge, Button } from 'react-bootstrap';
 import { FiEye, FiEdit, FiCalendar, FiUser } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 const RecentPersonsTable = ({ persons = [], loading = false }) => {
   const router = useRouter();
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
 
   const handleViewPerson = (personId) => {
     router.push(`/dashboard/personas/${personId}`);
@@ -29,7 +42,7 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
     }
   };
 
-  const LoadingSkeleton = () => (
+  const LoadingSkeleton = ({ isMobile }) => (
     <>
       {[...Array(5)].map((_, index) => (
         <tr key={index}>
@@ -38,26 +51,34 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
               <span className="placeholder col-8"></span>
             </div>
           </td>
-          <td>
-            <div className="placeholder-glow">
-              <span className="placeholder col-6"></span>
-            </div>
-          </td>
-          <td>
-            <div className="placeholder-glow">
-              <span className="placeholder col-4"></span>
-            </div>
-          </td>
-          <td>
-            <div className="placeholder-glow">
-              <span className="placeholder col-7"></span>
-            </div>
-          </td>
-          <td>
-            <div className="placeholder-glow">
-              <span className="placeholder col-5"></span>
-            </div>
-          </td>
+          {!isMobile && (
+            <td>
+              <div className="placeholder-glow">
+                <span className="placeholder col-6"></span>
+              </div>
+            </td>
+          )}
+          {!isMobile && (
+            <td>
+              <div className="placeholder-glow">
+                <span className="placeholder col-4"></span>
+              </div>
+            </td>
+          )}
+          {!isMobile && (
+            <td>
+              <div className="placeholder-glow">
+                <span className="placeholder col-7"></span>
+              </div>
+            </td>
+          )}
+          {!isMobile && (
+            <td>
+              <div className="placeholder-glow">
+                <span className="placeholder col-5"></span>
+              </div>
+            </td>
+          )}
           <td>
             <div className="placeholder-glow d-flex gap-1">
               <span className="placeholder col-4"></span>
@@ -108,20 +129,20 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
               backgroundColor: '#f5f5f5'
             }}>
               <tr>
-                <th className="fw-bold py-3 px-3 text-dark">Nombre Completo</th>
-                <th className="fw-bold py-3 px-3 text-dark">Identificación</th>
-                <th className="fw-bold py-3 px-3 text-dark">Provincia</th>
-                <th className="fw-bold py-3 px-3 text-dark">
+                <th className="fw-bold py-3 px-3 text-dark">Nombre</th>
+                {!isMobile && <th className="fw-bold py-3 px-3 text-dark">Identificación</th>}
+                {!isMobile && <th className="fw-bold py-3 px-3 text-dark">Provincia</th>}
+                {!isMobile && <th className="fw-bold py-3 px-3 text-dark">
                   <FiCalendar className="me-2" size={16} />
-                  Fecha de Registro
-                </th>
-                <th className="fw-bold py-3 px-3 text-dark">País</th>
+                  Fecha
+                </th>}
+                {!isMobile && <th className="fw-bold py-3 px-3 text-dark">País</th>}
                 <th className="fw-bold py-3 px-3 text-center text-dark">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <LoadingSkeleton />
+                <LoadingSkeleton isMobile={isMobile} />
               ) : persons.length > 0 ? (
                 persons.map((person, index) => (
                   <tr 
@@ -140,101 +161,115 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
                       e.currentTarget.style.transform = 'scale(1)';
                       e.currentTarget.style.boxShadow = 'none';
                     }}
-                    onClick={() => handleViewPerson(person.person_id || person.id)}
                   >
                     <td className="py-4 px-3">
                       <div className="d-flex align-items-center">
                         <div 
-                          className="rounded-circle text-white d-flex align-items-center justify-content-center me-3"
+                          className="rounded-circle text-white d-flex align-items-center justify-content-center"
                           style={{ 
-                            width: '48px', 
-                            height: '48px', 
-                            fontSize: '16px', 
+                            width: isMobile ? '40px' : '48px', 
+                            height: isMobile ? '40px' : '48px', 
+                            fontSize: isMobile ? '14px' : '16px', 
                             fontWeight: 'bold',
                             backgroundColor: '#1b3e61ff',
-                            border: '1px solid #dee2e6'
+                            border: '1px solid #dee2e6',
+                            flexShrink: 0,
+                            marginRight: isMobile ? '8px' : '12px'
                           }}
                         >
                           {person.names?.charAt(0) || 'N'}
                           {person.lastnames?.charAt(0) || 'A'}
                         </div>
-                        <div>
-                          <div className="fw-bold text-dark">
+                        <div style={{ minWidth: 0 }}>
+                          <div className="fw-bold text-dark" style={{ fontSize: isMobile ? '13px' : '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {person.names} {person.lastnames}
                           </div>
-                          <small className="text-muted">
-                            ID: {person.person_id || person.id}
+                          <small className="text-muted" style={{ fontSize: '11px' }}>
+                            {person.identification_type || 'DNI'}: {person.identification || 'N/A'}
                           </small>
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-3">
-                      <div>
-                        <span className="font-monospace fw-bold text-dark">
-                          {person.identification || 'No especificado'}
-                        </span>
-                        <br />
-                        <small className="text-muted" style={{ 
-                          padding: '2px 8px',
-                          backgroundColor: '#f5f5f5',
-                          borderRadius: '4px'
+                    {!isMobile && (
+                      <td className="py-4 px-3">
+                        <div>
+                          <span className="font-monospace fw-bold text-dark" style={{ fontSize: '13px' }}>
+                            {person.identification || 'No especificado'}
+                          </span>
+                          <br />
+                          <small className="text-muted" style={{ 
+                            padding: '2px 8px',
+                            backgroundColor: '#f5f5f5',
+                            borderRadius: '4px',
+                            display: 'inline-block',
+                            marginTop: '4px'
+                          }}>
+                            {person.identification_type || 'N/A'}
+                          </small>
+                        </div>
+                      </td>
+                    )}
+                    {!isMobile && (
+                      <td className="py-4 px-3">
+                        <Badge bg="secondary" style={{
+                          color: 'white',
+                          padding: '6px 12px',
+                          borderRadius: '12px',
+                          fontWeight: '600',
+                          fontSize: '12px',
+                          border: 'none'
                         }}>
-                          {person.identification_type || 'N/A'}
-                        </small>
-                      </div>
-                    </td>
-                    <td className="py-4 px-3">
-                      <Badge bg="secondary" style={{
-                        color: 'white',
-                        padding: '6px 12px',
-                        borderRadius: '12px',
-                        fontWeight: '600',
-                        fontSize: '12px',
-                        border: 'none'
-                      }}>
-                        {person.province || 'N/A'}
-                      </Badge>
-                    </td>
-                    <td className="py-4 px-3">
-                      <span style={{ 
-                        color: 'white', 
-                        fontWeight: '500',
-                        background: '#1b3e61ff',
-                        padding: '6px 12px',
-                        borderRadius: '4px',
-                        fontSize: '13px'
-                      }}>
-                        {formatDate(person.created_at)}
-                      </span>
-                    </td>
-                    <td className="py-4 px-3">
-                      <Badge bg="secondary" style={{
-                        color: 'white',
-                        padding: '6px 12px',
-                        borderRadius: '4px',
-                        fontWeight: '500',
-                        fontSize: '12px'
-                      }}>
-                        {person.country || 'Otro'}
-                      </Badge>
-                    </td>
-                    <td className="py-3 text-center">
-                      <div className="d-flex gap-2 justify-content-center">
+                          {person.province || 'N/A'}
+                        </Badge>
+                      </td>
+                    )}
+                    {!isMobile && (
+                      <td className="py-4 px-3">
+                        <span style={{ 
+                          color: 'white', 
+                          fontWeight: '500',
+                          background: '#1b3e61ff',
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          fontSize: '13px',
+                          display: 'inline-block'
+                        }}>
+                          {formatDate(person.created_at)}
+                        </span>
+                      </td>
+                    )}
+                    {!isMobile && (
+                      <td className="py-4 px-3">
+                        <Badge bg="secondary" style={{
+                          color: 'white',
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          fontWeight: '500',
+                          fontSize: '12px'
+                        }}>
+                          {person.country || 'Otro'}
+                        </Badge>
+                      </td>
+                    )}
+                    <td className="py-4 px-3" style={{ textAlign: 'center' }}>
+                      <div className="d-flex gap-2 justify-content-center" style={{ flexWrap: 'wrap' }}>
                         <Button 
-                          size="sm"
+                          size={isMobile ? 'sm' : 'sm'}
                           variant="dark"
                           title="Ver detalles"
                           onClick={() => handleViewPerson(person.person_id || person.id)}
+                          style={{ padding: isMobile ? '4px 8px' : '6px 12px' }}
                         >
-                          <FiEye size={14} />
+                          <FiEye size={isMobile ? 12 : 14} />
                         </Button>
                         <Button 
-                          size="sm"
+                          size={isMobile ? 'sm' : 'sm'}
                           variant="success"
                           title="Editar"
                           onClick={() => handleEditPerson(person.person_id || person.id)}
+                          style={{ padding: isMobile ? '4px 8px' : '6px 12px' }}
                         >
-                          <FiEdit size={14} />
+                          <FiEdit size={isMobile ? 12 : 14} />
                         </Button>
                       </div>
                     </td>
@@ -242,7 +277,7 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="text-center py-5">
+                  <td colSpan={isMobile ? 2 : 6} className="text-center py-5">
                     <div style={{
                       padding: '40px',
                       backgroundColor: '#f5f5f5',
