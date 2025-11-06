@@ -193,7 +193,7 @@ export default function CreatePerson() {
     setFiles(prev => prev.filter(file => file.id !== fileId));
   };
 
-  const handleRecordsLink = async (antecedent) => {
+  const handleRecordsLink = async (antecedent, typeRelationship = 'Denunciado') => {
     if (!personData?.person_id) {
       toast.error('Debe crear la persona primero');
       return;
@@ -203,7 +203,7 @@ export default function CreatePerson() {
       setLoading(true);
       // Manejo de antecedente individual (viene de AntecedentLinker uno por uno)
       const recordIds = [(antecedent.record_id || antecedent.id)];
-      const result = await personService.linkRecords(personData.person_id, recordIds);
+      const result = await personService.linkRecords(personData.person_id, recordIds, typeRelationship);
       
       if (result.success) {
         // Agregar el nuevo antecedente a la lista existente

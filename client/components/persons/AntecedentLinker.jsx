@@ -28,6 +28,18 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
   const [showOnlyAvailable, setShowOnlyAvailable] = useState(true);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedAntecedentDetail, setSelectedAntecedentDetail] = useState(null);
+  const [typeRelationship, setTypeRelationship] = useState('Denunciado');
+
+  const relationshipTypes = [
+    { value: 'Denunciado', label: 'Denunciado' },
+    { value: 'Denunciante', label: 'Denunciante' },
+    { value: 'Testigo', label: 'Testigo' },
+    { value: 'Autor', label: 'Autor' },
+    { value: 'Victima', label: 'Víctima' },
+    { value: 'Sospechoso', label: 'Sospechoso' },
+    { value: 'Implicado', label: 'Implicado' },
+    { value: 'Querellante', label: 'Querellante' }
+  ];
 
 
 
@@ -102,6 +114,11 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
       return;
     }
 
+    if (!typeRelationship.trim()) {
+      toast.warning('Seleccione un tipo de vinculación');
+      return;
+    }
+
     try {
       // Vincular cada antecedente uno por uno en lugar de enviar todos juntos
       let successCount = 0;
@@ -109,7 +126,7 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
 
       for (const antecedent of selectedAntecedents) {
         try {
-          await onLink(antecedent);
+          await onLink(antecedent, typeRelationship);
           successCount++;
         } catch (error) {
           console.error('Error vinculando antecedente:', error);
@@ -273,6 +290,34 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
               </div>
             </Col>
           </Row>
+
+          {/* Selector de tipo de vinculación */}
+          {selectedAntecedents.length > 0 && (
+            <Row className="mb-3 g-2">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-bold small text-dark">
+                    Tipo de Vinculación
+                  </Form.Label>
+                  <Form.Select
+                    value={typeRelationship}
+                    onChange={(e) => setTypeRelationship(e.target.value)}
+                    disabled={loading}
+                    className="shadow-sm"
+                  >
+                    {relationshipTypes.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </Form.Select>
+                  <small className="text-muted d-block mt-1">
+                    Selecciona cómo se relaciona la persona con el antecedente
+                  </small>
+                </Form.Group>
+              </Col>
+            </Row>
+          )}
 
           {/* Botones de acción */}
           {selectedAntecedents.length > 0 && (
