@@ -59,12 +59,24 @@ def create_user(body: UserSchema, current_user: Dict = Depends(is_authenticated)
             status_code= status.HTTP_400_BAD_REQUEST,
             detail= "Las contraseñas no coinciden!"
         )
+    print("Creando usuario con datos:", body)
+    
+    import uuid
+    # Convertir role_id a UUID si es string
+    try:
+        role_id = uuid.UUID(str(body.role_id)) if isinstance(body.role_id, str) else body.role_id
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El role_id proporcionado no es un UUID válido"
+        )
+    
     new_user = user_model.create_user(
         str(body.names),
         str(body.lastname),
         str(body.username),
         str(body.passwd),
-        str(body.role_id),
+        role_id,
         db=db_session
     )
     if not new_user:
@@ -84,11 +96,31 @@ def update(id: str, body: UserSchema, current_user: Dict = Depends(is_authentica
             detail="No tienes permiso para actualizar usuarios"
         )
     db_session = SessionLocal()
-    edit = user_model.edit_user(id, str(body.names),
+    
+    import uuid
+    # Convertir role_id a UUID si es string
+    try:
+        role_id = uuid.UUID(str(body.role_id)) if isinstance(body.role_id, str) else body.role_id
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El role_id proporcionado no es un UUID válido"
+        )
+    
+    # Convertir id a UUID
+    try:
+        id_uuid = uuid.UUID(str(id)) if isinstance(id, str) else id
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El id proporcionado no es un UUID válido"
+        )
+    
+    edit = user_model.edit_user(id_uuid, str(body.names),
         str(body.lastname),
         str(body.username),
         str(body.passwd),
-        str(body.role_id),
+        role_id,
         db=db_session
         )
     

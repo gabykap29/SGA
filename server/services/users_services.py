@@ -38,7 +38,21 @@ class UserService:
         db.commit()
         return user
     
-    
+    def create_user(self, names: str, lastname: str, username: str, passwd: str, role: uuid.UUID, db: Session):
+        try:
+            is_exist = db.query(self.userModel).filter(self.userModel.username == username).first()
+            if is_exist is not None:
+                print("El usuario ya existe!")
+                return False
+            pass_encrypt = hash_pass(passwd)
+            new_user = self.userModel(names=names, lastname=lastname, username=username, passwd=pass_encrypt, role_id=role)
+            db.add(new_user)
+            db.commit()
+            db.refresh(new_user)
+            return new_user
+        except Exception as e:
+            print("Error al crear el usuario", e)
+            return False
     
     def create_admin_user(self, db: Session):
         roles_service = RolesService()
@@ -131,7 +145,7 @@ class UserService:
         finally:
             db.close()
             
-    def edit_user(self, id: str, names: str, lastname: str, username: str, passwd: str, role: str, db: Session) :
+    def edit_user(self, id: uuid.UUID, names: str, lastname: str, username: str, passwd: str, role: uuid.UUID, db: Session) :
         try:
         
             find = db.query(self.userModel).filter(self.userModel.id == id).first()

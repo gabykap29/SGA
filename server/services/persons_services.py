@@ -112,7 +112,7 @@ class PersonsService:
             filters.append(self.personModel.names.ilike(f"%{names.strip()}%"))
         if lastname and lastname.strip():
             print(f"  ✓ Agregando filtro lastname: {lastname}")
-            filters.append(self.personModel.lastname.ilike(f"%{lastname.strip()}%"))
+            filters.append(self.personModel.lastnames.ilike(f"%{lastname.strip()}%"))
         if identification and identification.strip():
             print(f"  ✓ Agregando filtro identification: {identification}")
             filters.append(self.personModel.identification.ilike(f"%{identification.strip()}%"))
