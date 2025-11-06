@@ -28,11 +28,13 @@ import EditPersonModal from '../../../../../components/persons/EditPersonModal';
 
 // Servicios
 import personService from '../../../../../services/personService';
+import { useLogin } from '../../../../../hooks/useLogin';
 
 export default function PersonView() {
   const params = useParams();
   const router = useRouter();
   const personId = params.id;
+  const { isView } = useLogin();
 
   const [loading, setLoading] = useState(true);
   const [person, setPerson] = useState(null);
@@ -149,14 +151,16 @@ export default function PersonView() {
             </Button>
           </div>
           
-          <div className="d-flex mt-2 mt-md-0">
-            <Button 
-              variant="danger" 
-              onClick={() => setShowDeleteModal(true)}
-            >
-              <FiTrash2 className="me-1" /> Eliminar
-            </Button>
-          </div>
+          {!isView && (
+            <div className="d-flex mt-2 mt-md-0">
+              <Button 
+                variant="danger" 
+                onClick={() => setShowDeleteModal(true)}
+              >
+                <FiTrash2 className="me-1" /> Eliminar
+              </Button>
+            </div>
+          )}
         </div>
         
         <Card>

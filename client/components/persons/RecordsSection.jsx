@@ -15,8 +15,10 @@ import {
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import recordService from '../../services/recordService';
+import { useLogin } from '../../hooks/useLogin';
 
 const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
+  const { isView } = useLogin();
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [availableRecords, setAvailableRecords] = useState([]);
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -159,36 +161,40 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
           >
             {linkedRecords.length}
           </Badge>
-          <Button 
-            variant="dark" 
-            size="sm"
-            className="px-3 py-2"
-            onClick={() => setShowLinkModal(true)}
-            style={{
-              backgroundColor: '#212529',
-              border: '1px solid #000',
-              borderRadius: '4px',
-              color: 'white'
-            }}
-          >
-            <FiLink className="me-2" size={16} />
-            Vincular antecedente
-          </Button>
-          <Button 
-            variant="primary"
-            size="sm"
-            className="px-3 py-2"
-            onClick={() => window.location.href = '/dashboard/antecedentes/crear'}
-            style={{
-              backgroundColor: '#007bff',
-              border: 'none',
-              borderRadius: '4px',
-              color: 'white'
-            }}
-          >
-            <FiPlus className="me-2" size={16} />
-            Crear antecedente
-          </Button>
+          {!isView && (
+            <>
+              <Button 
+                variant="dark" 
+                size="sm"
+                className="px-3 py-2"
+                onClick={() => setShowLinkModal(true)}
+                style={{
+                  backgroundColor: '#212529',
+                  border: '1px solid #000',
+                  borderRadius: '4px',
+                  color: 'white'
+                }}
+              >
+                <FiLink className="me-2" size={16} />
+                Vincular antecedente
+              </Button>
+              <Button 
+                variant="primary"
+                size="sm"
+                className="px-3 py-2"
+                onClick={() => window.location.href = '/dashboard/antecedentes/crear'}
+                style={{
+                  backgroundColor: '#007bff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: 'white'
+                }}
+              >
+                <FiPlus className="me-2" size={16} />
+                Crear antecedente
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

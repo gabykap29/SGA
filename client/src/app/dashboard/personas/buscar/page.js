@@ -11,6 +11,15 @@ import { toast } from 'react-toastify';
 export default function SearchPersons() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchFields, setSearchFields] = useState({
+    identification: '',
+    names: '',
+    lastnames: '',
+    address: '',
+    province: '',
+    country: ''
+  });
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
@@ -45,11 +54,22 @@ export default function SearchPersons() {
     setSearchQuery(e.target.value);
   };
 
+  const handleFieldChange = (field, value) => {
+    setSearchFields(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   const handleSearch = async (e) => {
     e.preventDefault();
     
-    if (!searchQuery.trim()) {
-      toast.warning('Ingrese un término de búsqueda');
+    // Verificar si hay búsqueda general o específica
+    const hasGeneralSearch = searchQuery.trim();
+    const hasSpecificSearch = Object.values(searchFields).some(field => field.trim());
+    
+    if (!hasGeneralSearch && !hasSpecificSearch) {
+      toast.warning('Ingrese al menos un término de búsqueda');
       return;
     }
     
@@ -57,22 +77,47 @@ export default function SearchPersons() {
       setIsSearching(true);
       setSearchPerformed(true);
       
-      // Llamar al servicio de búsqueda usando solo el término de búsqueda
-      const result = await personService.searchPersons(searchQuery);
+      let searchTerm = '';
+      
+      // Construir el término de búsqueda combinando todos los campos
+      if (hasGeneralSearch) {
+        searchTerm = searchQuery.trim();
+      }
+      
+      if (hasSpecificSearch) {
+        const specificTerms = [];
+        if (searchFields.identification.trim()) specificTerms.push(searchFields.identification.trim());
+        if (searchFields.names.trim()) specificTerms.push(searchFields.names.trim());
+        if (searchFields.lastnames.trim()) specificTerms.push(searchFields.lastnames.trim());
+        if (searchFields.address.trim()) specificTerms.push(searchFields.address.trim());
+        if (searchFields.province.trim()) specificTerms.push(searchFields.province.trim());
+        if (searchFields.country.trim()) specificTerms.push(searchFields.country.trim());
+        
+        if (searchTerm) {
+          searchTerm += ' ' + specificTerms.join(' ');
+        } else {
+          searchTerm = specificTerms.join(' ');
+        }
+      }
+      
+      // Llamar al servicio de búsqueda
+      const result = await personService.searchPersons(searchTerm);
       
       if (result.success) {
         setSearchResults(result.data || []);
-        setCurrentPage(1); // Reset to first page on new search
+        setCurrentPage(1);
         
         if (result.data.length === 0) {
           toast.info('No se encontraron resultados para tu búsqueda');
+        } else {
+          toast.success(`Se encontraron ${result.data.length} resultado(s)`);
         }
       } else {
         toast.error(result.error || 'Error al buscar personas');
         setSearchResults([]);
       }
     } catch (error) {
-      console.error('Error searching persons:', error);
+      console.error('Error al buscar:', error);
       toast.error('Error inesperado al realizar la búsqueda');
       setSearchResults([]);
     } finally {
@@ -82,9 +127,18 @@ export default function SearchPersons() {
 
   const handleClearSearch = () => {
     setSearchQuery('');
+    setSearchFields({
+      identification: '',
+      names: '',
+      lastnames: '',
+      address: '',
+      province: '',
+      country: ''
+    });
     setShowDescription(false);
     setSearchResults([]);
     setSearchPerformed(false);
+    setShowAdvancedSearch(false);
   };
 
   const handleViewPerson = (personId) => {
@@ -194,7 +248,7 @@ export default function SearchPersons() {
         <div className="mb-3 mb-md-4 p-3 p-md-4 bg-white rounded shadow-sm" style={{ border: '1px solid #d4cfcfff' }}>
           <h2 className="fw-bold text-dark mb-2 fs-3 fs-md-2">Buscar Personas</h2>
           <p className="text-muted mb-0" style={{ fontSize: '0.95rem' }}>
-            ➜ Encuentra personas por nombre, DNI o domicilio
+            🔍 Encuentra personas por búsqueda general o campos específicos (DNI, nombres, apellidos, domicilio, provincia, país)
           </p>
         </div>
 
@@ -202,23 +256,137 @@ export default function SearchPersons() {
         <Card className="mb-3 mb-md-4 border-1 shadow-sm">
           <Card.Body className="p-3 p-md-4">
             <Form onSubmit={handleSearch}>
+              {/* Búsqueda general */}
               <Row className="align-items-end mb-3">
                 <Col>
-                  <Form.Label className="fw-medium text-dark">Término de búsqueda</Form.Label>
+                  <Form.Label className="fw-medium text-dark">
+                    <FiSearch className="me-1" />
+                    Búsqueda general
+                  </Form.Label>
                   <InputGroup>
                     <InputGroup.Text className="bg-light border-end-0">
                       <FiSearch className="text-muted" />
                     </InputGroup.Text>
                     <Form.Control
                       type="text"
-                      placeholder="Buscar por nombre, apellido, DNI o domicilio..."
+                      placeholder="Buscar en todos los campos..."
                       value={searchQuery}
                       onChange={handleInputChange}
                       className="border-start-0 ps-0"
                     />
                   </InputGroup>
+                  <Form.Text className="text-muted">
+                    Busca simultáneamente en nombres, apellidos, DNI, domicilio, provincia y país
+                  </Form.Text>
                 </Col>
               </Row>
+
+              {/* Divisor */}
+              <div className="d-flex align-items-center my-3">
+                <hr className="flex-grow-1" />
+                <span className="px-3 text-muted small">O buscar por campos específicos</span>
+                <hr className="flex-grow-1" />
+              </div>
+
+              {/* Toggle para búsqueda avanzada */}
+              <div className="d-flex align-items-center mb-3">
+                <Button 
+                  type="button"
+                  variant="outline-primary"
+                  size="sm"
+                  onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+                >
+                  <FiFilter className="me-1" /> 
+                  {showAdvancedSearch ? 'Ocultar campos específicos' : 'Mostrar campos específicos'}
+                </Button>
+              </div>
+
+              {/* Campos específicos de búsqueda */}
+              {showAdvancedSearch && (
+                <div className="border rounded p-3 bg-light mb-3">
+                  <h6 className="fw-bold text-dark mb-3">Búsqueda por campos específicos</h6>
+                  <Row className="g-3">
+                    <Col md={6}>
+                      <Form.Label className="fw-medium text-dark">
+                        <FiCreditCard className="me-1" />
+                        DNI/Identificación
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Ej: 12345678"
+                        value={searchFields.identification}
+                        onChange={(e) => handleFieldChange('identification', e.target.value)}
+                      />
+                    </Col>
+                    <Col md={6}>
+                      <Form.Label className="fw-medium text-dark">
+                        <FiUser className="me-1" />
+                        Nombres
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Ej: Juan Pablo"
+                        value={searchFields.names}
+                        onChange={(e) => handleFieldChange('names', e.target.value)}
+                      />
+                    </Col>
+                    <Col md={6}>
+                      <Form.Label className="fw-medium text-dark">
+                        <FiUser className="me-1" />
+                        Apellidos
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Ej: García López"
+                        value={searchFields.lastnames}
+                        onChange={(e) => handleFieldChange('lastnames', e.target.value)}
+                      />
+                    </Col>
+                    <Col md={6}>
+                      <Form.Label className="fw-medium text-dark">
+                        <FiHome className="me-1" />
+                        Domicilio
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Ej: Av. San Martín 123"
+                        value={searchFields.address}
+                        onChange={(e) => handleFieldChange('address', e.target.value)}
+                      />
+                    </Col>
+                    <Col md={6}>
+                      <Form.Label className="fw-medium text-dark">
+                        <FiMapPin className="me-1" />
+                        Provincia
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Ej: Buenos Aires"
+                        value={searchFields.province}
+                        onChange={(e) => handleFieldChange('province', e.target.value)}
+                      />
+                    </Col>
+                    <Col md={6}>
+                      <Form.Label className="fw-medium text-dark">
+                        <FiMapPin className="me-1" />
+                        País
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Ej: Argentina"
+                        value={searchFields.country}
+                        onChange={(e) => handleFieldChange('country', e.target.value)}
+                      />
+                    </Col>
+                  </Row>
+                  <div className="mt-3">
+                    <small className="text-muted">
+                      💡 <strong>Tip:</strong> Los campos específicos se combinan con AND (todos deben coincidir). 
+                      Puedes usar varios campos para una búsqueda más precisa.
+                    </small>
+                  </div>
+                </div>
+              )}
 
               <div className="d-flex align-items-center mb-3">
                 <Button 
@@ -234,14 +402,32 @@ export default function SearchPersons() {
 
               {showDescription && (
                 <Alert variant="info" className="mb-3 p-2 p-md-3">
-                  <h6 className="fw-bold mb-2 mb-md-2">Cómo buscar</h6>
-                  <p className="mb-1 small">Puedes buscar personas usando:</p>
-                  <ul className="mb-0 small ps-3 ps-md-4">
-                    <li>Nombre o apellido</li>
-                    <li>Número de documento</li>
-                    <li>Tipo de documento</li>
-                    <li>Domicilio</li>
-                  </ul>
+                  <h6 className="fw-bold mb-2 mb-md-2">📋 Cómo buscar personas</h6>
+                  <Row>
+                    <Col md={6}>
+                      <p className="mb-2 small"><strong>🔍 Búsqueda general:</strong></p>
+                      <ul className="mb-2 small ps-3">
+                        <li>Busca en todos los campos simultáneamente</li>
+                        <li>Ideal para búsquedas rápidas</li>
+                        <li>Encuentra coincidencias parciales</li>
+                      </ul>
+                    </Col>
+                    <Col md={6}>
+                      <p className="mb-2 small"><strong>🎯 Búsqueda específica:</strong></p>
+                      <ul className="mb-2 small ps-3">
+                        <li>DNI/Identificación completa o parcial</li>
+                        <li>Nombres y apellidos por separado</li>
+                        <li>Domicilio, provincia y país</li>
+                        <li>Combinación de múltiples campos</li>
+                      </ul>
+                    </Col>
+                  </Row>
+                  <div className="mt-2 p-2 bg-light rounded">
+                    <small className="text-muted">
+                      💡 <strong>Tip:</strong> Usa la búsqueda general para encontrar rápidamente, 
+                      o los campos específicos para búsquedas más precisas.
+                    </small>
+                  </div>
                 </Alert>
               )}
 
@@ -272,7 +458,7 @@ export default function SearchPersons() {
                   size="sm"
                   className="ms-2"
                   onClick={handleClearSearch}
-                  disabled={isSearching || (!searchQuery && !searchPerformed)}
+                  disabled={isSearching || (!searchQuery && !Object.values(searchFields).some(field => field.trim()) && !searchPerformed)}
                 >
                   <FiX className="me-1" />
                   <span className="d-none d-sm-inline">Limpiar</span>

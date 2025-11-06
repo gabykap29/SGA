@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Nav, Button, ProgressBar } from 'react-bootstrap';
 import { FiUser, FiFileText, FiImage, FiSave, FiArrowLeft, FiCheck, FiUsers, FiPlus } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
@@ -28,6 +28,21 @@ export default function CreatePerson() {
   const [completedSteps, setCompletedSteps] = useState(new Set());
   const [isDuplicateError, setIsDuplicateError] = useState(false);
   const [showCreateRecordModal, setShowCreateRecordModal] = useState(false);
+
+  // Cuando personData esté disponible y activeStep sea 1, avanzar a paso 2
+  useEffect(() => {
+    console.log('useEffect triggerado:', { personData, activeStep, completedSteps: Array.from(completedSteps) });
+    
+    if (personData && personData.person_id && activeStep === 1 && completedSteps.has(1)) {
+      console.log('Condiciones cumplidas, avanzando a paso 2');
+      // Hacer un pequeño delay para asegurar que el state se actualice
+      const timer = setTimeout(() => {
+        console.log('Ejecutando setActiveStep(2)');
+        setActiveStep(2);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [personData, activeStep, completedSteps]);
 
   const steps = [
     { 
@@ -63,6 +78,37 @@ export default function CreatePerson() {
   const handlePersonSave = async (formData) => {
     try {
       setLoading(true);
+      
+      console.log('handlePersonSave recibido:', formData);
+      console.log('existingPerson:', formData.existingPerson);
+      
+      // Si la persona ya existe (fue encontrada por DNI), usarla directamente
+      if (formData.existingPerson) {
+        const personObject = formData.existingPerson;
+        
+        console.log('Usando persona existente:', personObject);
+        console.log('person_id:', personObject.person_id);
+        
+        setPersonData(personObject);
+        setCompletedSteps(prev => new Set([...prev, 1]));
+        
+        // Cargar archivos existentes de la persona (si los hay)
+        try {
+          const filesResult = await personService.getPersonFiles(personObject.person_id);
+          if (filesResult.success) {
+            setFiles(filesResult.data);
+          }
+        } catch (fileError) {
+          // Error silencioso al cargar archivos
+          console.log('Error cargando archivos:', fileError);
+        }
+        
+        toast.success('Persona encontrada. Usando datos existentes.');
+        // No llamar a setActiveStep aquí, dejar que useEffect lo maneje
+        return;
+      }
+      
+      // Si no existe, crear la nueva persona
       const result = await personService.createPerson(formData);
       
       if (result.data.status_code == 422 || result.data.status_code == 400) {
@@ -76,22 +122,44 @@ export default function CreatePerson() {
         }
 
       } else {
-
-        setPersonData(result.data);
+        // Debug temporal para ver la estructura de la respuesta
+        console.log('Respuesta completa del backend:', result.data);
+        
+        // La respuesta del backend tiene esta estructura:
+        // { message: "...", person_id: "...", data: PersonObject }
+        let personObject;
+        
+        if (result.data.data) {
+          // Si hay un campo 'data' anidado, usar ese
+          personObject = result.data.data;
+        } else {
+          // Si no, usar la respuesta completa (fallback)
+          personObject = result.data;
+        }
+        
+        // Asegurar que tenemos el person_id correcto
+        if (result.data.person_id && !personObject.person_id) {
+          personObject.person_id = result.data.person_id;
+        }
+        
+        console.log('Objeto persona procesado:', personObject);
+        
+        setPersonData(personObject);
         setCompletedSteps(prev => new Set([...prev, 1]));
         
         // Cargar archivos existentes de la persona (si los hay)
         try {
-          const filesResult = await personService.getPersonFiles(result.data.person_id);
+          const filesResult = await personService.getPersonFiles(personObject.person_id);
           if (filesResult.success) {
             setFiles(filesResult.data);
           }
         } catch (fileError) {
           // Error silencioso al cargar archivos
+          console.log('Error cargando archivos:', fileError);
         }
         
         toast.success('Persona creada exitosamente');
-        setActiveStep(2); // Avanzar al siguiente paso        
+        // No llamar a setActiveStep aquí, dejar que useEffect lo maneje
       }
     } catch (error) {
       console.error('Error creating person:', error);
@@ -137,7 +205,12 @@ export default function CreatePerson() {
     }
   };
 
-  const handleRecordsLink = async (antecedents) => {
+  const handleFileDelete = async (fileId) => {
+    // Actualizar la lista de archivos eliminando el archivo borrado
+    setFiles(prev => prev.filter(file => file.id !== fileId));
+  };
+
+  const handleRecordsLink = async (antecedent) => {
     if (!personData?.person_id) {
       toast.error('Debe crear la persona primero');
       return;
@@ -145,31 +218,24 @@ export default function CreatePerson() {
 
     try {
       setLoading(true);
-      const recordIds = antecedents.map(ant => ant.record_id || ant.id);
+      // Manejo de antecedente individual (viene de AntecedentLinker uno por uno)
+      const recordIds = [(antecedent.record_id || antecedent.id)];
       const result = await personService.linkRecords(personData.person_id, recordIds);
       
       if (result.success) {
-        // Agregar los nuevos antecedentes a la lista existente
+        // Agregar el nuevo antecedente a la lista existente
         const linkedCount = result.data.length;
-        const totalCount = antecedents.length;
         
-        setLinkedRecords(prev => [...prev, ...antecedents]);
+        setLinkedRecords(prev => [...prev, antecedent]);
         setCompletedSteps(prev => new Set([...prev, 3]));
         
-        if (linkedCount === totalCount) {
-          toast.success(`${linkedCount} antecedente(s) vinculado(s) exitosamente`);
-        } else {
-          toast.success(`${linkedCount} de ${totalCount} antecedente(s) vinculados exitosamente`);
-          if (result.warnings && result.warnings.length > 0) {
-            toast.warning(`Algunos antecedentes no se pudieron vincular: ${result.warnings.join(', ')}`);
-          }
-        }
+        toast.success(`Antecedente vinculado exitosamente`);
       } else {
-        toast.error(result.error || 'Error al vincular antecedentes');
+        toast.error(result.error || 'Error al vincular antecedente');
       }
     } catch (error) {
       console.error('Error linking records:', error);
-      toast.error('Error inesperado al vincular antecedentes');
+      toast.error('Error inesperado al vincular antecedente');
     } finally {
       setLoading(false);
     }
@@ -333,6 +399,7 @@ export default function CreatePerson() {
             personId={personData?.person_id}
             files={files}
             onFilesUpload={handleFilesUpload}
+            onFileDelete={handleFileDelete}
             loading={loading}
           />
         );
@@ -519,15 +586,15 @@ export default function CreatePerson() {
                   <div className="small">
                     <div className="d-flex justify-content-between mb-2">
                       <span className="text-muted">Nombre:</span>
-                      <span className="fw-medium">{personData.names} {personData.lastnames}</span>
+                      <span className="fw-medium">{personData?.names || ''} {personData?.lastnames || ''}</span>
                     </div>
                     <div className="d-flex justify-content-between mb-2">
                       <span className="text-muted">DNI:</span>
-                      <span className="fw-medium">{personData.identification}</span>
+                      <span className="fw-medium">{personData?.identification || ''}</span>
                     </div>
                     <div className="d-flex justify-content-between">
                       <span className="text-muted">ID:</span>
-                      <span className="fw-medium text-primary">#{personData.person_id}</span>
+                      <span className="fw-medium text-primary">#{personData?.person_id || ''}</span>
                     </div>
                   </div>
                   

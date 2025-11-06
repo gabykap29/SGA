@@ -255,10 +255,27 @@ class RecordService {
   }
   
   // Método para buscar antecedentes
-  async searchRecords(searchTerm) {
+  async searchRecords(searchTerm = null, filters = {}) {
     try {
       const token = this.getAuthToken();
-      const url = `${this.baseURL}/records/search?query=${encodeURIComponent(searchTerm)}`;
+      
+      // Construir parámetros de búsqueda
+      const params = new URLSearchParams();
+      
+      if (searchTerm) {
+        params.append('query', searchTerm);
+      }
+      
+      // Agregar filtros específicos
+      if (filters.title) params.append('title', filters.title);
+      if (filters.content) params.append('content', filters.content);
+      if (filters.observations) params.append('observations', filters.observations);
+      if (filters.type_record) params.append('type_record', filters.type_record);
+      if (filters.date_from) params.append('date_from', filters.date_from);
+      if (filters.date_to) params.append('date_to', filters.date_to);
+      if (filters.person_name) params.append('person_name', filters.person_name);
+      
+      const url = `${this.baseURL}/records/search?${params.toString()}`;
       const headers = this.getHeaders();
       
       console.log('RecordService.searchRecords: Making request to:', url);
@@ -273,8 +290,16 @@ class RecordService {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('RecordService.searchRecords: Response data count:', data.length);
-        return { success: true, data };
+        console.log('RecordService.searchRecords: Response data type:', Array.isArray(data) ? 'array' : typeof data);
+        console.log('RecordService.searchRecords: Response data:', data);
+        
+        // Si la respuesta es directamente un array, devolverla como data
+        if (Array.isArray(data)) {
+          return { success: true, data: data };
+        }
+        
+        // Si es un objeto, devolver tal como está
+        return { success: true, data: data };
       } else {
         // Si es 404, devolver array vacío
         if (response.status === 404) {
@@ -286,7 +311,7 @@ class RecordService {
         console.error('RecordService.searchRecords: Error response:', errorData);
         return { 
           success: false, 
-          error: errorData.detail || `Error al buscar antecedentes: ${response.status}`
+          error: errorData.detail || errorData.error || `Error al buscar antecedentes: ${response.status}`
         };
       }
     } catch (error) {

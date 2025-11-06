@@ -16,9 +16,11 @@ import {
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import personService from '../../services/personService';
+import { useLogin } from '../../hooks/useLogin';
 import Link from 'next/link';
 
 const ConnectionsSection = ({ personId, refreshKey, onRefresh }) => {
+  const { isView } = useLogin();
   const [loading, setLoading] = useState(false);
   const [linkedPersons, setLinkedPersons] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -264,19 +266,21 @@ const ConnectionsSection = ({ personId, refreshKey, onRefresh }) => {
                     </Button>
                   </Link>
                   
-                  <Button
-                    variant="outline-danger"
-                    size="sm"
-                    title="Desvincular persona"
-                    onClick={() => handleUnlinkPerson(person.person_id)}
-                    disabled={unlinkLoading[person.person_id]}
-                  >
-                    {unlinkLoading[person.person_id] ? (
-                      <Spinner animation="border" size="sm" />
-                    ) : (
-                      <FiXCircle size={14} />
-                    )}
-                  </Button>
+                  {!isView && (
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      title="Desvincular persona"
+                      onClick={() => handleUnlinkPerson(person.person_id)}
+                      disabled={unlinkLoading[person.person_id]}
+                    >
+                      {unlinkLoading[person.person_id] ? (
+                        <Spinner animation="border" size="sm" />
+                      ) : (
+                        <FiXCircle size={14} />
+                      )}
+                    </Button>
+                  )}
                 </div>
               </td>
             </tr>
@@ -462,15 +466,17 @@ const ConnectionsSection = ({ personId, refreshKey, onRefresh }) => {
             <FiRefreshCw size={16} />
           </Button>
           
-          <Button
-            variant="primary"
-            size="sm"
-            className="d-flex align-items-center"
-            onClick={() => setShowLinkForm(!showLinkForm)}
-          >
-            <FiPlus size={16} className="me-1" />
-            Agregar Conexión
-          </Button>
+          {!isView && (
+            <Button
+              variant="primary"
+              size="sm"
+              className="d-flex align-items-center"
+              onClick={() => setShowLinkForm(!showLinkForm)}
+            >
+              <FiPlus size={16} className="me-1" />
+              Agregar Conexión
+            </Button>
+          )}
         </div>
       </div>
 

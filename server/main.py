@@ -65,3 +65,9 @@ async def startup_event():
 
     else:
         print("❌ Error al inicializar la base de datos")
+
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="", port=8000, reload=True)

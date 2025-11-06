@@ -28,7 +28,7 @@ const LinkPersonModal = ({ show, onHide, recordId, onPersonLinked, currentLinked
     e.preventDefault();
     
     if (!searchQuery.trim()) {
-      toast.warning('Ingrese un criterio de búsqueda');
+      toast.warning('Ingrese un número de DNI/Identificación');
       return;
     }
     
@@ -36,20 +36,22 @@ const LinkPersonModal = ({ show, onHide, recordId, onPersonLinked, currentLinked
       setIsSearching(true);
       setSearchPerformed(true);
       
-      const result = await personService.searchPersons(searchQuery);
+      // Usar el endpoint específico de búsqueda por DNI
+      const result = await personService.searchPersonByDniForLinker(searchQuery);
       
       if (result.success) {
-        // Filtrar personas que ya están vinculadas al antecedente
-        const linkedPersonIds = currentLinkedPersons.map(rel => rel.person_id);
-        const filteredPersons = result.data.filter(person => !linkedPersonIds.includes(person.person_id));
+        const person = result.data;
+        // Verificar si la persona ya está vinculada
+        const isAlreadyLinked = currentLinkedPersons.some(rel => rel.person_id === person.person_id);
         
-        setPersons(filteredPersons);
-        
-        if (filteredPersons.length === 0 && result.data.length > 0) {
-          toast.info('Todas las personas encontradas ya están vinculadas a este antecedente');
+        if (isAlreadyLinked) {
+          toast.info('Esta persona ya está vinculada a este antecedente');
+          setPersons([]);
+        } else {
+          setPersons([person]);
         }
       } else {
-        toast.error(result.error || 'Error al buscar personas');
+        toast.error(result.error || 'Persona no encontrada');
         setPersons([]);
       }
     } catch (error) {
@@ -108,7 +110,7 @@ const LinkPersonModal = ({ show, onHide, recordId, onPersonLinked, currentLinked
       </Modal.Header>
       <Modal.Body>
         <p className="text-muted small mb-4">
-          Busque una persona existente para vincularla con este antecedente.
+          Busque una persona existente por su DNI/Identificación para vincularla con este antecedente.
         </p>
 
         <Row className="mb-3">
@@ -159,7 +161,7 @@ const LinkPersonModal = ({ show, onHide, recordId, onPersonLinked, currentLinked
             </InputGroup.Text>
             <Form.Control
               type="text"
-              placeholder="Buscar por nombre, apellido o número de documento..."
+              placeholder="Ingrese el número de DNI/Identificación..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="border-start-0 ps-0"

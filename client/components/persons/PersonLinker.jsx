@@ -42,19 +42,21 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
     setSearchPerformed(true);
     
     try {
-      const result = await personService.searchPersons(searchQuery);
+      // Usar el endpoint específico de búsqueda por DNI
+      const result = await personService.searchPersonByDniForLinker(searchQuery);
       if (result.success) {
-        // Filtrar la propia persona
-        const filtered = result.data.filter(person => 
-          person.person_id !== personId
-        );
-        setSearchResults(filtered);
+        // El endpoint retorna una sola persona, envolverla en array
+        const person = result.data;
         
-        if (filtered.length === 0) {
-          toast.info('No se encontraron personas con ese criterio de búsqueda');
+        // Filtrar la propia persona
+        if (person.person_id !== personId) {
+          setSearchResults([person]);
+        } else {
+          setSearchResults([]);
+          toast.info('No puede vincularse a sí mismo');
         }
       } else {
-        toast.error(result.error || 'Error al buscar personas');
+        toast.error(result.error || 'Persona no encontrada');
         setSearchResults([]);
       }
     } catch (error) {
@@ -110,7 +112,7 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
           <div>
             <h5 className="fw-bold mb-1">Vincular con Otras Personas</h5>
             <p className="text-muted small mb-0">
-              Establezca vínculos con otras personas registradas en el sistema
+              Busque por DNI/Identificación para vincular con otras personas registradas en el sistema
             </p>
           </div>
           <Button 
@@ -131,7 +133,7 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
                   <FiSearch className="text-muted" />
                 </InputGroup.Text>
                 <Form.Control
-                  placeholder="Buscar por nombre, apellido o documento..."
+                  placeholder="Ingrese el número de DNI/Identificación..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -150,11 +152,31 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
               value={relationshipType}
               onChange={(e) => setRelationshipType(e.target.value)}
             >
-              <optgroup label="Relaciones Personales">
-                <option value="FAMILIAR">Familiar</option>
-                <option value="AMIGO">Amigo</option>
-                <option value="CONOCIDO">Conocido</option>
-                <option value="COLEGA">Colega</option>
+              <optgroup label="Relaciones Familiares">
+                <option value="PADRE">Padre</option>
+                <option value="MADRE">Madre</option>
+                <option value="HERMANO">Hermano</option>
+                <option value="HERMANA">Hermana</option>
+                <option value="HIJO">Hijo</option>
+                <option value="HIJA">Hija</option>
+                <option value="ABUELO">Abuelo</option>
+                <option value="ABUELA">Abuela</option>
+                <option value="NIETO">Nieto</option>
+                <option value="NIETA">Nieta</option>
+                <option value="TIO">Tío</option>
+                <option value="TIA">Tía</option>
+                <option value="SOBRINO">Sobrino</option>
+                <option value="SOBRINA">Sobrina</option>
+                <option value="PRIMO">Primo</option>
+                <option value="PRIMA">Prima</option>
+                <option value="ESPOSO">Esposo</option>
+                <option value="ESPOSA">Esposa</option>
+                <option value="SUEGRO">Suegro</option>
+                <option value="SUEGRA">Suegra</option>
+                <option value="CUÑADO">Cuñado</option>
+                <option value="CUÑADA">Cuñada</option>
+                <option value="PADRINO">Padrino</option>
+                <option value="MADRINA">Madrina</option>
               </optgroup>
               <optgroup label="Relaciones Criminales">
                 <option value="GRUPO_CRIMINAL">Grupo Criminal</option>
@@ -164,6 +186,15 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
                 <option value="LIDER_PANDILLA">Líder de Pandilla</option>
                 <option value="VICTIMA">Víctima</option>
                 <option value="TESTIGO">Testigo</option>
+              </optgroup>
+              <optgroup label="Relaciones Personales">
+                <option value="AMIGO">Amigo</option>
+                <option value="AMIGA">Amiga</option>
+                <option value="CONOCIDO">Conocido</option>
+                <option value="CONOCIDA">Conocida</option>
+                <option value="COLEGA">Colega</option>
+                <option value="COMPAÑERO">Compañero</option>
+                <option value="COMPAÑERA">Compañera</option>
               </optgroup>
               <option value="OTRO">Otro</option>
             </Form.Select>

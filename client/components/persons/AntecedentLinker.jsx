@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Row, Col, Button, Form, Table, Badge, Alert, InputGroup } from 'react-bootstrap';
+import { Card, Row, Col, Button, Form, Table, Badge, Alert, InputGroup, Modal } from 'react-bootstrap';
 import { 
   FiSearch, 
   FiPlus, 
@@ -16,14 +16,18 @@ import {
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import recordService from '../../services/recordService';
+import { useLogin } from '../../hooks/useLogin';
 
 const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, loading = false }) => {
+  const { isView } = useLogin();
   const [searchTerm, setSearchTerm] = useState('');
   const [availableAntecedents, setAvailableAntecedents] = useState([]);
   const [filteredAntecedents, setFilteredAntecedents] = useState([]);
   const [selectedAntecedents, setSelectedAntecedents] = useState([]);
   const [loadingAntecedents, setLoadingAntecedents] = useState(false);
   const [showOnlyAvailable, setShowOnlyAvailable] = useState(true);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedAntecedentDetail, setSelectedAntecedentDetail] = useState(null);
 
 
 
@@ -136,6 +140,11 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
     }
   };
 
+  const handleViewDetails = (antecedent) => {
+    setSelectedAntecedentDetail(antecedent);
+    setShowDetailsModal(true);
+  };
+
 
 
   return (
@@ -189,18 +198,25 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
                     </td>
                     <td>
                       <div className="d-flex gap-1">
-                        <Button variant="outline-primary" size="sm" title="Ver detalles">
+                        <Button 
+                          variant="outline-primary" 
+                          size="sm" 
+                          title="Ver detalles"
+                          onClick={() => handleViewDetails(antecedent)}
+                        >
                           <FiEye size={14} />
                         </Button>
-                        <Button 
-                          variant="outline-danger" 
-                          size="sm" 
-                          title="Desvincular"
-                          onClick={() => handleUnlinkAntecedent(antecedent)}
-                          disabled={loading}
-                        >
-                          <FiXCircle size={14} />
-                        </Button>
+                        {!isView && (
+                          <Button 
+                            variant="outline-danger" 
+                            size="sm" 
+                            title="Desvincular"
+                            onClick={() => handleUnlinkAntecedent(antecedent)}
+                            disabled={loading}
+                          >
+                            <FiXCircle size={14} />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -212,14 +228,15 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
       )}
 
       {/* Filtros y búsqueda */}
-      <Card className="mb-4">
-        <Card.Header className="bg-white">
-          <h6 className="mb-0 fw-bold">
-            <FiSearch className="me-2" />
-            Vincular Nuevos Antecedentes
-          </h6>
-        </Card.Header>
-        <Card.Body>
+      {!isView && (
+        <Card className="mb-4">
+          <Card.Header className="bg-white">
+            <h6 className="mb-0 fw-bold">
+              <FiSearch className="me-2" />
+              Vincular Nuevos Antecedentes
+            </h6>
+          </Card.Header>
+          <Card.Body>
           <Row>
             <Col md={9}>
               <InputGroup className="mb-3">
@@ -294,10 +311,12 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
             </Alert>
           )}
         </Card.Body>
-      </Card>
+        </Card>
+      )}
 
       {/* Lista de antecedentes disponibles */}
-      <Card>
+      {!isView && (
+        <Card>
         <Card.Header className="bg-white">
           <div className="d-flex justify-content-between align-items-center">
             <h6 className="mb-0 fw-bold">
@@ -400,7 +419,8 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
             </Alert>
           )}
         </Card.Body>
-      </Card>
+        </Card>
+      )}
 
       {linkedAntecedents.length === 0 && personId && (
         <Alert variant="info" className="text-center mt-4">
@@ -409,6 +429,83 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
           <p className="mb-0">Los antecedentes vinculados a esta persona aparecerán aquí.</p>
         </Alert>
       )}
+
+      {/* Modal de Detalles del Antecedente */}
+      <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Detalles del Antecedente</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedAntecedentDetail && (
+            <div>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <div className="mb-3">
+                    <label className="fw-bold text-muted small">ID:</label>
+                    <p>
+                      <code>{selectedAntecedentDetail.record_id || selectedAntecedentDetail.id}</code>
+                    </p>
+                  </div>
+                </Col>
+                <Col md={6}>
+                  <div className="mb-3">
+                    <label className="fw-bold text-muted small">Fecha:</label>
+                    <p>{new Date(selectedAntecedentDetail.date).toLocaleDateString()}</p>
+                  </div>
+                </Col>
+              </Row>
+
+              <div className="mb-3">
+                <label className="fw-bold text-muted small">Título:</label>
+                <p>{selectedAntecedentDetail.title}</p>
+              </div>
+
+              {selectedAntecedentDetail.observations && (
+                <div className="mb-3">
+                  <label className="fw-bold text-muted small">Observaciones:</label>
+                  <p>{selectedAntecedentDetail.observations}</p>
+                </div>
+              )}
+
+              <div className="mb-3">
+                <label className="fw-bold text-muted small">Contenido:</label>
+                <div className="p-3 bg-light rounded" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  <p className="mb-0">{selectedAntecedentDetail.content}</p>
+                </div>
+              </div>
+
+              {selectedAntecedentDetail.source && (
+                <div className="mb-3">
+                  <label className="fw-bold text-muted small">Fuente:</label>
+                  <p>{selectedAntecedentDetail.source}</p>
+                </div>
+              )}
+
+              {selectedAntecedentDetail.severity && (
+                <div className="mb-3">
+                  <label className="fw-bold text-muted small">Severidad:</label>
+                  <p>
+                    <Badge 
+                      bg={
+                        selectedAntecedentDetail.severity === 'high' ? 'danger' : 
+                        selectedAntecedentDetail.severity === 'medium' ? 'warning' : 
+                        'info'
+                      }
+                    >
+                      {selectedAntecedentDetail.severity}
+                    </Badge>
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>
+            Cerrar
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

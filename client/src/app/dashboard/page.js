@@ -13,6 +13,7 @@ import RecentPersonsTable from '../../../components/dashboard/RecentPersonsTable
 // Servicios
 import { dashboardService } from '../../../services/dashboardService';
 import personService from '../../../services/personService';
+import { authService } from '../../../services/authService';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -30,8 +31,31 @@ export default function Dashboard() {
       return;
     }
 
-    // Cargar datos del dashboard
-    loadDashboardData();
+    // Verificar que no sea usuario VIEW
+    const checkAndVerifyAccess = async () => {
+      try {
+        const userData = await authService.getCurrentUser();
+        if (userData) {
+          // Verificar si es rol VIEW
+          const isView = 
+            (userData.role_name && userData.role_name.toUpperCase() === 'VIEW') ||
+            (userData.role && userData.role.role_name && userData.role.role_name.toUpperCase() === 'VIEW');
+          
+          if (isView) {
+            // Redirigir a la vista de visualizador
+            router.push('/dashboard/view');
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error al verificar acceso:', error);
+      }
+      
+      // Cargar datos del dashboard para usuarios autorizados
+      loadDashboardData();
+    };
+
+    checkAndVerifyAccess();
     
     // Actualizar los datos cada 30 segundos para mantenerlos frescos
     const intervalId = setInterval(() => {

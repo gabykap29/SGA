@@ -15,6 +15,7 @@ import { toast } from 'react-toastify';
 const Header = ({ toggleSidebar, sidebarOpen }) => {
   const [user, setUser] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isDashboardHovered, setIsDashboardHovered] = useState(false);
   const router = useRouter();
   
   useEffect(() => {
@@ -93,7 +94,22 @@ const Header = ({ toggleSidebar, sidebarOpen }) => {
       </Button>
 
       {/* Título de la página */}
-      <Navbar.Brand className="mb-0 fw-bold" onClick={() => router.push('/dashboard')} style={{ cursor: 'pointer', fontSize: isMobile ? '1rem' : '1.25rem' }}>
+      <Navbar.Brand 
+        className="mb-0 fw-bold" 
+        onClick={() => router.push('/dashboard')} 
+        onMouseEnter={() => setIsDashboardHovered(true)}
+        onMouseLeave={() => setIsDashboardHovered(false)}
+        style={{ 
+          cursor: 'pointer', 
+          fontSize: isMobile ? '1rem' : '1.25rem',
+          color: isDashboardHovered ? '#0d6efd' : '#fff',
+          textDecoration: isDashboardHovered ? 'underline' : 'none',
+          transition: 'all 0.3s ease',
+          padding: '8px 12px',
+          borderRadius: '6px',
+          backgroundColor: isDashboardHovered ? 'rgba(13, 110, 253, 0.1)' : 'transparent'
+        }}
+      >
         Dashboard
       </Navbar.Brand>
 

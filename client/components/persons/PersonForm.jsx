@@ -73,6 +73,23 @@ const PersonForm = ({ onSave, loading = false, initialData = null, isDuplicateEr
         validateAllSections(updatedFormData);
 
         toast.success('Persona encontrada. Información completada automáticamente.');
+        
+        // Cuando se encuentra una persona, automáticamente avanzar sin necesidad de clic
+        setTimeout(() => {
+          const cleanData = {
+            identification: person.identification || '',
+            identification_type: person.identification_type || 'DNI',
+            names: person.names || '',
+            lastnames: person.lastnames || '',
+            address: person.address || '',
+            province: person.province || 'Buenos Aires',
+            country: person.country || 'Argentina',
+            observations: person.observations || '',
+            existingPerson: person  // Incluir la persona encontrada
+          };
+          console.log('Auto-enviando cleanData con persona encontrada:', cleanData);
+          onSave(cleanData);
+        }, 500);
       } else {
         setPersonFound(null);
       }
@@ -195,6 +212,8 @@ const PersonForm = ({ onSave, loading = false, initialData = null, isDuplicateEr
   const handleSubmit = (e) => {
     e.preventDefault();
     
+    console.log('PersonForm - personFound:', personFound);
+    
     if (validateForm()) {
       // Limpiar datos antes de enviar
       const cleanData = {
@@ -205,9 +224,12 @@ const PersonForm = ({ onSave, loading = false, initialData = null, isDuplicateEr
         address: (formData.address ? formData.address.trim() : '') || '',
         province: formData.province || 'Buenos Aires',
         country: formData.country || 'Argentina',
-        observations: formData.observations ? formData.observations.trim() : ''
+        observations: formData.observations ? formData.observations.trim() : '',
+        // Si se encontró una persona existente, incluirla
+        ...(personFound && { existingPerson: personFound })
       };
 
+      console.log('PersonForm - cleanData enviada:', cleanData);
       onSave(cleanData);
     }
   };

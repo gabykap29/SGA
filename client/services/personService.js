@@ -311,7 +311,7 @@ class PersonService {
   // Desvincular un antecedente de una persona
   async unlinkRecord(personId, recordId) {
     try {
-      const response = await fetch(`${this.baseURL}/records/unlink/${recordId}/${personId}`, {
+      const response = await fetch(`${this.baseURL}/persons/${personId}/record/${recordId}`, {
         method: 'DELETE',
         headers: this.getHeaders()
       });
@@ -382,7 +382,7 @@ class PersonService {
   // Desvincular personas
   async unlinkPerson(personId, linkedPersonId) {
     try {
-      const response = await fetch(`${this.baseURL}/persons/${personId}/unlink/${linkedPersonId}`, {
+      const response = await fetch(`${this.baseURL}/persons/${personId}/connection/${linkedPersonId}`, {
         method: 'DELETE',
         headers: this.getHeaders()
       });
@@ -469,27 +469,62 @@ class PersonService {
   // Buscar personas por término
   async searchPersons(searchTerm) {
     try {
-      // El endpoint solo requiere el parámetro query
-      const queryParams = new URLSearchParams();
-      queryParams.append('query', searchTerm);
-      
-      console.log('Realizando búsqueda con término:', searchTerm);
-      console.log('URL completa:', `${this.baseURL}/persons/search/?${queryParams.toString()}`);
+      // Si es un objeto, convertirlo a parámetros de URL
+      if (typeof searchTerm === 'object' && searchTerm !== null) {
+        const params = new URLSearchParams();
+        for (const key in searchTerm) {
+          if (searchTerm[key]) {
+            params.append(key, searchTerm[key]);
+          }
+        }
 
-      const response = await fetch(`${this.baseURL}/persons/search/?${queryParams.toString()}`, {
-        method: 'GET',
-        headers: this.getHeaders()
-      });
+        const queryString = params.toString();
+        if (!queryString) {
+          return { success: false, error: 'Debe proporcionar criterios de búsqueda' };
+        }
 
-      const data = await response.json();
+        const url = `${this.baseURL}/persons/search/person/?${queryString}`;
+        console.log(`Enviando solicitud de búsqueda a: ${url}`);
 
-      if (response.ok) {
-        return { success: true, data };
-      } else {
-        return { success: false, error: data.detail || 'Error al buscar personas' };
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: this.getHeaders()
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          return { success: true, data };
+        } else {
+          return { success: false, error: data.detail || 'Error al buscar personas' };
+        }
       }
+
+      // Si es un string, usar como término de búsqueda
+      if (typeof searchTerm === 'string') {
+        if (!searchTerm || !searchTerm.trim()) {
+          return { success: false, error: 'Debe proporcionar un término de búsqueda' };
+        }
+
+        const url = `${this.baseURL}/persons/search/person/?query=${encodeURIComponent(searchTerm.trim())}`;
+
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: this.getHeaders()
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          return { success: true, data };
+        } else {
+          return { success: false, error: data.detail || 'Error al buscar personas' };
+        }
+      }
+
+      return { success: false, error: 'Parámetro de búsqueda inválido' };
     } catch (error) {
-      console.error('PersonService.searchPersons error:', error);
+      console.error('Error al buscar personas:', error);
       return { success: false, error: 'Error de conexión' };
     }
   }
@@ -539,6 +574,38 @@ class PersonService {
     } catch (error) {
       console.error('PersonService.loadPersonsFromCSV error:', error);
       return { success: false, error: 'Error de conexión al cargar personas desde CSV' };
+    }
+  }
+
+  async searchPersonByDniForLinker(identification) {
+    /**
+     * Busca una persona específicamente por su DNI/identificación
+     * Utilizando el endpoint dedicado /persons/search-dni/{identification}
+     * Retorna un objeto de persona o null
+     */
+    try {
+      if (!identification || !identification.trim()) {
+        return { success: false, error: 'Debe proporcionar un número de identificación' };
+      }
+
+      const url = `${this.baseURL}/persons/search-dni/${encodeURIComponent(identification.trim())}`;
+      console.log(`Buscando persona por DNI: ${url}`);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: this.getHeaders()
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        return { success: true, data: data };
+      } else {
+        return { success: false, error: data.detail || 'Persona no encontrada' };
+      }
+    } catch (error) {
+      console.error('Error al buscar persona por DNI para vinculación:', error);
+      return { success: false, error: 'Error de conexión' };
     }
   }
 }

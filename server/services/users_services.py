@@ -78,61 +78,42 @@ class UserService:
         finally:
             db.close()
         
-    def get_user(self, id: str, db: Session):
+    def get_user(self, id: uuid.UUID, db: Session):
         try:
             from models.schemas.user_schema import UserResponses
-            import uuid
+            from sqlalchemy.orm import joinedload
             
-            # Asegurarse de que el ID sea un objeto UUID válido
-            try:
-                # Si id ya es un UUID, lo usamos directamente
-                if isinstance(id, uuid.UUID):
-                    user_id = id
-                else:
-                    # Si es un string, intentamos convertirlo a UUID
-                    user_id = uuid.UUID(id)
-            except (ValueError, TypeError) as e:
-                print(f"Error al convertir ID a UUID: {e}, id={id}, type={type(id)}")
-                return None
-                
-            user = db.query(self.userModel.id,
-                          self.userModel.names,
-                          self.userModel.lastname,
-                          self.userModel.username,
-                          self.userModel.last_login,
-                          self.roleModel.name.label("role_name")).join(self.roleModel).filter(self.userModel.id == user_id).first()
-            if user:
-                # Crear objeto UserResponses con los datos del usuario
-                return UserResponses(
-                    id=user.id,
-                    names=user.names,
-                    lastname=user.lastname,
-                    username=user.username,
-                    last_login=user.last_login,
-                    role_name=user.role_name
-                )
-            else: 
-                return None
-        except Exception as e:
-            print("Error al obtener los usuarios", e)
-            return None  # Cambiado de False a None
-        finally:
-            db.close()
+            print(f"Getting user with ID: {id}, type: {type(id)}")
             
-    def create_user(self, names: str, lastname: str, username: str, passwd: str, role: str, db:Session):
-        try:
-            hashed_pass = hash_pass(passwd)
-            new_user = self.userModel(names=names, lastname=lastname, username=username, passwd=hashed_pass, role_id=uuid.UUID(role))
-            db.add(new_user)
-            db.commit()
-            return new_user
+            # Usar joinedload para cargar la relación del rol - mismo patrón que get_user_by_username
+            user = db.query(self.userModel).options(
+                joinedload(self.userModel.roles)
+            ).filter(self.userModel.id == id).first()
+            
+            if user is None:
+                print(f"Usuario no encontrado con ID: {id}")
+                return None
+            
+            print(f"Usuario encontrado: {user.username}, role: {user.roles.name if user.roles else 'N/A'}")
+            
+            # Crear la respuesta ANTES de cerrar la sesión
+            response = UserResponses(
+                id=user.id,
+                names=user.names,
+                lastname=user.lastname,
+                username=user.username,
+                last_login=user.last_login,
+                role_name=user.roles.name if user.roles else "UNKNOWN"
+            )
+            
+            return response
         except Exception as e:
-            print("Error al crear el usuario", e)
-            return False
-        finally:
-            db.close()
+            print(f"Error al obtener el usuario: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
     
-    def get_user_username(self, username: str, db: Session):
+    def get_user_by_username(self, username: str, db: Session):
         try:
             from sqlalchemy.orm import joinedload
             # Usar joinedload para cargar la relación roles en la misma consulta

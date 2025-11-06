@@ -1,13 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Form, Button, InputGroup, Table, Badge, Pagination, Alert, Spinner } from 'react-bootstrap';
+import { Card, Form, Button, InputGroup, Table, Badge, Pagination, Alert, Spinner, Row, Col } from 'react-bootstrap';
 import { FiSearch, FiFilter, FiFileText, FiCalendar, FiUser, FiX, FiEye } from 'react-icons/fi';
 import recordService from '../../services/recordService';
 import { toast } from 'react-toastify';
 
 const RecordsSearchView = () => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchFields, setSearchFields] = useState({
+    title: '',
+    content: '',
+    type_record: '',
+    person_name: '',
+    date_from: '',
+    date_to: ''
+  });
   const [isSearching, setIsSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
@@ -32,14 +39,20 @@ const RecordsSearchView = () => {
   }, []);
 
   const handleInputChange = (e) => {
-    setSearchQuery(e.target.value);
+    const { name, value } = e.target;
+    setSearchFields(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSearch = async (e) => {
     e.preventDefault();
     
-    if (!searchQuery.trim()) {
-      toast.warning('Ingrese un término de búsqueda');
+    // Verificar que al menos un campo esté completo
+    const hasSearchCriteria = Object.values(searchFields).some(val => val.trim());
+    if (!hasSearchCriteria) {
+      toast.warning('Ingrese al menos un criterio de búsqueda');
       return;
     }
     
@@ -47,15 +60,23 @@ const RecordsSearchView = () => {
       setIsSearching(true);
       setSearchPerformed(true);
       
-      // Llamar al servicio de búsqueda
-      const result = await recordService.searchRecords(searchQuery);
+      // Llamar al servicio de búsqueda con los campos específicos
+      const result = await recordService.searchRecords(null, searchFields);
+      
+      console.log('handleSearch result:', result);
+      console.log('handleSearch result.data:', result.data);
+      console.log('handleSearch is array:', Array.isArray(result.data));
       
       if (result && result.success) {
-        setSearchResults(result.data || []);
+        const dataToSet = result.data || [];
+        console.log('Setting searchResults to:', dataToSet);
+        setSearchResults(dataToSet);
         setCurrentPage(1); // Reset to first page on new search
         
-        if (result.data.length === 0) {
+        if (dataToSet.length === 0) {
           toast.info('No se encontraron resultados para tu búsqueda');
+        } else {
+          console.log(`Search completed: ${dataToSet.length} results found`);
         }
       } else {
         toast.error((result && result.error) || 'Error al buscar antecedentes');
@@ -71,7 +92,14 @@ const RecordsSearchView = () => {
   };
 
   const handleClearSearch = () => {
-    setSearchQuery('');
+    setSearchFields({
+      title: '',
+      content: '',
+      type_record: '',
+      person_name: '',
+      date_from: '',
+      date_to: ''
+    });
     setSearchResults([]);
     setSearchPerformed(false);
   };
@@ -105,10 +133,11 @@ const RecordsSearchView = () => {
   };
 
   // Paginación
-  const totalPages = Math.ceil(searchResults.length / resultsPerPage);
+  const resultsArray = Array.isArray(searchResults) ? searchResults : [];
+  const totalPages = Math.ceil(resultsArray.length / resultsPerPage);
   const indexOfLastResult = currentPage * resultsPerPage;
   const indexOfFirstResult = indexOfLastResult - resultsPerPage;
-  const currentResults = searchResults.slice(indexOfFirstResult, indexOfLastResult);
+  const currentResults = resultsArray.slice(indexOfFirstResult, indexOfLastResult);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -191,46 +220,160 @@ const RecordsSearchView = () => {
             </h5>
             
             <Form onSubmit={handleSearch}>
-              <InputGroup className="mb-3 shadow-sm">
-                <Form.Control
-                  placeholder="Buscar por número, descripción, tipo de antecedente..."
-                  value={searchQuery}
-                  onChange={handleInputChange}
-                  disabled={isSearching}
-                />
-                {searchQuery && (
-                  <Button 
-                    variant="outline-secondary" 
-                    onClick={handleClearSearch}
-                    title="Limpiar búsqueda"
-                  >
-                    <FiX />
-                  </Button>
-                )}
-                <Button 
-                  variant="dark" 
-                  type="submit" 
-                  disabled={isSearching || !searchQuery.trim()}
-                >
-                  {isSearching ? (
-                    <>
-                      <Spinner
-                        as="span"
-                        animation="border"
-                        size="sm"
-                        role="status"
-                        aria-hidden="true"
-                        className="me-2"
-                      />
-                      Buscando...
-                    </>
-                  ) : (
-                    <>
-                      <FiSearch className="me-2" /> Buscar
-                    </>
-                  )}
-                </Button>
-              </InputGroup>
+              <Row className="g-3">
+                {/* Campo Título */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-bold text-dark small">
+                      <FiFileText className="me-2" size={16} />
+                      Título
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="title"
+                      placeholder="Ingrese título..."
+                      value={searchFields.title}
+                      onChange={handleInputChange}
+                      disabled={isSearching}
+                      className="shadow-sm"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Campo Contenido */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-bold text-dark small">
+                      <FiFileText className="me-2" size={16} />
+                      Contenido
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="content"
+                      placeholder="Ingrese contenido..."
+                      value={searchFields.content}
+                      onChange={handleInputChange}
+                      disabled={isSearching}
+                      className="shadow-sm"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Campo Tipo de Registro */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-bold text-dark small">
+                      <FiFilter className="me-2" size={16} />
+                      Tipo de Registro
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="type_record"
+                      placeholder="Ej: Criminal, Civil, Penal..."
+                      value={searchFields.type_record}
+                      onChange={handleInputChange}
+                      disabled={isSearching}
+                      className="shadow-sm"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Campo Nombre de Persona */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-bold text-dark small">
+                      <FiUser className="me-2" size={16} />
+                      Nombre de Persona
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="person_name"
+                      placeholder="Ingrese nombre de persona..."
+                      value={searchFields.person_name}
+                      onChange={handleInputChange}
+                      disabled={isSearching}
+                      className="shadow-sm"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Campo Fecha Desde */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-bold text-dark small">
+                      <FiCalendar className="me-2" size={16} />
+                      Fecha Desde
+                    </Form.Label>
+                    <Form.Control
+                      type="date"
+                      name="date_from"
+                      value={searchFields.date_from}
+                      onChange={handleInputChange}
+                      disabled={isSearching}
+                      className="shadow-sm"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Campo Fecha Hasta */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-bold text-dark small">
+                      <FiCalendar className="me-2" size={16} />
+                      Fecha Hasta
+                    </Form.Label>
+                    <Form.Control
+                      type="date"
+                      name="date_to"
+                      value={searchFields.date_to}
+                      onChange={handleInputChange}
+                      disabled={isSearching}
+                      className="shadow-sm"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Botones de acción */}
+                <Col xs={12}>
+                  <div className="d-flex gap-2 align-items-center">
+                    <Button 
+                      variant="dark" 
+                      type="submit" 
+                      disabled={isSearching || !Object.values(searchFields).some(val => val.trim())}
+                      className="flex-grow-1"
+                    >
+                      {isSearching ? (
+                        <>
+                          <Spinner
+                            as="span"
+                            animation="border"
+                            size="sm"
+                            role="status"
+                            aria-hidden="true"
+                            className="me-2"
+                          />
+                          Buscando...
+                        </>
+                      ) : (
+                        <>
+                          <FiSearch className="me-2" />
+                          Buscar
+                        </>
+                      )}
+                    </Button>
+                    {Object.values(searchFields).some(val => val.trim()) && (
+                      <Button 
+                        variant="outline-secondary" 
+                        onClick={handleClearSearch}
+                        disabled={isSearching}
+                        title="Limpiar criterios de búsqueda"
+                      >
+                        <FiX />
+                      </Button>
+                    )}
+                  </div>
+                </Col>
+              </Row>
             </Form>
           </Card.Body>
         </Card>
@@ -245,17 +388,17 @@ const RecordsSearchView = () => {
                 </Spinner>
                 <p className="mt-3 text-muted">Buscando antecedentes...</p>
               </div>
-            ) : searchResults.length === 0 ? (
+            ) : resultsArray.length === 0 ? (
               <Alert variant="info" className="text-center my-4">
                 <FiFilter className="me-2" size={20} />
-                No se encontraron resultados para <strong>"{searchQuery}"</strong>
+                No se encontraron resultados para los criterios especificados
               </Alert>
             ) : (
               <>
                 {/* Resumen de resultados */}
                 <div className="d-flex justify-content-between align-items-center mb-4">
                   <p className="text-muted mb-0">
-                    Se encontraron <strong>{searchResults.length}</strong> resultados
+                    Se encontraron <strong>{resultsArray.length}</strong> resultados
                   </p>
                 </div>
 
@@ -272,56 +415,67 @@ const RecordsSearchView = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {currentResults.map((record) => (
-                        <tr key={record.record_id}>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <div className={`bg-${getRecordTypeColor(record.record_type)} text-white rounded-circle d-flex justify-content-center align-items-center me-3`} style={{ width: '40px', height: '40px', fontSize: '16px' }}>
-                                <FiFileText />
-                              </div>
-                              <div>
-                                <div className="fw-bold">{record.record_number}</div>
-                                <small className="text-muted d-block">
-                                  {record.description || 'Sin descripción'}
-                                </small>
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <Badge bg={getRecordTypeColor(record.record_type)}>
-                              {record.record_type || 'N/A'}
-                            </Badge>
-                          </td>
-                          {!isMobile && (
-                            <td>
-                              <div className="d-flex align-items-center">
-                                <FiCalendar className="me-2 text-muted" size={14} />
-                                <span>{formatDate(record.record_date)}</span>
-                              </div>
-                            </td>
-                          )}
-                          {!isMobile && (
-                            <td>
-                              <div className="d-flex align-items-start">
-                                <FiUser className="me-2 mt-1 text-muted" size={14} />
-                                <span className="text-muted">
-                                  {record.court || record.authority || 'No registrado'}
-                                </span>
-                              </div>
-                            </td>
-                          )}
-                          <td className="text-center">
-                            <Button 
-                              variant="outline-primary" 
-                              size="sm" 
-                              onClick={() => handleViewRecord(record.record_id)}
-                              title="Ver detalles"
-                            >
-                              <FiEye /> Ver
-                            </Button>
+                      {currentResults && currentResults.length > 0 ? (
+                        currentResults.map((record) => {
+                          console.log('Rendering record:', record);
+                          return (
+                            <tr key={record.record_id}>
+                              <td>
+                                <div className="d-flex align-items-center">
+                                  <div className={`bg-${getRecordTypeColor(record.type_record)} text-white rounded-circle d-flex justify-content-center align-items-center me-3`} style={{ width: '40px', height: '40px', fontSize: '16px' }}>
+                                    <FiFileText />
+                                  </div>
+                                  <div>
+                                    <div className="fw-bold">{record.title || 'Sin título'}</div>
+                                    <small className="text-muted d-block">
+                                      {record.content || 'Sin descripción'}
+                                    </small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                <Badge bg={getRecordTypeColor(record.type_record)}>
+                                  {record.type_record || 'N/A'}
+                                </Badge>
+                              </td>
+                              {!isMobile && (
+                                <td>
+                                  <div className="d-flex align-items-center">
+                                    <FiCalendar className="me-2 text-muted" size={14} />
+                                    <span>{formatDate(record.date)}</span>
+                                  </div>
+                                </td>
+                              )}
+                              {!isMobile && (
+                                <td>
+                                  <div className="d-flex align-items-start">
+                                    <FiUser className="me-2 mt-1 text-muted" size={14} />
+                                    <span className="text-muted">
+                                      {record.observations || 'No registrado'}
+                                    </span>
+                                  </div>
+                                </td>
+                              )}
+                              <td className="text-center">
+                                <Button 
+                                  variant="outline-primary"
+                                  size="sm" 
+                                  onClick={() => handleViewRecord(record.record_id)}
+                                  title="Ver detalles"
+                                >
+                                  <FiEye /> Ver
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan="5" className="text-center text-muted py-4">
+                            No hay registros para mostrar
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </Table>
                 </div>

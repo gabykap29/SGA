@@ -1,13 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Form, Button, InputGroup, Table, Badge, Pagination, Alert, Spinner } from 'react-bootstrap';
+import { Card, Form, Button, InputGroup, Table, Badge, Pagination, Alert, Spinner, Row, Col } from 'react-bootstrap';
 import { FiSearch, FiFilter, FiUser, FiHome, FiCreditCard, FiMapPin, FiX, FiEye } from 'react-icons/fi';
 import personService from '../../services/personService';
 import { toast } from 'react-toastify';
 
 const SearchPersonsView = () => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchFields, setSearchFields] = useState({
+    names: '',
+    lastname: '',
+    identification: '',
+    address: ''
+  });
   const [showDescription, setShowDescription] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
@@ -33,14 +38,20 @@ const SearchPersonsView = () => {
   }, []);
 
   const handleInputChange = (e) => {
-    setSearchQuery(e.target.value);
+    const { name, value } = e.target;
+    setSearchFields(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSearch = async (e) => {
     e.preventDefault();
     
-    if (!searchQuery.trim()) {
-      toast.warning('Ingrese un término de búsqueda');
+    // Verificar que al menos un campo esté completo
+    const hasSearchCriteria = Object.values(searchFields).some(val => val.trim());
+    if (!hasSearchCriteria) {
+      toast.warning('Ingrese al menos un criterio de búsqueda');
       return;
     }
     
@@ -48,8 +59,8 @@ const SearchPersonsView = () => {
       setIsSearching(true);
       setSearchPerformed(true);
       
-      // Llamar al servicio de búsqueda
-      const result = await personService.searchPersons(searchQuery);
+      // Llamar al servicio de búsqueda con los campos específicos
+      const result = await personService.searchPersons(searchFields);
       
       if (result.success) {
         setSearchResults(result.data || []);
@@ -72,7 +83,12 @@ const SearchPersonsView = () => {
   };
 
   const handleClearSearch = () => {
-    setSearchQuery('');
+    setSearchFields({
+      names: '',
+      lastname: '',
+      identification: '',
+      address: ''
+    });
     setShowDescription(false);
     setSearchResults([]);
     setSearchPerformed(false);
@@ -169,60 +185,140 @@ const SearchPersonsView = () => {
             </h5>
             
             <Form onSubmit={handleSearch}>
-              <InputGroup className="mb-3 shadow-sm">
-                <Form.Control
-                  placeholder="Buscar por nombre, apellido, documento, etc."
-                  value={searchQuery}
-                  onChange={handleInputChange}
-                  disabled={isSearching}
-                />
-                {searchQuery && (
-                  <Button 
-                    variant="outline-secondary" 
-                    onClick={handleClearSearch}
-                    title="Limpiar búsqueda"
-                  >
-                    <FiX />
-                  </Button>
-                )}
-                <Button 
-                  variant="dark" 
-                  type="submit" 
-                  disabled={isSearching || !searchQuery.trim()}
-                >
-                  {isSearching ? (
-                    <>
-                      <Spinner
-                        as="span"
-                        animation="border"
-                        size="sm"
-                        role="status"
-                        aria-hidden="true"
-                        className="me-2"
-                      />
-                      Buscando...
-                    </>
-                  ) : (
-                    <>
-                      <FiSearch className="me-2" /> Buscar
-                    </>
-                  )}
-                </Button>
-              </InputGroup>
-              <div className="d-flex justify-content-between align-items-center">
-                <div className="form-check">
-                  <input 
-                    className="form-check-input" 
-                    type="checkbox" 
-                    id="showDescriptionCheck"
-                    checked={showDescription}
-                    onChange={() => setShowDescription(!showDescription)}
-                  />
-                  <label className="form-check-label text-muted" htmlFor="showDescriptionCheck">
-                    Mostrar descripción en resultados
-                  </label>
-                </div>
-              </div>
+              <Row className="g-3">
+                {/* Campo Nombre */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-bold text-dark small">
+                      <FiUser className="me-2" size={16} />
+                      Nombre
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="names"
+                      placeholder="Ingrese nombre..."
+                      value={searchFields.names}
+                      onChange={handleInputChange}
+                      disabled={isSearching}
+                      className="shadow-sm"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Campo Apellido */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-bold text-dark small">
+                      <FiUser className="me-2" size={16} />
+                      Apellido
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="lastname"
+                      placeholder="Ingrese apellido..."
+                      value={searchFields.lastname}
+                      onChange={handleInputChange}
+                      disabled={isSearching}
+                      className="shadow-sm"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Campo DNI/Identificación */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-bold text-dark small">
+                      <FiCreditCard className="me-2" size={16} />
+                      DNI/Identificación
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="identification"
+                      placeholder="Ingrese número de documento..."
+                      value={searchFields.identification}
+                      onChange={handleInputChange}
+                      disabled={isSearching}
+                      className="shadow-sm"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Campo Domicilio */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-bold text-dark small">
+                      <FiMapPin className="me-2" size={16} />
+                      Domicilio
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="address"
+                      placeholder="Ingrese dirección..."
+                      value={searchFields.address}
+                      onChange={handleInputChange}
+                      disabled={isSearching}
+                      className="shadow-sm"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Botones de acción */}
+                <Col xs={12}>
+                  <div className="d-flex gap-2 align-items-center">
+                    <Button 
+                      variant="dark" 
+                      type="submit" 
+                      disabled={isSearching || !Object.values(searchFields).some(val => val.trim())}
+                      className="flex-grow-1"
+                    >
+                      {isSearching ? (
+                        <>
+                          <Spinner
+                            as="span"
+                            animation="border"
+                            size="sm"
+                            role="status"
+                            aria-hidden="true"
+                            className="me-2"
+                          />
+                          Buscando...
+                        </>
+                      ) : (
+                        <>
+                          <FiSearch className="me-2" />
+                          Buscar
+                        </>
+                      )}
+                    </Button>
+                    {Object.values(searchFields).some(val => val.trim()) && (
+                      <Button 
+                        variant="outline-secondary" 
+                        onClick={handleClearSearch}
+                        disabled={isSearching}
+                        title="Limpiar criterios de búsqueda"
+                      >
+                        <FiX />
+                      </Button>
+                    )}
+                  </div>
+                </Col>
+
+                {/* Checkbox mostrar descripción */}
+                <Col xs={12}>
+                  <div className="form-check">
+                    <input 
+                      className="form-check-input" 
+                      type="checkbox" 
+                      id="showDescriptionCheck"
+                      checked={showDescription}
+                      onChange={() => setShowDescription(!showDescription)}
+                    />
+                    <label className="form-check-label text-muted small" htmlFor="showDescriptionCheck">
+                      Mostrar descripción en resultados
+                    </label>
+                  </div>
+                </Col>
+              </Row>
             </Form>
           </Card.Body>
         </Card>

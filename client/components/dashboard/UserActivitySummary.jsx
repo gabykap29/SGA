@@ -49,9 +49,6 @@ const UserActivitySummary = ({ summary, loading }) => {
     
   return (
     <Card className="border-0 shadow-sm mb-4">
-      <Card.Header className="bg-white py-3">
-        <h5 className="mb-0">Resumen de Actividad</h5>
-      </Card.Header>
       <Card.Body className="p-0">
         <Tabs
           activeKey={activeTab}

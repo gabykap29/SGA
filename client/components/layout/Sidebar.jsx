@@ -17,7 +17,7 @@ import {
 import { useLogin } from '../../hooks/useLogin';
 
 const Sidebar = ({ isOpen, toggle, isMobile }) => {
-  const { isAdmin } = useLogin();
+  const { isAdmin, isView } = useLogin();
   const [openMenus, setOpenMenus] = useState({
     personas: false,
     antecedentes: false,
@@ -90,6 +90,11 @@ const Sidebar = ({ isOpen, toggle, isMobile }) => {
   ] : [];
   
   const sidebarItems = [...baseItems, ...adminItem];
+
+  // No renderizar sidebar para usuarios VIEW
+  if (isView) {
+    return null;
+  }
 
   return (
     <>

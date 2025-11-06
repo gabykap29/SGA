@@ -14,7 +14,7 @@ import {
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 
-const FileManager = ({ personId, files = [], onFilesUpload, loading = false }) => {
+const FileManager = ({ personId, files = [], onFilesUpload, onFileDelete, loading = false }) => {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState({});
@@ -162,6 +162,132 @@ const FileManager = ({ personId, files = [], onFilesUpload, loading = false }) =
 
   const getFileColor = (type) => {
     return allowedTypes[type]?.color || 'secondary';
+  };
+
+  // Obtener token de autenticación
+  const getAuthToken = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('token');
+    }
+    return null;
+  };
+
+  // Headers con autenticación
+  const getAuthHeaders = () => {
+    const token = getAuthToken();
+    return {
+      ...(token && { Authorization: `Bearer ${token}` })
+    };
+  };
+
+  // Función para verificar autenticación
+  const checkAuth = () => {
+    const token = getAuthToken();
+    if (!token) {
+      toast.error('Sesión expirada. Por favor, inicie sesión nuevamente.');
+      return false;
+    }
+    return true;
+  };
+
+  // Función para ver archivo
+  const handleViewFile = async (file) => {
+    if (!checkAuth()) return;
+    
+    try {
+      const fileId = file.id || file.file_id;
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/files/${fileId}/download`, {
+        method: 'GET',
+        headers: getAuthHeaders()
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        // Limpiar el URL después de un tiempo para liberar memoria
+        setTimeout(() => window.URL.revokeObjectURL(url), 100);
+      } else {
+        if (response.status === 401 || response.status === 403) {
+          toast.error('Sesión expirada. Por favor, inicie sesión nuevamente.');
+        } else {
+          const errorData = await response.json();
+          toast.error(errorData.detail || 'Error al acceder al archivo');
+        }
+      }
+    } catch (error) {
+      console.error('Error viewing file:', error);
+      toast.error('Error al acceder al archivo');
+    }
+  };
+
+  // Función para descargar archivo
+  const handleDownloadFile = async (file) => {
+    if (!checkAuth()) return;
+    
+    try {
+      const fileId = file.id || file.file_id;
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/files/${fileId}/download`, {
+        method: 'GET',
+        headers: getAuthHeaders()
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.original_filename || file.filename || 'archivo';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        toast.success('Archivo descargado exitosamente');
+      } else {
+        if (response.status === 401 || response.status === 403) {
+          toast.error('Sesión expirada. Por favor, inicie sesión nuevamente.');
+        } else {
+          const errorData = await response.json();
+          toast.error(errorData.detail || 'Error al descargar el archivo');
+        }
+      }
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast.error('Error al descargar el archivo');
+    }
+  };
+
+  // Función para eliminar archivo
+  const handleDeleteFile = async (file) => {
+    if (!checkAuth()) return;
+    
+    if (window.confirm('¿Está seguro de que desea eliminar este archivo?')) {
+      try {
+        const fileId = file.id || file.file_id;
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/files/${fileId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+
+        if (response.ok) {
+          toast.success('Archivo eliminado exitosamente');
+          // Llamar callback para actualizar la lista
+          if (onFileDelete) {
+            onFileDelete(fileId);
+          }
+        } else {
+          if (response.status === 401 || response.status === 403) {
+            toast.error('Sesión expirada. Por favor, inicie sesión nuevamente.');
+          } else {
+            const errorData = await response.json();
+            toast.error(errorData.detail || 'Error al eliminar el archivo');
+          }
+        }
+      } catch (error) {
+        console.error('Error deleting file:', error);
+        toast.error('Error al eliminar el archivo');
+      }
+    }
   };
 
   return (
@@ -336,6 +462,7 @@ const FileManager = ({ personId, files = [], onFilesUpload, loading = false }) =
                           variant="outline-primary"
                           size="sm"
                           title="Ver archivo"
+                          onClick={() => handleViewFile(file)}
                         >
                           <FiEye size={14} />
                         </Button>
@@ -343,6 +470,7 @@ const FileManager = ({ personId, files = [], onFilesUpload, loading = false }) =
                           variant="outline-success"
                           size="sm"
                           title="Descargar"
+                          onClick={() => handleDownloadFile(file)}
                         >
                           <FiDownload size={14} />
                         </Button>
@@ -350,6 +478,7 @@ const FileManager = ({ personId, files = [], onFilesUpload, loading = false }) =
                           variant="outline-danger"
                           size="sm"
                           title="Eliminar"
+                          onClick={() => handleDeleteFile(file)}
                         >
                           <FiTrash2 size={14} />
                         </Button>

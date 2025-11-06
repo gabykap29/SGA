@@ -8,16 +8,43 @@ import {
   FiEdit2,
   FiGlobe,
   FiCreditCard,
-  FiTrash2
+  FiTrash2,
+  FiLink,
+  FiUsers
 } from 'react-icons/fi';
 import AddImageModal from './AddImageModal';
 import personService from '../../services/personService';
 import { toast } from 'react-toastify';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLogin } from '../../hooks/useLogin';
 
 const PersonDetails = ({ person, onUpdate, onDelete }) => {
+  const { isView } = useLogin();
   const [showAddImage, setShowAddImage] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [linkedPersons, setLinkedPersons] = useState([]);
+  const [loadingConnections, setLoadingConnections] = useState(false);
+
+  // Cargar conexiones al iniciar
+  useEffect(() => {
+    if (person?.person_id) {
+      loadConnections();
+    }
+  }, [person?.person_id]);
+
+  const loadConnections = async () => {
+    try {
+      setLoadingConnections(true);
+      const result = await personService.getLinkedPersons(person.person_id);
+      if (result.success) {
+        setLinkedPersons(result.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading connections:', error);
+    } finally {
+      setLoadingConnections(false);
+    }
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -70,11 +97,13 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
       padding: '0'
     }}>
       {/* Botón para añadir imagen */}
-      <div className="mb-3 text-end">
-        <Button variant="dark" onClick={() => setShowAddImage(true)}>
-          Añadir Imagen
-        </Button>
-      </div>
+      {!isView && (
+        <div className="mb-3 text-end">
+          <Button variant="dark" onClick={() => setShowAddImage(true)}>
+            Añadir Imagen
+          </Button>
+        </div>
+      )}
 
       {/* Información básica */}
       <div className="mb-4 p-3" style={{
@@ -220,22 +249,88 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
                 </div>
                 
               </div>
-              <div className="mb-3">
-                <Button 
-                  variant="dark" 
-                  size="sm"
-                  onClick={() => onUpdate && onUpdate()}
-                  style={{
-                    backgroundColor: '#212529',
-                    border: '1px solid #000',
-                    borderRadius: '4px',
-                    color: 'white'
-                  }}
-                >
-                  <FiEdit2 className="me-2" size={14} />
-                  Editar Información
-                </Button>
-              </div>
+              {!isView && (
+                <div className="mb-3">
+                  <Button 
+                    variant="dark" 
+                    size="sm"
+                    onClick={() => onUpdate && onUpdate()}
+                    style={{
+                      backgroundColor: '#212529',
+                      border: '1px solid #000',
+                      borderRadius: '4px',
+                      color: 'white'
+                    }}
+                  >
+                    <FiEdit2 className="me-2" size={14} />
+                    Editar Información
+                  </Button>
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Conexiones de Personas */}
+      <Row className="g-3 px-3 mt-3">
+        <Col xs={12}>
+          <Card style={{
+            backgroundColor: 'white',
+            border: '1px solid #dee2e6',
+            borderRadius: '4px'
+          }}>
+            <Card.Header className="border-bottom" style={{backgroundColor: '#f5f5f5'}}>
+              <h6 className="mb-0 fw-bold text-dark">
+                <FiLink className="me-2" size={16} />
+                Personas Relacionadas ({linkedPersons.length})
+              </h6>
+            </Card.Header>
+            <Card.Body>
+              {loadingConnections ? (
+                <div className="text-center text-muted">
+                  <p>Cargando conexiones...</p>
+                </div>
+              ) : linkedPersons.length === 0 ? (
+                <div className="text-center text-muted">
+                  <p className="mb-0">No hay personas relacionadas</p>
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table table-sm table-hover mb-0">
+                    <thead className="table-light">
+                      <tr>
+                        <th>Nombre</th>
+                        <th>Documento</th>
+                        <th>Tipo de Relación</th>
+                        <th>Provincia</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {linkedPersons.map((linkedPerson) => (
+                        <tr key={linkedPerson.person_id}>
+                          <td className="fw-medium">
+                            {linkedPerson.names} {linkedPerson.lastnames}
+                          </td>
+                          <td>
+                            <Badge bg="light" text="dark" className="small">
+                              {linkedPerson.identification || 'N/A'}
+                            </Badge>
+                          </td>
+                          <td>
+                            <Badge bg="info" className="small">
+                              {linkedPerson.connection_type || linkedPerson.type_relationship || 'N/A'}
+                            </Badge>
+                          </td>
+                          <td className="text-muted small">
+                            {linkedPerson.province || 'N/A'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </Card.Body>
           </Card>
         </Col>
