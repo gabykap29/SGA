@@ -123,7 +123,7 @@ class RecordService:
                     self.recordModel.observations.ilike(search_pattern),
                     self.recordModel.type_record.ilike(search_pattern)
                 )
-            )
+            ).limit(50)
         
         # Filtros específicos por campo
         if filters.get('title'):

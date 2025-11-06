@@ -225,7 +225,7 @@ def search_person_debug(query: str = Query(..., description="Término de búsque
 
 
 @router.post("/create", status_code=status.HTTP_201_CREATED, response_model=PersonResponse)
-def create_person(person_data: PersonSchema, current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_admin)):
+def create_person(person_data: PersonSchema, current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all)):
     if not is_authorized:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

@@ -44,12 +44,57 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
 
 
   useEffect(() => {
-    loadAntecedents();
+    // No cargar todos los antecedentes al inicio, esperar a que el usuario busque
   }, []);
 
   useEffect(() => {
-    filterAntecedents();
+    // Este efecto ya no es necesario porque no filtramos localmente
   }, [searchTerm, showOnlyAvailable, availableAntecedents, linkedAntecedents]);
+
+  const searchAntecedents = async () => {
+    if (!searchTerm.trim()) {
+      toast.warning('Ingrese un término de búsqueda');
+      return;
+    }
+
+    setLoadingAntecedents(true);
+    try {
+      // Buscar antecedentes en el backend
+      const result = await recordService.searchRecords(searchTerm, {});
+      
+      if (result.success) {
+        let filtered = result.data || [];
+
+        // Mostrar solo disponibles (no vinculados)
+        if (showOnlyAvailable) {
+          const linkedIds = linkedAntecedents.map(ant => ant.record_id || ant.id);
+          filtered = filtered.filter(ant => !linkedIds.includes(ant.record_id || ant.id));
+        }
+
+        setFilteredAntecedents(filtered);
+        
+        if (filtered.length === 0) {
+          toast.info('No se encontraron antecedentes con ese término de búsqueda');
+        }
+      } else {
+        toast.error(result.error || 'Error al buscar antecedentes');
+        setFilteredAntecedents([]);
+      }
+    } catch (error) {
+      console.error('Error searching antecedents:', error);
+      toast.error('Error al buscar antecedentes');
+      setFilteredAntecedents([]);
+    } finally {
+      setLoadingAntecedents(false);
+    }
+  };
+
+  const handleSearchKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      searchAntecedents();
+    }
+  };
 
   const loadAntecedents = async () => {
     setLoadingAntecedents(true);
@@ -268,10 +313,11 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
                 </InputGroup.Text>
                 <Form.Control
                   type="text"
-                  placeholder="Buscar antecedentes por título, contenido u observaciones..."
+                  placeholder="Buscar antecedentes por título, contenido u observaciones... (Presiona Enter)"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  disabled={!personId}
+                  onKeyPress={handleSearchKeyPress}
+                  disabled={!personId || loadingAntecedents}
                 />
               </InputGroup>
             </Col>
@@ -288,10 +334,11 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
                 <Button 
                   variant="outline-secondary" 
                   size="sm"
-                  onClick={loadAntecedents}
-                  disabled={loadingAntecedents || !personId}
+                  onClick={searchAntecedents}
+                  disabled={loadingAntecedents || !personId || !searchTerm.trim()}
+                  title="Buscar antecedentes"
                 >
-                  <FiRefreshCw size={14} />
+                  <FiSearch size={14} />
                 </Button>
               </div>
             </Col>
@@ -464,7 +511,7 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
               <p className="mb-0">
                 {searchTerm ? 
                   'No hay antecedentes que coincidan con la búsqueda.' :
-                  'No hay antecedentes disponibles para vincular.'
+                  'Ingresa un término de búsqueda y presiona Enter para buscar antecedentes.'
                 }
               </p>
             </Alert>
