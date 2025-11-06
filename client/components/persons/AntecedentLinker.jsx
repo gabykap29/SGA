@@ -189,6 +189,7 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
                   <th>Título</th>
                   <th>Contenido</th>
                   <th>Fecha</th>
+                  <th>Tipo de Vinculación</th>
                   <th width="120">Acciones</th>
                 </tr>
               </thead>
@@ -212,6 +213,11 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
                     <td>
                       <FiCalendar size={14} className="me-1" />
                       {new Date(antecedent.date).toLocaleDateString()}
+                    </td>
+                    <td>
+                      <Badge bg="info">
+                        {antecedent.type_relationship || 'N/A'}
+                      </Badge>
                     </td>
                     <td>
                       <div className="d-flex gap-1">

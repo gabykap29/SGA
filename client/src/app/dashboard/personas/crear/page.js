@@ -206,10 +206,13 @@ export default function CreatePerson() {
       const result = await personService.linkRecords(personData.person_id, recordIds, typeRelationship);
       
       if (result.success) {
-        // Agregar el nuevo antecedente a la lista existente
-        const linkedCount = result.data.length;
+        // Agregar el nuevo antecedente a la lista existente, incluyendo el tipo de vinculación
+        const antecedentWithRelationship = {
+          ...antecedent,
+          type_relationship: typeRelationship
+        };
         
-        setLinkedRecords(prev => [...prev, antecedent]);
+        setLinkedRecords(prev => [...prev, antecedentWithRelationship]);
         setCompletedSteps(prev => new Set([...prev, 3]));
         
         toast.success(`Antecedente vinculado exitosamente`);
