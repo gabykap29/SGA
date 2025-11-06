@@ -146,11 +146,18 @@ def search_person(
     Busca personas basado en criterios específicos.
     Requiere autenticación y rol autorizado (ADMIN, MODERATE, USERS, VIEW).
     """
+    print(f"🔍 GET /persons/search/person/ - Parámetros recibidos:")
+    print(f"   names={names}, lastname={lastname}, identification={identification}")
+    print(f"   gender={gender}, address={address}, nationality={nationality}")
+    print(f"   Usuario: {current_user.get('sub', 'unknown')}")
+    
     if not is_authorized:
+        print("❌ Usuario no autorizado")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permiso para realizar esta acción")
 
     db_session = SessionLocal()
     try:
+        print("📊 Llamando a person_service.search_person()")
         persons = person_service.search_person(
             db=db_session,
             names=names,
@@ -161,15 +168,23 @@ def search_person(
             nationality=nationality
         )
 
+        print(f"✅ Búsqueda completada: {len(persons) if persons else 0} personas encontradas")
+        
         if not persons:
+            print("⚠️  Sin resultados")
             return []
 
-        return [PersonResponse.model_validate(p) for p in persons]
+        result = [PersonResponse.model_validate(p) for p in persons]
+        print(f"✅ Retornando {len(result)} resultados")
+        return result
     except HTTPException as e:
         # Re-lanzar excepciones HTTP para que FastAPI las maneje
+        print(f"❌ HTTPException: {e.detail}")
         raise e
     except Exception as e:
-        print(f"Error en el controlador de búsqueda: {e}")
+        print(f"❌ Error en el controlador de búsqueda: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error en el servidor al buscar personas: {str(e)}"

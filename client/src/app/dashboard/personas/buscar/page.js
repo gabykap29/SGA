@@ -14,12 +14,10 @@ export default function SearchPersons() {
   const [searchFields, setSearchFields] = useState({
     identification: '',
     names: '',
-    lastnames: '',
-    address: '',
-    province: '',
-    country: ''
+    lastname: '',
+    address: ''
   });
-  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(true);
   const [showDescription, setShowDescription] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
@@ -64,12 +62,11 @@ export default function SearchPersons() {
   const handleSearch = async (e) => {
     e.preventDefault();
     
-    // Verificar si hay búsqueda general o específica
-    const hasGeneralSearch = searchQuery.trim();
-    const hasSpecificSearch = Object.values(searchFields).some(field => field.trim());
+    // Verificar que al menos un campo esté completo
+    const hasSearchCriteria = Object.values(searchFields).some(field => field.trim());
     
-    if (!hasGeneralSearch && !hasSpecificSearch) {
-      toast.warning('Ingrese al menos un término de búsqueda');
+    if (!hasSearchCriteria) {
+      toast.warning('Ingrese al menos un criterio de búsqueda');
       return;
     }
     
@@ -77,31 +74,16 @@ export default function SearchPersons() {
       setIsSearching(true);
       setSearchPerformed(true);
       
-      let searchTerm = '';
-      
-      // Construir el término de búsqueda combinando todos los campos
-      if (hasGeneralSearch) {
-        searchTerm = searchQuery.trim();
-      }
-      
-      if (hasSpecificSearch) {
-        const specificTerms = [];
-        if (searchFields.identification.trim()) specificTerms.push(searchFields.identification.trim());
-        if (searchFields.names.trim()) specificTerms.push(searchFields.names.trim());
-        if (searchFields.lastnames.trim()) specificTerms.push(searchFields.lastnames.trim());
-        if (searchFields.address.trim()) specificTerms.push(searchFields.address.trim());
-        if (searchFields.province.trim()) specificTerms.push(searchFields.province.trim());
-        if (searchFields.country.trim()) specificTerms.push(searchFields.country.trim());
-        
-        if (searchTerm) {
-          searchTerm += ' ' + specificTerms.join(' ');
-        } else {
-          searchTerm = specificTerms.join(' ');
+      // Filtrar solo los campos con valores
+      const filteredFields = {};
+      Object.entries(searchFields).forEach(([key, value]) => {
+        if (value.trim()) {
+          filteredFields[key] = value.trim();
         }
-      }
+      });
       
-      // Llamar al servicio de búsqueda
-      const result = await personService.searchPersons(searchTerm);
+      // Llamar al servicio de búsqueda con el objeto de campos específicos
+      const result = await personService.searchPersons(filteredFields);
       
       if (result.success) {
         setSearchResults(result.data || []);
@@ -130,10 +112,8 @@ export default function SearchPersons() {
     setSearchFields({
       identification: '',
       names: '',
-      lastnames: '',
-      address: '',
-      province: '',
-      country: ''
+      lastname: '',
+      address: ''
     });
     setShowDescription(false);
     setSearchResults([]);
@@ -256,37 +236,6 @@ export default function SearchPersons() {
         <Card className="mb-3 mb-md-4 border-1 shadow-sm">
           <Card.Body className="p-3 p-md-4">
             <Form onSubmit={handleSearch}>
-              {/* Búsqueda general */}
-              <Row className="align-items-end mb-3">
-                <Col>
-                  <Form.Label className="fw-medium text-dark">
-                    <FiSearch className="me-1" />
-                    Búsqueda general
-                  </Form.Label>
-                  <InputGroup>
-                    <InputGroup.Text className="bg-light border-end-0">
-                      <FiSearch className="text-muted" />
-                    </InputGroup.Text>
-                    <Form.Control
-                      type="text"
-                      placeholder="Buscar en todos los campos..."
-                      value={searchQuery}
-                      onChange={handleInputChange}
-                      className="border-start-0 ps-0"
-                    />
-                  </InputGroup>
-                  <Form.Text className="text-muted">
-                    Busca simultáneamente en nombres, apellidos, DNI, domicilio, provincia y país
-                  </Form.Text>
-                </Col>
-              </Row>
-
-              {/* Divisor */}
-              <div className="d-flex align-items-center my-3">
-                <hr className="flex-grow-1" />
-                <span className="px-3 text-muted small">O buscar por campos específicos</span>
-                <hr className="flex-grow-1" />
-              </div>
 
               {/* Toggle para búsqueda avanzada */}
               <div className="d-flex align-items-center mb-3">
@@ -338,8 +287,8 @@ export default function SearchPersons() {
                       <Form.Control
                         type="text"
                         placeholder="Ej: García López"
-                        value={searchFields.lastnames}
-                        onChange={(e) => handleFieldChange('lastnames', e.target.value)}
+                        value={searchFields.lastname}
+                        onChange={(e) => handleFieldChange('lastname', e.target.value)}
                       />
                     </Col>
                     <Col md={6}>

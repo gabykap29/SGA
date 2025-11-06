@@ -102,32 +102,43 @@ class PersonsService:
         """
         Busca personas por campos específicos de forma dinámica.
         """
+        print(f"🔎 search_person() llamado con: names={names}, lastname={lastname}, identification={identification}, gender={gender}, address={address}, nationality={nationality}")
+        
         query = db.query(self.personModel)
         filters = []
 
         if names and names.strip():
+            print(f"  ✓ Agregando filtro names: {names}")
             filters.append(self.personModel.names.ilike(f"%{names.strip()}%"))
         if lastname and lastname.strip():
+            print(f"  ✓ Agregando filtro lastname: {lastname}")
             filters.append(self.personModel.lastname.ilike(f"%{lastname.strip()}%"))
         if identification and identification.strip():
+            print(f"  ✓ Agregando filtro identification: {identification}")
             filters.append(self.personModel.identification.ilike(f"%{identification.strip()}%"))
         if gender and gender.strip():
+            print(f"  ✓ Agregando filtro gender: {gender}")
             filters.append(self.personModel.gender.ilike(f"%{gender.strip()}%"))
         if address and address.strip():
+            print(f"  ✓ Agregando filtro address: {address}")
             filters.append(self.personModel.address.ilike(f"%{address.strip()}%"))
         if nationality and nationality.strip():
+            print(f"  ✓ Agregando filtro nationality: {nationality}")
             filters.append(self.personModel.nationality.ilike(f"%{nationality.strip()}%"))
 
         if not filters:
             # Si no hay filtros, no devolvemos nada para evitar una carga masiva de datos.
+            print(f"  ⚠️  Sin filtros especificados, devolviendo lista vacía")
             return []
 
         try:
             # Aplicar todos los filtros con un AND lógico
             persons = query.filter(and_(*filters)).limit(100).all()
+            print(f"  ✅ Búsqueda completada: {len(persons)} personas encontradas")
             logger.info(f"Búsqueda por criterios específicos encontró {len(persons)} personas.")
             return persons
         except Exception as e:
+            print(f"  ❌ Error durante la búsqueda: {e}")
             logger.error(f"Error durante la búsqueda en la base de datos: {e}", exc_info=True)
             raise e
 

@@ -28,30 +28,20 @@ class RecordService {
       const url = `${this.baseURL}/records`;
       const headers = this.getHeaders();
       
-      console.log('RecordService: Making request to:', url);
-      console.log('RecordService: Token present:', !!token);
-      console.log('RecordService: Headers:', headers);
-      
       const response = await fetch(url, {
         method: 'GET',
         headers: headers
       });
 
-      console.log('RecordService: Response status:', response.status);
-      console.log('RecordService: Response ok:', response.ok);
-
       if (response.ok) {
         const data = await response.json();
-        console.log('RecordService: Response data:', data);
         return { success: true, data };
       } else {
         // Si es 404, devolver array vacío
         if (response.status === 404) {
-          console.log('RecordService: 404 response, returning empty array');
           return { success: true, data: [] };
         }
         const errorData = await response.json();
-        console.log('RecordService: Error response:', errorData);
         return { success: false, error: errorData.detail || 'Error al obtener antecedentes' };
       }
     } catch (error) {
@@ -278,20 +268,13 @@ class RecordService {
       const url = `${this.baseURL}/records/search?${params.toString()}`;
       const headers = this.getHeaders();
       
-      console.log('RecordService.searchRecords: Making request to:', url);
-      console.log('RecordService.searchRecords: Token present:', !!token);
-      
       const response = await fetch(url, {
         method: 'GET',
         headers: headers
       });
 
-      console.log('RecordService.searchRecords: Response status:', response.status);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log('RecordService.searchRecords: Response data type:', Array.isArray(data) ? 'array' : typeof data);
-        console.log('RecordService.searchRecords: Response data:', data);
         
         // Si la respuesta es directamente un array, devolverla como data
         if (Array.isArray(data)) {
@@ -303,7 +286,6 @@ class RecordService {
       } else {
         // Si es 404, devolver array vacío
         if (response.status === 404) {
-          console.log('RecordService.searchRecords: 404 response, returning empty array');
           return { success: true, data: [] };
         }
         

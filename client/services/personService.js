@@ -77,15 +77,12 @@ class PersonService {
   // Obtener una persona por ID
   async getPersonById(personId) {
     try {
-      console.log(`Obteniendo datos de persona con ID: ${personId}`);
       const response = await fetch(`${this.baseURL}/persons/${personId}`, {
         method: 'GET',
         headers: this.getHeaders()
       });
 
-      console.log('Status de respuesta:', response.status);
       const data = await response.json();
-      console.log('Respuesta completa del servidor:', data);
 
       if (response.ok) {
         // Normalizar la estructura de datos para evitar errores en el frontend
@@ -99,9 +96,6 @@ class PersonService {
           connections: Array.isArray(data.connections) ? data.connections : []
         };
         
-        const filesCount = normalizedData.files.length;
-        const recordsCount = normalizedData.record_relationships.length;
-        console.log(`Persona obtenida con ${filesCount} archivos y ${recordsCount} relaciones de antecedentes`);
         return { success: true, data: normalizedData };
       } else {
         console.error('Error en respuesta:', data);
@@ -334,13 +328,9 @@ class PersonService {
       const linkedPersons = [];
       const warnings = [];
       
-      console.log(`Vinculando ${personsToLink.length} personas con la persona ID: ${personId}`);
-      
       for (const personToLink of personsToLink) {
-        console.log(`Intentando vincular persona: ${personToLink.person_id} - ${personToLink.names}`);
         
         const url = `${this.baseURL}/persons/linked-person/${personId}/${personToLink.person_id}?connection_type=${encodeURIComponent(relationshipType)}`;
-        console.log(`URL de petición: ${url}`);
         
         const response = await fetch(url, {
           method: 'PATCH',
@@ -348,7 +338,6 @@ class PersonService {
         });
 
         if (response.ok) {
-          console.log(`Vinculación exitosa para persona: ${personToLink.names}`);
           const data = await response.json();
           // Añadir el tipo de relación a la persona vinculada
           linkedPersons.push({ ...personToLink, relationship: relationshipType });
@@ -471,20 +460,22 @@ class PersonService {
     try {
       // Si es un objeto, convertirlo a parámetros de URL
       if (typeof searchTerm === 'object' && searchTerm !== null) {
+        console.log('searchPersons: Recibido objeto:', searchTerm);
         const params = new URLSearchParams();
         for (const key in searchTerm) {
           if (searchTerm[key]) {
+            console.log(`  Agregando parámetro: ${key}=${searchTerm[key]}`);
             params.append(key, searchTerm[key]);
           }
         }
 
         const queryString = params.toString();
+        
         if (!queryString) {
           return { success: false, error: 'Debe proporcionar criterios de búsqueda' };
         }
 
         const url = `${this.baseURL}/persons/search/person/?${queryString}`;
-        console.log(`Enviando solicitud de búsqueda a: ${url}`);
 
         const response = await fetch(url, {
           method: 'GET',

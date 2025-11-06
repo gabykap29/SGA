@@ -13,7 +13,6 @@ const SearchPersonsView = () => {
     identification: '',
     address: ''
   });
-  const [showDescription, setShowDescription] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
@@ -89,7 +88,6 @@ const SearchPersonsView = () => {
       identification: '',
       address: ''
     });
-    setShowDescription(false);
     setSearchResults([]);
     setSearchPerformed(false);
   };
@@ -179,10 +177,18 @@ const SearchPersonsView = () => {
         {/* Formulario de búsqueda */}
         <Card className="mb-4 border-0 bg-light shadow-sm">
           <Card.Body className="p-4">
-            <h5 className="card-title mb-4 fw-bold text-dark">
+            <h5 className="card-title mb-3 fw-bold text-dark">
               <FiSearch className="me-2" />
               Buscar Personas
             </h5>
+            
+            {/* Descripción informativa */}
+            <Alert variant="info" className="mb-4 py-2" style={{ fontSize: '0.9rem' }}>
+              <FiFilter className="me-2" />
+              <strong>Consejo:</strong> No es necesario completar todos los campos para hacer una búsqueda. 
+              Ingresa al menos uno de los datos disponibles (nombre, apellido, DNI o dirección) y el sistema 
+              te mostrará los resultados que coincidan.
+            </Alert>
             
             <Form onSubmit={handleSearch}>
               <Row className="g-3">
@@ -302,22 +308,6 @@ const SearchPersonsView = () => {
                     )}
                   </div>
                 </Col>
-
-                {/* Checkbox mostrar descripción */}
-                <Col xs={12}>
-                  <div className="form-check">
-                    <input 
-                      className="form-check-input" 
-                      type="checkbox" 
-                      id="showDescriptionCheck"
-                      checked={showDescription}
-                      onChange={() => setShowDescription(!showDescription)}
-                    />
-                    <label className="form-check-label text-muted small" htmlFor="showDescriptionCheck">
-                      Mostrar descripción en resultados
-                    </label>
-                  </div>
-                </Col>
               </Row>
             </Form>
           </Card.Body>
@@ -336,7 +326,7 @@ const SearchPersonsView = () => {
             ) : searchResults.length === 0 ? (
               <Alert variant="info" className="text-center my-4">
                 <FiFilter className="me-2" size={20} />
-                No se encontraron resultados para <strong>"{searchQuery}"</strong>
+                No se encontraron resultados para los criterios especificados
               </Alert>
             ) : (
               <>
@@ -369,11 +359,6 @@ const SearchPersonsView = () => {
                               </div>
                               <div>
                                 <div className="fw-bold">{person.name} {person.lastname}</div>
-                                {showDescription && (
-                                  <small className="text-muted d-block">
-                                    {person.description || 'Sin descripción'}
-                                  </small>
-                                )}
                               </div>
                             </div>
                           </td>

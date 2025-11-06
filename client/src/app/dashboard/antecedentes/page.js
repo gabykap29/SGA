@@ -25,12 +25,9 @@ export default function RecordsList() {
   const loadRecords = async () => {
     try {
       setLoading(true);
-      console.log('Attempting to load records...');
       const result = await recordService.getRecords();
-      console.log('Record service result:', result);
       
       if (result.success) {
-        console.log('Records loaded successfully:', result.data);
         setRecords(Array.isArray(result.data) ? result.data : []);
       } else {
         toast.error(result.error || 'Error al cargar los antecedentes');

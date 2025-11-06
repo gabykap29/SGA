@@ -31,13 +31,9 @@ export default function CreatePerson() {
 
   // Cuando personData esté disponible y activeStep sea 1, avanzar a paso 2
   useEffect(() => {
-    console.log('useEffect triggerado:', { personData, activeStep, completedSteps: Array.from(completedSteps) });
-    
     if (personData && personData.person_id && activeStep === 1 && completedSteps.has(1)) {
-      console.log('Condiciones cumplidas, avanzando a paso 2');
       // Hacer un pequeño delay para asegurar que el state se actualice
       const timer = setTimeout(() => {
-        console.log('Ejecutando setActiveStep(2)');
         setActiveStep(2);
       }, 100);
       return () => clearTimeout(timer);
@@ -79,15 +75,9 @@ export default function CreatePerson() {
     try {
       setLoading(true);
       
-      console.log('handlePersonSave recibido:', formData);
-      console.log('existingPerson:', formData.existingPerson);
-      
       // Si la persona ya existe (fue encontrada por DNI), usarla directamente
       if (formData.existingPerson) {
         const personObject = formData.existingPerson;
-        
-        console.log('Usando persona existente:', personObject);
-        console.log('person_id:', personObject.person_id);
         
         setPersonData(personObject);
         setCompletedSteps(prev => new Set([...prev, 1]));
@@ -100,7 +90,6 @@ export default function CreatePerson() {
           }
         } catch (fileError) {
           // Error silencioso al cargar archivos
-          console.log('Error cargando archivos:', fileError);
         }
         
         toast.success('Persona encontrada. Usando datos existentes.');
@@ -122,9 +111,6 @@ export default function CreatePerson() {
         }
 
       } else {
-        // Debug temporal para ver la estructura de la respuesta
-        console.log('Respuesta completa del backend:', result.data);
-        
         // La respuesta del backend tiene esta estructura:
         // { message: "...", person_id: "...", data: PersonObject }
         let personObject;
@@ -142,8 +128,6 @@ export default function CreatePerson() {
           personObject.person_id = result.data.person_id;
         }
         
-        console.log('Objeto persona procesado:', personObject);
-        
         setPersonData(personObject);
         setCompletedSteps(prev => new Set([...prev, 1]));
         
@@ -155,7 +139,6 @@ export default function CreatePerson() {
           }
         } catch (fileError) {
           // Error silencioso al cargar archivos
-          console.log('Error cargando archivos:', fileError);
         }
         
         toast.success('Persona creada exitosamente');
