@@ -51,18 +51,13 @@ const StatsCards = ({ stats, loading = false }) => {
       title: 'Registros Activos',
       value: stats?.registrosActivos || 0,
       icon: FiDatabase
-    },
-    {
-      title: 'Nuevos Este Mes',
-      value: stats?.nuevosEsteMes || 0,
-      icon: FiTrendingUp
     }
   ];
 
   return (
     <Row className="g-4 mb-4">
       {cardsData.map((card, index) => (
-        <Col key={index} xs={12} sm={6} lg={3}>
+        <Col key={index} xs={12} sm={6} lg={4}>
           <StatsCard
             title={card.title}
             value={card.value}

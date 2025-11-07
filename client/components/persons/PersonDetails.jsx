@@ -86,7 +86,8 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
         setShowAddImage(false);
         if (onUpdate) onUpdate();
       } else {
-        toast.error(result.error || 'Error al subir la imagen');
+        toast.error(result.error || 'Error al subir la imagen - Verifique que la extensión sea JPEG, PNG y el tamaño no exceda los 5MB');
+        return false;
       }
     } catch (e) {
       console.error('Error uploading image:', e);
