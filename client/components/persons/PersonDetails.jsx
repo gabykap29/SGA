@@ -79,12 +79,18 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
   const handleAddImage = async ({ file, description }) => {
     setUploading(true);
     try {
-      await personService.uploadFiles(person.person_id, [{ file, description }]);
-      toast.success('Imagen subida correctamente');
-      setShowAddImage(false);
-      if (onUpdate) onUpdate();
+      const result = await personService.uploadFiles(person.person_id, [{ file, description }]);
+      
+      if (result.success) {
+        toast.success('Imagen subida correctamente');
+        setShowAddImage(false);
+        if (onUpdate) onUpdate();
+      } else {
+        toast.error(result.error || 'Error al subir la imagen');
+      }
     } catch (e) {
-      toast.error('Error al subir la imagen');
+      console.error('Error uploading image:', e);
+      toast.error('Error inesperado al subir la imagen');
     } finally {
       setUploading(false);
     }
