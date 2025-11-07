@@ -10,10 +10,24 @@ import uuid
 import pandas
 import logging
 import sys
+import threading
+from datetime import datetime
 
 # Configurar logging para que sea más visible
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Variable global para rastrear el estado de la carga del padrón
+_load_status = {
+    'is_loading': False,
+    'progress': 0,
+    'total': 0,
+    'message': '',
+    'start_time': None,
+    'status': 'idle'  # idle, loading, completed, failed
+}
+_load_lock = threading.Lock()
+
 class PersonsService:
     def __init__(self):
         self.personModel = Persons
@@ -442,26 +456,99 @@ class PersonsService:
             raise e
 
     def load_persons(self, db: Session):
-            try:
+        """
+        Inicia la carga de personas desde CSV en un thread separado.
+        Retorna inmediatamente el estado de la solicitud.
+        """
+        global _load_status, _load_lock
+        
+        try:
+            with _load_lock:
+                if _load_status['is_loading']:
+                    return {
+                        'status': 'loading',
+                        'message': 'Ya hay una carga en progreso',
+                        'progress': _load_status['progress'],
+                        'is_loading': True
+                    }
+                
+                # Verificar si ya hay suficientes personas
                 count = db.query(self.personModel).count()
-                print("Cantidad de personas en la base de datos:", count)
-                if count < 5:
-                    df = pandas.read_csv("padron_25_filtrado.csv", encoding='latin-1', sep=',')
-                    processed_count = 0
-                    for index, row in df.iterrows():
-                        identification = str(row['identification']).strip()
-                        type_identification = str(row["identification_type"]).strip()
-                        names = str(row['names']).strip().title()
-                        lastnames = str(row['lastnames']).strip().title()
-                        address = str(row['address']).strip().title()
-                        province = str(row['province']).strip().title()
-                        country = "country"
+                if count >= 5:
+                    return {
+                        'status': 'skipped',
+                        'message': 'Ya hay suficientes personas en la base de datos',
+                        'is_loading': False
+                    }
+                
+                # Iniciar la carga en un thread separado
+                _load_status['is_loading'] = True
+                _load_status['status'] = 'loading'
+                _load_status['progress'] = 0
+                _load_status['start_time'] = datetime.now()
+                _load_status['message'] = 'Iniciando carga del padrón...'
+            
+            # Iniciar thread de carga
+            thread = threading.Thread(
+                target=self._load_persons_background,
+                args=(db,),
+                daemon=True
+            )
+            thread.start()
+            
+            return {
+                'status': 'started',
+                'message': 'Carga iniciada. Por favor, espera...',
+                'is_loading': True
+            }
+        except Exception as e:
+            logger.error(f"Error al iniciar carga de personas: {e}")
+            with _load_lock:
+                _load_status['is_loading'] = False
+                _load_status['status'] = 'failed'
+            return {
+                'status': 'error',
+                'message': f'Error al iniciar la carga: {str(e)}',
+                'is_loading': False
+            }
 
-                        existing_person = db.query(self.personModel).filter(self.personModel.identification == identification).first()
-                        if existing_person:
-                            print(f"La persona con DNI {identification} ya existe. Saltando...")
-                            continue
+    def _load_persons_background(self, db: Session):
+        """
+        Realiza la carga de personas en background sin bloquear la respuesta HTTP.
+        """
+        global _load_status, _load_lock
+        
+        try:
+            from database.db import SessionLocal
+            # Crear una nueva sesión para este thread
+            bg_session = SessionLocal()
+            
+            df = pandas.read_csv("padron_25_filtrado.csv", encoding='latin-1', sep=',')
+            total_rows = len(df)
+            processed_count = 0
+            skipped_count = 0
+            
+            with _load_lock:
+                _load_status['total'] = total_rows
+                _load_status['message'] = f'Procesando {total_rows} registros...'
+            
+            for index, row in df.iterrows():
+                try:
+                    identification = str(row['identification']).strip()
+                    type_identification = str(row["identification_type"]).strip()
+                    names = str(row['names']).strip().title()
+                    lastnames = str(row['lastnames']).strip().title()
+                    address = str(row['address']).strip().title()
+                    province = str(row['province']).strip().title()
+                    country = "country"
 
+                    existing_person = bg_session.query(self.personModel).filter(
+                        self.personModel.identification == identification
+                    ).first()
+                    
+                    if existing_person:
+                        skipped_count += 1
+                    else:
                         new_person = self.personModel(
                             identification=identification,
                             identification_type=type_identification,
@@ -471,18 +558,52 @@ class PersonsService:
                             province=province,
                             country=country,
                         )
-                        db.add(new_person)
+                        bg_session.add(new_person)
                         processed_count += 1
 
                         if processed_count % 100 == 0:
-                            db.commit()
-                            print(f"{processed_count} personas procesadas...")
-                    db.commit()
-                    print("Carga de personas completada.")
-                    return True
-                else:
-                    print("Ya hay suficientes personas en la base de datos. No se cargaron nuevas personas.")
-                    return False
-            except Exception as e:
-                print(f"Error al cargar personas desde CSV: {e}")
-                db.rollback()
+                            bg_session.commit()
+                            with _load_lock:
+                                _load_status['progress'] = processed_count
+                                _load_status['message'] = f'Procesadas {processed_count}/{total_rows} personas...'
+                            logger.info(f"{processed_count} personas procesadas...")
+                
+                except Exception as row_error:
+                    logger.warning(f"Error procesando fila {index}: {row_error}")
+                    continue
+            
+            # Commit final
+            bg_session.commit()
+            bg_session.close()
+            
+            with _load_lock:
+                _load_status['is_loading'] = False
+                _load_status['status'] = 'completed'
+                _load_status['progress'] = processed_count
+                _load_status['message'] = f'Carga completada: {processed_count} personas añadidas, {skipped_count} duplicadas omitidas.'
+            
+            logger.info(f"Carga finalizada: {processed_count} nuevas personas, {skipped_count} omitidas.")
+            
+        except Exception as e:
+            logger.error(f"Error crítico en carga de fondo: {e}", exc_info=True)
+            with _load_lock:
+                _load_status['is_loading'] = False
+                _load_status['status'] = 'failed'
+                _load_status['message'] = f'Error durante la carga: {str(e)}'
+
+    def get_load_status(self):
+        """
+        Retorna el estado actual de la carga del padrón.
+        """
+        global _load_status, _load_lock
+        
+        with _load_lock:
+            return {
+                'is_loading': _load_status['is_loading'],
+                'status': _load_status['status'],
+                'progress': _load_status['progress'],
+                'total': _load_status['total'],
+                'message': _load_status['message'],
+                'start_time': _load_status['start_time'].isoformat() if _load_status['start_time'] else None
+            }
+

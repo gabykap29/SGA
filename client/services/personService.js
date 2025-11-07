@@ -599,6 +599,48 @@ class PersonService {
       return { success: false, error: 'Error de conexiÃ³n' };
     }
   }
+
+  // Obtener estado de carga del padrón
+  async getLoadCsvStatus() {
+    try {
+      const response = await fetch(`${this.baseURL}/persons/load-csv/status/, {
+        method: 'GET',
+        headers: this.getHeaders()
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        return { success: true, data };
+      } else {
+        return { success: false, error: data.detail || 'Error al obtener estado de carga' };
+      }
+    } catch (error) {
+      console.error('PersonService.getLoadCsvStatus error:', error);
+      return { success: false, error: 'Error de conexión al obtener estado de carga' };
+    }
+  }
+  // Obtener estado de carga del padrón
+  async getLoadCsvStatus() {
+    try {
+      const response = await fetch(`${this.baseURL}/persons/load-csv/status/`, {
+        method: 'GET',
+        headers: this.getHeaders()
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        return { success: true, data };
+      } else {
+        return { success: false, error: data.detail || 'Error al obtener estado de carga' };
+      }
+    } catch (error) {
+      console.error('PersonService.getLoadCsvStatus error:', error);
+      return { success: false, error: 'Error de conexión al obtener estado de carga' };
+    }
+  }
 }
 
 export default new PersonService();
+

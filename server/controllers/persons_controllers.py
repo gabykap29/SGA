@@ -311,24 +311,37 @@ def load_persons_from_csv(current_user: Dict = Depends(is_authenticated), is_aut
     db_session = SessionLocal()
     try:
         result = person_service.load_persons(db=db_session)
-        if result is True:
-            return {
-                "status": "success",
-                "message": "Personas cargadas desde CSV correctamente!"
-            }
-        else:
-            return {
-                "status": "info",
-                "message": "Ya hay suficientes personas en la base de datos. No se cargaron nuevas personas."
-            }
+        return result
     except Exception as e:
         print("Error critico al cargar personas desde CSV", e)
         raise HTTPException(
-            status_code= status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error en el servidor al cargar personas desde CSV"
         )
     finally:
         db_session.close()
+
+
+@router.get("/load-csv/status/", status_code=status.HTTP_200_OK)
+def get_load_csv_status(current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_admin)):
+    """
+    Retorna el estado actual de la carga del padrón electoral.
+    Permite monitorear el progreso de la operación.
+    """
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para consultar el estado de carga"
+        )
+    try:
+        status_info = person_service.get_load_status()
+        return status_info
+    except Exception as e:
+        print("Error al obtener estado de carga:", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al obtener estado de carga"
+        )
 
 
 @router.delete("/delete/{id}", status_code=status.HTTP_200_OK)
