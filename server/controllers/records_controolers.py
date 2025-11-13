@@ -148,7 +148,7 @@ def get_record_by_id(id: str, current_user: Dict = Depends(is_authenticated), is
             'record_date': getattr(record, 'date', None),
             'description': getattr(record, 'content', None),
             'observations': getattr(record, 'observations', None),
-            'record_type': getattr(record, 'type_record', None),
+            'type_record': getattr(record, 'type_record', None),
             'create_at': getattr(record, 'create_at', None),
             'updated_at': getattr(record, 'updated_at', None),
         }
@@ -248,8 +248,7 @@ def create_record(record: RecordSchema, request: Request, current_user: Dict = D
             "date": new_record.date,
             "type_record": new_record.type_record,
             "content": new_record.content,
-            "observations": new_record.observations,
-            "type_relationship": record.type_relationship  # Incluir el tipo de vinculación en la respuesta
+            "observations": new_record.observations
         }
         
         return CustomJSONResponse(

@@ -5,7 +5,7 @@ from models.Recortds_Persons import RecordsPersons
 import uuid
 from typing import Optional
 from models.Persons import Persons
-from sqlalchemy import func, or_, and_
+from sqlalchemy import func, or_
 
 class RecordService:
     def __init__(self) -> None:

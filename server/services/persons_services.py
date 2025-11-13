@@ -525,12 +525,12 @@ class PersonsService:
             create_all = db.bulk_save_objects([
                 self.personModel(
                     identification=str(item['identification']),
-                    identification_type=str(item.get('identification_type', 'DNI')),
+                    identification_type="DNI",
                     names=item['names'],
                     lastnames=item['lastnames'],
                     address=item['address'],
                     province=item['province'],
-                    country="country",
+                    country="ARGENTINA",
                     created_by=uuid.UUID(self.user_id)
                 ) for item in data_to_json
             ])
