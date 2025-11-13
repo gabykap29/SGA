@@ -4,12 +4,12 @@ from models.Users import Users
 from models.Recortds_Persons import RecordsPersons
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, and_
-from typing import Optional, List, Dict
+from typing import Optional
 from models.Connection_Type import ConnectionType
+import json
 import uuid
 import pandas
 import logging
-import sys
 import threading
 from datetime import datetime
 
@@ -33,6 +33,7 @@ class PersonsService:
         self.personModel = Persons
         self.recordModel = Records
         self.userModel = Users
+        self.user_id = None
         self.connectionType = ConnectionType
     def get_persons(self, db: Session):
         persons = db.query(self.personModel).options(
@@ -455,13 +456,13 @@ class PersonsService:
             print(f"Error al obtener antecedentes de la persona: {e}")
             raise e
 
-    def load_persons(self, db: Session):
+    def load_persons(self, db: Session, user_id: str):
         """
         Inicia la carga de personas desde CSV en un thread separado.
         Retorna inmediatamente el estado de la solicitud.
         """
         global _load_status, _load_lock
-        
+        self.user_id = user_id
         try:
             with _load_lock:
                 if _load_status['is_loading']:
@@ -514,78 +515,35 @@ class PersonsService:
 
     def _load_persons_background(self, db: Session):
         """
-        Realiza la carga de personas en background sin bloquear la respuesta HTTP.
+        Función que se ejecuta en un thread separado para cargar personas desde CSV.
         """
         global _load_status, _load_lock
-        
         try:
-            from database.db import SessionLocal
-            # Crear una nueva sesión para este thread
-            bg_session = SessionLocal()
+            persons = pandas.read_csv("padron.csv", encoding='latin-1')
+            data_to_json = json.loads(persons.to_json(orient="records"))
             
-            df = pandas.read_csv("padron_25_filtrado.csv", encoding='latin-1', sep=',')
-            total_rows = len(df)
-            processed_count = 0
-            skipped_count = 0
-            
-            with _load_lock:
-                _load_status['total'] = total_rows
-                _load_status['message'] = f'Procesando {total_rows} registros...'
-            
-            for index, row in df.iterrows():
-                try:
-                    identification = str(row['identification']).strip()
-                    type_identification = str(row["identification_type"]).strip()
-                    names = str(row['names']).strip().title()
-                    lastnames = str(row['lastnames']).strip().title()
-                    address = str(row['address']).strip().title()
-                    province = str(row['province']).strip().title()
-                    country = "country"
-
-                    existing_person = bg_session.query(self.personModel).filter(
-                        self.personModel.identification == identification
-                    ).first()
-                    
-                    if existing_person:
-                        skipped_count += 1
-                    else:
-                        new_person = self.personModel(
-                            identification=identification,
-                            identification_type=type_identification,
-                            names=names,
-                            lastnames=lastnames,
-                            address=address,
-                            province=province,
-                            country=country,
-                        )
-                        bg_session.add(new_person)
-                        processed_count += 1
-
-                        if processed_count % 100 == 0:
-                            bg_session.commit()
-                            with _load_lock:
-                                _load_status['progress'] = processed_count
-                                _load_status['message'] = f'Procesadas {processed_count}/{total_rows} personas...'
-                            logger.info(f"{processed_count} personas procesadas...")
-                
-                except Exception as row_error:
-                    logger.warning(f"Error procesando fila {index}: {row_error}")
-                    continue
-            
-            # Commit final
-            bg_session.commit()
-            bg_session.close()
-            
+            create_all = db.bulk_save_objects([
+                self.personModel(
+                    identification=str(item['identification']),
+                    identification_type=str(item.get('identification_type', 'DNI')),
+                    names=item['names'],
+                    lastnames=item['lastnames'],
+                    address=item['address'],
+                    province=item['province'],
+                    country="country",
+                    created_by=uuid.UUID(self.user_id)
+                ) for item in data_to_json
+            ])
+            db.commit()
             with _load_lock:
                 _load_status['is_loading'] = False
+                _load_status['progress'] = 100
                 _load_status['status'] = 'completed'
-                _load_status['progress'] = processed_count
-                _load_status['message'] = f'Carga completada: {processed_count} personas añadidas, {skipped_count} duplicadas omitidas.'
-            
-            logger.info(f"Carga finalizada: {processed_count} nuevas personas, {skipped_count} omitidas.")
-            
+                _load_status['message'] = 'Carga completada exitosamente.'
+            logger.info("Carga de personas completada exitosamente.")
+            return True
         except Exception as e:
-            logger.error(f"Error crítico en carga de fondo: {e}", exc_info=True)
+            logger.error(f"Error durante la carga de personas: {e}", exc_info=True)
             with _load_lock:
                 _load_status['is_loading'] = False
                 _load_status['status'] = 'failed'
@@ -596,14 +554,10 @@ class PersonsService:
         Retorna el estado actual de la carga del padrón.
         """
         global _load_status, _load_lock
-        
         with _load_lock:
             return {
                 'is_loading': _load_status['is_loading'],
-                'status': _load_status['status'],
                 'progress': _load_status['progress'],
-                'total': _load_status['total'],
                 'message': _load_status['message'],
-                'start_time': _load_status['start_time'].isoformat() if _load_status['start_time'] else None
+                'status': _load_status['status']
             }
-

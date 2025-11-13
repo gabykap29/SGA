@@ -8,6 +8,7 @@ class RecordSchema(BaseModel):
     content: str
     observations: str
     type_record: str = 'PENAL'
+    type_relationship: str = 'Denunciado'  # Tipo de vinculación para antecedentes
 
 
 class RecordResponse(BaseModel):

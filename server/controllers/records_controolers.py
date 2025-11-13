@@ -248,7 +248,8 @@ def create_record(record: RecordSchema, request: Request, current_user: Dict = D
             "date": new_record.date,
             "type_record": new_record.type_record,
             "content": new_record.content,
-            "observations": new_record.observations
+            "observations": new_record.observations,
+            "type_relationship": record.type_relationship  # Incluir el tipo de vinculación en la respuesta
         }
         
         return CustomJSONResponse(

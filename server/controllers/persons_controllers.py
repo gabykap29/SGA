@@ -310,7 +310,14 @@ def load_persons_from_csv(current_user: Dict = Depends(is_authenticated), is_aut
         )
     db_session = SessionLocal()
     try:
-        result = person_service.load_persons(db=db_session)
+
+        user_id = current_user.get("user_id")
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="ID de usuario no encontrado en el token"
+            )
+        result = person_service.load_persons(db=db_session, user_id=user_id)
         return result
     except Exception as e:
         print("Error critico al cargar personas desde CSV", e)
@@ -373,12 +380,16 @@ def delete_person(id: str, current_user: Dict = Depends(is_authenticated), is_au
         db_session.close()
 
 @router.patch("/{person_id}/record/{record_id}", status_code=HTTP_200_OK)
-def add_person_to_record(person_id:str, record_id:str, type_relationship:str = Query(..., description="Por lo general autor o victima"), current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all)):
+def add_person_to_record(person_id:str, record_id:str, type_relationship:str = Query(default="Denunciado", description="Tipo de vinculación: Denunciado, Denunciante, Testigo, Autor, Víctima, Sospechoso, Implicado, Querellante"), current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all)):
     if not is_authorized:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para vincular personas con registros"
         )
+    
+    # Debug: verificar qué se está recibiendo
+    print(f"DEBUG: type_relationship recibido = '{type_relationship}'")
+    
     db_session = SessionLocal()
     try:
         if not person_id or not record_id:
