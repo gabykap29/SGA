@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from typing import Dict, List, Optional
-from database.db import SessionLocal
+from database.db import get_db
 from datetime import datetime, timedelta
 from pydantic import BaseModel
 from services.logs_services import logs_service
@@ -82,7 +82,7 @@ def get_logs(
             detail="No tiene permisos para acceder a los logs"
         )
     
-    db_session = SessionLocal()
+    db_session = get_db()
     
     try:
         filters = {}
@@ -125,9 +125,12 @@ def get_logs(
             response_logs.append(log_dict)
             
         return response_logs
-    finally:
-        db_session.close()
-
+    except Exception as e:
+        print(f"Error al obtener logs: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al obtener los logs"
+        )
 @router.get("/summary")
 def get_logs_summary(
     request: Request,
@@ -145,7 +148,7 @@ def get_logs_summary(
             detail="No tiene permisos para acceder a los logs"
         )
     
-    db_session = SessionLocal()
+    db_session = get_db()
     
     try:
         start_date = datetime.utcnow() - timedelta(days=days)
@@ -204,5 +207,9 @@ def get_logs_summary(
         }
         
         return summary
-    finally:
-        db_session.close()
+    except Exception as e:
+        print(f"Error al obtener resumen de logs: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al obtener el resumen de logs"
+        )

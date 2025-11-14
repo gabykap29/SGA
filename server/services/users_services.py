@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from models.Roles import Roles
 from passlib.context import CryptContext
 from datetime import datetime
+from sqlalchemy.orm import joinedload
 
 class UserService: 
     def __init__(self):
@@ -22,7 +23,6 @@ class UserService:
             :param db: Sesión de la base de datos.
             :return: El objeto del usuario si la autenticación es exitosa, False en caso contrario.
         """
-        from sqlalchemy.orm import joinedload
         user = db.query(self.userModel).options(joinedload(self.userModel.roles)).filter(self.userModel.username == username).first()
         if not user or user is None:
             print("Usuario no encontrado!")
@@ -73,8 +73,6 @@ class UserService:
             
         except Exception as e:
             print("Error al crear el usuario admin: ", e)
-        finally:
-            db.close()
             
     def get_users(self, db: Session):
         try:
@@ -89,8 +87,6 @@ class UserService:
         except Exception as e:
             print("Error al obtener los usuarios", e)
             return False
-        finally:
-            db.close()
         
     def get_user(self, id: uuid.UUID, db: Session):
         try:
@@ -142,8 +138,6 @@ class UserService:
         except Exception as e:
             print("Error al obtener el usuario", e)
             return False
-        finally:
-            db.close()
             
     def edit_user(self, id: uuid.UUID, names: str, lastname: str, username: str, passwd: str, role: uuid.UUID, db: Session) :
         try:
@@ -164,8 +158,6 @@ class UserService:
         except Exception as e:
             print("Error al actualizar el usuario", e)
             return False
-        finally:
-            db.close()
     
     def delete_user(self, id: str, db: Session):
         try:
@@ -178,5 +170,3 @@ class UserService:
         except Exception as e:
             print("Error al eliminar el usuario", e)
             return False
-        finally:
-            db.close()

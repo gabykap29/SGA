@@ -1,11 +1,10 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, status, Header
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, status
+from database.db import get_db
 from fastapi.responses import StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
-from database.db import SessionLocal
 from services.files_services import FilesService
 from models.schemas.file_schemas import (
-    FileUploadRequest, FileResponse, FileListResponse, 
-    FilesByPersonResponse, FileUpdateRequest, FileDownloadResponse
+    FileResponse, FileListResponse,FileUpdateRequest
 )
 from typing import List, Optional, Dict
 import io
@@ -14,16 +13,6 @@ from dependencies.checked_role import check_rol_all
 
 router = APIRouter(tags=["Files"], prefix="/files")
 files_service = FilesService()
-
-def get_db():
-    """Dependency para obtener sesión de base de datos"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
 
 @router.post("/upload", response_model=FileResponse, status_code=status.HTTP_201_CREATED)
 async def upload_file(

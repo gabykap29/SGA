@@ -1,10 +1,10 @@
+from database.db import get_db
 from services.users_services import UserService
 from fastapi import HTTPException, status, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi import APIRouter
 # from models.schemas.token_schemas import TokenData
 from typing import Annotated
-from database.db import SessionLocal
 from config.config import token_expires_minutes
 from datetime import timedelta
 from utils.jwt import create_access_token
@@ -14,7 +14,7 @@ auth_router = APIRouter()
 
 @auth_router.post("/login")
 async def login(request: Request, formdata: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         user = user_service.login(formdata.username, formdata.password, db=db_session)
         if not user:
@@ -121,6 +121,4 @@ async def login(request: Request, formdata: Annotated[OAuth2PasswordRequestForm,
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error al intentar iniciar sesión, comuníquese con el administrador!"
         )
-    finally:
-        # Siempre cerrar la sesión
-        db_session.close()
+

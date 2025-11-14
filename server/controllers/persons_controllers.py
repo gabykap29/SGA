@@ -4,7 +4,7 @@ from starlette.status import HTTP_200_OK
 from services.persons_services import PersonsService
 from services.users_services import UserService
 from models.schemas.person_schemas import PersonSchema, PersonResponse
-from database.db import SessionLocal
+from database.db import get_db
 from typing import List, Dict, Optional
 from dependencies.is_auth import is_authenticated
 from dependencies.checked_role import check_rol_all, check_rol_admin, check_rol_all_or_viewer
@@ -33,7 +33,7 @@ def get_persons(current_user: Dict = Depends(is_authenticated),is_authorized: bo
         )
 
     # Luego verificamos el rol directamente aquí
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         import uuid
         user_service = UserService()
@@ -70,9 +70,8 @@ def get_persons(current_user: Dict = Depends(is_authenticated),is_authorized: bo
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al verificar permisos: {str(e)}"
         )
-    finally:
-        db_session.close()
-    db_session = SessionLocal()
+
+    db_session = get_db()
     try:
         persons = person_service.get_persons(db=db_session)
         persons_list = list(persons)
@@ -89,8 +88,7 @@ def get_persons(current_user: Dict = Depends(is_authenticated),is_authorized: bo
             status_code= status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error en el servidor al obtener las personas"
         )
-    finally:
-        db_session.close()
+
 
 @router.get("/{id}", status_code=status.HTTP_200_OK, response_model=PersonResponse)
 def get_person(id: str, current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all_or_viewer)):
@@ -99,7 +97,7 @@ def get_person(id: str, current_user: Dict = Depends(is_authenticated), is_autho
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para ver esta persona"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         person = person_service.get_person(person_id=id, db=db_session)
         if not person:
@@ -128,8 +126,7 @@ def get_person(id: str, current_user: Dict = Depends(is_authenticated), is_autho
             status_code= status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error en el servidor al obtener la persona"
         )
-    finally:
-        db_session.close()
+
 
 @router.get("/search/person/", response_model=List[PersonResponse])
 def search_person(
@@ -155,7 +152,7 @@ def search_person(
         print("❌ Usuario no autorizado")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permiso para realizar esta acción")
 
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         print("📊 Llamando a person_service.search_person()")
         persons = person_service.search_person(
@@ -189,8 +186,7 @@ def search_person(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error en el servidor al buscar personas: {str(e)}"
         )
-    finally:
-        db_session.close()
+
 
 
 # Endpoint de prueba sin autenticación para debug
@@ -201,7 +197,7 @@ def search_person_debug(query: str = Query(..., description="Término de búsque
     Busca principalmente por identificación.
     """
     print(f"Controlador search_person_debug recibido: query='{query}'")
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         # Llama al nuevo servicio, usando 'query' para el campo 'identification'
         persons = person_service.search_person(db=db_session, identification=query)
@@ -220,9 +216,6 @@ def search_person_debug(query: str = Query(..., description="Término de búsque
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error en el servidor al buscar personas: {str(e)}"
         )
-    finally:
-        db_session.close()
-
 
 @router.post("/create", status_code=status.HTTP_201_CREATED, response_model=PersonResponse)
 def create_person(person_data: PersonSchema, current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all)):
@@ -232,7 +225,7 @@ def create_person(person_data: PersonSchema, current_user: Dict = Depends(is_aut
             detail="No tienes permiso para crear personas"
         )
 
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         user_id = current_user.get("user_id")
         if not user_id:
@@ -258,8 +251,7 @@ def create_person(person_data: PersonSchema, current_user: Dict = Depends(is_aut
     except Exception as e:
         print(f"Error en el controlador de creación: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error inesperado en el servidor: {e}")
-    finally:
-        db_session.close()
+
 
 
 @router.patch("/update/{id}", status_code=status.HTTP_200_OK)
@@ -269,7 +261,7 @@ def update_person(id: str, body: PersonSchema, current_user: Dict = Depends(is_a
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para actualizar personas"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         person = person_service.update_person(
             person_id= id,
@@ -298,8 +290,7 @@ def update_person(id: str, body: PersonSchema, current_user: Dict = Depends(is_a
             status_code= status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error en el servidor al actualizar la persona"
         )
-    finally:
-        db_session.close()
+
 
 @router.get("/load-csv/", status_code=status.HTTP_200_OK)
 def load_persons_from_csv(current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_admin)):
@@ -308,7 +299,7 @@ def load_persons_from_csv(current_user: Dict = Depends(is_authenticated), is_aut
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para cargar personas desde CSV"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
 
         user_id = current_user.get("user_id")
@@ -325,8 +316,7 @@ def load_persons_from_csv(current_user: Dict = Depends(is_authenticated), is_aut
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error en el servidor al cargar personas desde CSV"
         )
-    finally:
-        db_session.close()
+
 
 
 @router.get("/load-csv/status/", status_code=status.HTTP_200_OK)
@@ -358,7 +348,7 @@ def delete_person(id: str, current_user: Dict = Depends(is_authenticated), is_au
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para eliminar personas"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         deleted = person_service.delete_person(person_id=id, db=db_session)
         if type(deleted) is str:
@@ -376,8 +366,7 @@ def delete_person(id: str, current_user: Dict = Depends(is_authenticated), is_au
             status_code= status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error en el servidor al eliminar la persona"
         )
-    finally:
-        db_session.close()
+
 
 @router.patch("/{person_id}/record/{record_id}", status_code=HTTP_200_OK)
 def add_person_to_record(person_id:str, record_id:str, type_relationship:str = Query(default="Denunciado", description="Tipo de vinculación: Denunciado, Denunciante, Testigo, Autor, Víctima, Sospechoso, Implicado, Querellante"), current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all)):
@@ -390,7 +379,7 @@ def add_person_to_record(person_id:str, record_id:str, type_relationship:str = Q
     # Debug: verificar qué se está recibiendo
     print(f"DEBUG: type_relationship recibido = '{type_relationship}'")
     
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         if not person_id or not record_id:
             raise HTTPException(
@@ -421,8 +410,7 @@ def add_person_to_record(person_id:str, record_id:str, type_relationship:str = Q
             status_code= status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail= "Error interno en el servidor al agregar la persona al antecedente"
         )
-    finally:
-        db_session.close()
+
 
 @router.patch("/linked-person/{person_id}/{person_to_connect}")
 def add_person_connection(person_id: str, person_to_connect: str, connection_type: str, current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all)):
@@ -431,7 +419,7 @@ def add_person_connection(person_id: str, person_to_connect: str, connection_typ
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para conectar personas"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
 
     try:
         res = person_service.add_person_connection(person_id=person_id, person_to_connect=person_to_connect,connection_type=connection_type , db= db_session)
@@ -447,8 +435,7 @@ def add_person_connection(person_id: str, person_to_connect: str, connection_typ
             status_code=500,
             detail="Error interno al vincular personas. Por favor, verifica los IDs."
         )
-    finally:
-        db_session.close()
+
 @router.post("/search-dni/{identification}", status_code=status.HTTP_200_OK)
 def get_person_by_dni(identification: str, current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all_or_viewer)):
     """
@@ -461,7 +448,7 @@ def get_person_by_dni(identification: str, current_user: Dict = Depends(is_authe
             detail="No tienes permiso para realizar esta acción"
         )
     
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         person = person_service.search_person_by_dni(dni=identification, db=db_session)
 
@@ -480,8 +467,7 @@ def get_person_by_dni(identification: str, current_user: Dict = Depends(is_authe
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno en el servidor al buscar persona por DNI"
         )
-    finally:
-        db_session.close()
+
 @router.get("/{person_id}/linked", status_code=status.HTTP_200_OK)
 def get_linked_persons(person_id: str, current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all_or_viewer)):
     """
@@ -493,7 +479,7 @@ def get_linked_persons(person_id: str, current_user: Dict = Depends(is_authentic
             detail="No tienes permiso para ver las conexiones de personas"
         )
 
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         linked_persons = person_service.get_linked_persons(person_id=person_id, db=db_session)
 
@@ -513,8 +499,7 @@ def get_linked_persons(person_id: str, current_user: Dict = Depends(is_authentic
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno en el servidor al obtener personas vinculadas"
         )
-    finally:
-        db_session.close()
+
 
 @router.get("/{person_id}/records", status_code=status.HTTP_200_OK)
 def get_person_records(person_id: str, current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all_or_viewer)):
@@ -527,7 +512,7 @@ def get_person_records(person_id: str, current_user: Dict = Depends(is_authentic
             detail="No tienes permiso para ver los antecedentes de personas"
         )
 
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         records = person_service.get_person_records(person_id=person_id, db=db_session)
 
@@ -547,8 +532,7 @@ def get_person_records(person_id: str, current_user: Dict = Depends(is_authentic
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno en el servidor al obtener antecedentes de la persona"
         )
-    finally:
-        db_session.close()
+
 
 @router.delete("/{person_id}/record/{record_id}", status_code=status.HTTP_200_OK)
 def remove_person_record(person_id: str, record_id: str, current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all)):
@@ -561,7 +545,7 @@ def remove_person_record(person_id: str, record_id: str, current_user: Dict = De
             detail="No tienes permiso para desvinculación antecedentes"
         )
 
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         if not person_id or not record_id:
             raise HTTPException(
@@ -593,8 +577,7 @@ def remove_person_record(person_id: str, record_id: str, current_user: Dict = De
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno en el servidor al desvinculación el antecedente"
         )
-    finally:
-        db_session.close()
+
 
 @router.delete("/{person_id}/connection/{person_to_disconnect}", status_code=status.HTTP_200_OK)
 def remove_person_connection(person_id: str, person_to_disconnect: str, current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all)):
@@ -607,7 +590,7 @@ def remove_person_connection(person_id: str, person_to_disconnect: str, current_
             detail="No tienes permiso para desvinculación personas"
         )
     
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         if not person_id or not person_to_disconnect:
             raise HTTPException(
@@ -639,5 +622,4 @@ def remove_person_connection(person_id: str, person_to_disconnect: str, current_
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno en el servidor al desvinculación la persona"
         )
-    finally:
-        db_session.close()
+

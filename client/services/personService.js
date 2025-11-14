@@ -1,158 +1,71 @@
 // Servicio para gestión de personas
-class PersonService {
+import BaseService from './BaseService';
+
+class PersonService extends BaseService {
   constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  }
-
-  // Obtener token del localStorage
-  getAuthToken() {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('token');
-    }
-    return null;
-  }
-
-  // Headers por defecto con autenticación
-  getHeaders() {
-    const token = this.getAuthToken();
-    return {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` })
-    };
-  }
-
-  // Headers para archivos
-  getFileHeaders() {
-    const token = this.getAuthToken();
-    return {
-      ...(token && { Authorization: `Bearer ${token}` })
-    };
+    super(); // Usa BaseService con detección automática de errores de sesión
   }
 
   // Crear una nueva persona
   async createPerson(personData) {
-    try {
-      const backendData = {
-        identification: personData.identification,
-        identification_type: personData.identification_type,
-        names: personData.names,
-        lastnames: personData.lastnames,
-        address: personData.address || '',
-        province: personData.province,
-        country: personData.country,
-        observations: personData.observations || ''
+    const backendData = {
+      identification: personData.identification,
+      identification_type: personData.identification_type,
+      names: personData.names,
+      lastnames: personData.lastnames,
+      address: personData.address || '',
+      province: personData.province,
+      country: personData.country,
+      observations: personData.observations || ''
+    };
+
+    const result = await this.post('/persons/create', backendData);
+    
+    // Manejar duplicados
+    if (!result.success && result.status === 422) {
+      return { 
+        success: false, 
+        error: result.error || 'La persona ya existe en el sistema', 
+        isDuplicate: true 
       };
-
-      const response = await fetch(`${this.baseURL}/persons/create`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify(backendData)
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        return { success: true, data };
-      } else {
-        if (response.status === 422) {
-          return { 
-            success: false, 
-            error: data.detail || 'La persona ya existe en el sistema', 
-            isDuplicate: true 
-          };
-        }
-        return { success: false, error: data.detail || 'Error al crear persona' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Error de conexión' };
     }
+    
+    return result;
   }
 
   // Obtener una persona por ID
   async getPersonById(personId) {
-    try {
-      const response = await fetch(`${this.baseURL}/persons/${personId}`, {
-        method: 'GET',
-        headers: this.getHeaders()
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        const normalizedData = {
-          ...data,
-          files: Array.isArray(data.files) ? data.files : [],
-          record_relationships: Array.isArray(data.record_relationships) ? data.record_relationships : [],
-          connections: Array.isArray(data.connections) ? data.connections : []
-        };
-        return { success: true, data: normalizedData };
-      } else {
-        return { success: false, error: data.detail || 'Error al obtener persona' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Error de conexión' };
+    const result = await this.get(`/persons/${personId}`);
+    
+    if (result.success) {
+      // Normalizar datos
+      return {
+        success: true,
+        data: {
+          ...result.data,
+          files: Array.isArray(result.data.files) ? result.data.files : [],
+          record_relationships: Array.isArray(result.data.record_relationships) ? result.data.record_relationships : [],
+          connections: Array.isArray(result.data.connections) ? result.data.connections : []
+        }
+      };
     }
+    
+    return result;
   }
 
   // Obtener todas las personas
   async getPersons(filters = {}) {
-    try {
-      const response = await fetch(`${this.baseURL}/persons`, {
-        method: 'GET',
-        headers: this.getHeaders()
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        return { success: true, data };
-      } else {
-        return { success: false, error: data.detail || 'Error al obtener personas' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Error de conexión' };
-    }
+    return this.get('/persons');
   }
 
   // Actualizar una persona
   async updatePerson(personId, personData) {
-    try {
-      const response = await fetch(`${this.baseURL}/persons/update/${personId}`, {
-        method: 'PATCH',
-        headers: this.getHeaders(),
-        body: JSON.stringify(personData)
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        return { success: true, data };
-      } else {
-        return { success: false, error: data.detail || 'Error al actualizar persona' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Error de conexión' };
-    }
+    return this.patch(`/persons/update/${personId}`, personData);
   }
 
   // Eliminar una persona
   async deletePerson(personId) {
-    try {
-      const response = await fetch(`${this.baseURL}/persons/delete/${personId}`, {
-        method: 'DELETE',
-        headers: this.getHeaders()
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return { success: true, data };
-      } else {
-        const errorData = await response.json();
-        return { success: false, error: errorData.detail || 'Error al eliminar la persona' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Error de conexión' };
-    }
+    return this.delete(`/persons/delete/${personId}`);
   }
 
   // Subir archivos para una persona
@@ -170,18 +83,12 @@ class PersonService {
             formData.append('description', fileData.description);
           }
 
-          const response = await fetch(`${this.baseURL}/files/upload`, {
-            method: 'POST',
-            headers: this.getFileHeaders(),
-            body: formData
-          });
+          const result = await this.postFormData('/files/upload', formData);
 
-          const data = await response.json();
-
-          if (response.ok) {
-            uploadedFiles.push(data);
+          if (result.success) {
+            uploadedFiles.push(result.data);
           } else {
-            errors.push(`${fileData.file.name}: ${data.detail || 'Error al subir'}`);
+            errors.push(`${fileData.file.name}: ${result.error || 'Error al subir'}`);
           }
         } catch (fileError) {
           errors.push(`${fileData.file.name}: Error de conexión`);
@@ -204,41 +111,12 @@ class PersonService {
 
   // Obtener archivos de una persona
   async getPersonFiles(personId) {
-    try {
-      const response = await fetch(`${this.baseURL}/files/person/${personId}`, {
-        method: 'GET',
-        headers: this.getHeaders()
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        return { success: true, data };
-      } else {
-        return { success: false, error: data.detail || 'Error al obtener archivos' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Error de conexión' };
-    }
+    return this.get(`/files/person/${personId}`);
   }
 
   // Eliminar un archivo de una persona
   async deleteFile(fileId) {
-    try {
-      const response = await fetch(`${this.baseURL}/files/${fileId}`, {
-        method: 'DELETE',
-        headers: this.getHeaders()
-      });
-
-      if (response.ok) {
-        return { success: true };
-      } else {
-        const data = await response.json();
-        return { success: false, error: data.detail || 'Error al eliminar archivo' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Error de conexión' };
-    }
+    return this.delete(`/files/${fileId}`);
   }
 
   // Vincular antecedentes a una persona
@@ -249,17 +127,15 @@ class PersonService {
 
       for (const recordId of recordIds) {
         try {
-          const response = await fetch(`${this.baseURL}/persons/${personId}/record/${recordId}?type_relationship=${encodeURIComponent(typeRelationship)}`, {
-            method: 'PATCH',
-            headers: this.getHeaders()
-          });
+          const result = await this.patch(
+            `/persons/${personId}/record/${recordId}?type_relationship=${encodeURIComponent(typeRelationship)}`,
+            {}
+          );
 
-          const data = await response.json();
-
-          if (response.ok) {
+          if (result.success) {
             results.push({ recordId, success: true });
           } else {
-            errors.push(`Record ${recordId}: ${data.detail || 'Error al vincular'}`);
+            errors.push(`Record ${recordId}: ${result.error || 'Error al vincular'}`);
           }
         } catch (recordError) {
           errors.push(`Record ${recordId}: Error de conexión`);
@@ -282,21 +158,7 @@ class PersonService {
 
   // Desvincular un antecedente de una persona
   async unlinkRecord(personId, recordId) {
-    try {
-      const response = await fetch(`${this.baseURL}/persons/${personId}/record/${recordId}`, {
-        method: 'DELETE',
-        headers: this.getHeaders()
-      });
-
-      if (response.ok) {
-        return { success: true };
-      } else {
-        const errorData = await response.json();
-        return { success: false, error: errorData.detail || 'Error al desvincular antecedente' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Error de conexión' };
-    }
+    return this.delete(`/persons/${personId}/record/${recordId}`);
   }
 
   // Vincular personas con otras personas
@@ -306,25 +168,15 @@ class PersonService {
       const warnings = [];
       
       for (const personToLink of personsToLink) {
-        const url = `${this.baseURL}/persons/linked-person/${personId}/${personToLink.person_id}?connection_type=${encodeURIComponent(relationshipType)}`;
-        
-        const response = await fetch(url, {
-          method: 'PATCH',
-          headers: this.getHeaders()
-        });
+        const result = await this.patch(
+          `/persons/linked-person/${personId}/${personToLink.person_id}?connection_type=${encodeURIComponent(relationshipType)}`,
+          {}
+        );
 
-        if (response.ok) {
-          const data = await response.json();
+        if (result.success) {
           linkedPersons.push({ ...personToLink, relationship: relationshipType });
         } else {
-          let errorDetail = 'Error desconocido';
-          try {
-            const errorData = await response.json();
-            errorDetail = errorData.detail || 'Error desconocido';
-          } catch (e) {
-            errorDetail = `Error ${response.status}: ${response.statusText}`;
-          }
-          warnings.push(`${personToLink.names} ${personToLink.lastnames}: ${errorDetail}`);
+          warnings.push(`${personToLink.names} ${personToLink.lastnames}: ${result.error}`);
         }
       }
 
@@ -340,84 +192,29 @@ class PersonService {
 
   // Desvincular personas
   async unlinkPerson(personId, linkedPersonId) {
-    try {
-      const response = await fetch(`${this.baseURL}/persons/${personId}/connection/${linkedPersonId}`, {
-        method: 'DELETE',
-        headers: this.getHeaders()
-      });
-
-      if (response.ok) {
-        return { success: true };
-      } else {
-        const errorData = await response.json();
-        return { success: false, error: errorData.detail || 'Error al desvincular persona' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Error de conexión' };
-    }
+    return this.delete(`/persons/${personId}/connection/${linkedPersonId}`);
   }
   
   // Obtener personas vinculadas
   async getLinkedPersons(personId) {
-    try {
-      const response = await fetch(`${this.baseURL}/persons/${personId}/linked`, {
-        method: 'GET',
-        headers: this.getHeaders()
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return { success: true, data };
-      } else {
-        if (response.status === 404) {
-          return { success: true, data: [] };
-        }
-        const errorData = await response.json();
-        return { success: false, error: errorData.detail || 'Error al obtener personas vinculadas' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Error de conexión' };
+    const result = await this.get(`/persons/${personId}/linked`);
+    
+    // Si es 404, retornar lista vacía
+    if (!result.success && result.status === 404) {
+      return { success: true, data: [] };
     }
+    
+    return result;
   }
 
   // Obtener antecedentes vinculados a una persona
   async getPersonRecords(personId) {
-    try {
-      const response = await fetch(`${this.baseURL}/persons/${personId}/records`, {
-        method: 'GET',
-        headers: this.getHeaders()
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        return { success: true, data };
-      } else {
-        return { success: false, error: data.detail || 'Error al obtener antecedentes' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Error de conexión' };
-    }
+    return this.get(`/persons/${personId}/records`);
   }
 
   // Obtener estadísticas de personas
   async getPersonStats() {
-    try {
-      const response = await fetch(`${this.baseURL}/persons/stats`, {
-        method: 'GET',
-        headers: this.getHeaders()
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        return { success: true, data };
-      } else {
-        return { success: false, error: data.detail || 'Error al obtener estadísticas' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Error de conexión' };
-    }
+    return this.get('/persons/stats');
   }
 
   // Buscar personas por término
@@ -434,34 +231,14 @@ class PersonService {
         if (!queryString) {
           return { success: false, error: 'Debe proporcionar criterios de búsqueda' };
         }
-        const url = `${this.baseURL}/persons/search/person/?${queryString}`;
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: this.getHeaders()
-        });
-        const data = await response.json();
-        if (response.ok) {
-          return { success: true, data };
-        } else {
-          return { success: false, error: data.detail || 'Error al buscar personas' };
-        }
+        return this.get(`/persons/search/person/?${queryString}`);
       }
 
       if (typeof searchTerm === 'string') {
         if (!searchTerm || !searchTerm.trim()) {
           return { success: false, error: 'Debe proporcionar un término de búsqueda' };
         }
-        const url = `${this.baseURL}/persons/search/person/?query=${encodeURIComponent(searchTerm.trim())}`;
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: this.getHeaders()
-        });
-        const data = await response.json();
-        if (response.ok) {
-          return { success: true, data };
-        } else {
-          return { success: false, error: data.detail || 'Error al buscar personas' };
-        }
+        return this.get(`/persons/search/person/?query=${encodeURIComponent(searchTerm.trim())}`);
       }
 
       return { success: false, error: 'Parámetro de búsqueda inválido' };
@@ -472,48 +249,12 @@ class PersonService {
 
   // Obtener personas recientes
   async getRecentPersons(limit = 5) {
-    try {
-      const response = await fetch(`${this.baseURL}/persons/recent?limit=${limit}`, {
-        method: 'GET',
-        headers: this.getHeaders()
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        return { success: true, data };
-      } else {
-        return { success: false, error: data.detail || 'Error al obtener personas recientes' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Error de conexión' };
-    }
+    return this.get(`/persons/recent?limit=${limit}`);
   }
 
   // Cargar personas desde CSV (solo para administradores)
   async loadPersonsFromCSV() {
-    try {
-      const response = await fetch(`${this.baseURL}/persons/load-csv/`, {
-        method: 'GET',
-        headers: this.getHeaders()
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        return { 
-          success: true, 
-          data: {
-            message: data.message,
-            status: data.status
-          }
-        };
-      } else {
-        return { success: false, error: data.detail || 'Error al cargar personas desde CSV' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Error de conexión al cargar personas desde CSV' };
-    }
+    return this.get('/persons/load-csv/');
   }
 
   async searchPersonByDniForLinker(identification) {
@@ -522,20 +263,7 @@ class PersonService {
         return { success: false, error: 'Debe proporcionar un número de identificación' };
       }
 
-      const url = `${this.baseURL}/persons/search-dni/${encodeURIComponent(identification.trim())}`;
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: this.getHeaders()
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        return { success: true, data: data };
-      } else {
-        return { success: false, error: data.detail || 'Persona no encontrada' };
-      }
+      return this.post(`/persons/search-dni/${encodeURIComponent(identification.trim())}`, {});
     } catch (error) {
       return { success: false, error: 'Error de conexión' };
     }
@@ -543,22 +271,7 @@ class PersonService {
 
   // Obtener estado de carga del padron
   async getLoadCsvStatus() {
-    try {
-      const response = await fetch(`${this.baseURL}/persons/load-csv/status/`, {
-        method: 'GET',
-        headers: this.getHeaders()
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        return { success: true, data };
-      } else {
-        return { success: false, error: data.detail || 'Error al obtener estado de carga' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Error de conexión al obtener estado de carga' };
-    }
+    return this.get('/persons/load-csv/status/');
   }
 }
 

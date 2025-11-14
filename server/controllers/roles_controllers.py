@@ -1,6 +1,6 @@
 from services.roles_services import RolesService
 from fastapi import HTTPException, status, APIRouter, Depends
-from database.db import SessionLocal
+from database.db import get_db
 from typing import Dict
 from dependencies.is_auth import is_authenticated
 from dependencies.checked_role import check_rol_moderate_or_admin
@@ -15,7 +15,7 @@ def get_roles(current_user: Dict = Depends(is_authenticated), is_authorized: boo
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para listar roles"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
     roles = role_service.get_roles(db=db_session)
     if not roles:
         raise HTTPException(

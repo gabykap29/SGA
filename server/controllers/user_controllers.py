@@ -1,7 +1,7 @@
 from services.users_services import UserService
 from fastapi import HTTPException, status, APIRouter, Depends
 from models.schemas.user_schema import UserSchema, UserResponses
-from database.db import SessionLocal
+from database.db import get_db
 from typing import List, Dict
 from dependencies.is_auth import is_authenticated
 from dependencies.checked_role import check_rol_admin, check_rol_moderate_or_admin, check_rol_all
@@ -16,7 +16,7 @@ def get_users(current_user: Dict = Depends(is_authenticated), is_authorized: boo
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para listar usuarios"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         users = user_model.get_users(db=db_session)
         if not users or len(users) == 0:
@@ -26,9 +26,12 @@ def get_users(current_user: Dict = Depends(is_authenticated), is_authorized: boo
             )
         
         return users
-    finally:
-        db_session.close()
-
+    except Exception as e:
+        print(f"Error al obtener usuarios: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al obtener usuarios"
+        )
 @user_routes.get("/{id}", status_code=status.HTTP_200_OK, response_model=UserResponses)
 def get_user(id: str, current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_moderate_or_admin)):
     if not is_authorized:
@@ -36,7 +39,7 @@ def get_user(id: str, current_user: Dict = Depends(is_authenticated), is_authori
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para ver este usuario"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
     user = user_model.get_user(id, db=db_session)
     if not user: 
         raise HTTPException(
@@ -53,7 +56,7 @@ def create_user(body: UserSchema, current_user: Dict = Depends(is_authenticated)
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Solo administradores pueden crear usuarios"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
     if body.passwd != body.confirm_passwd:
         raise HTTPException(
             status_code= status.HTTP_400_BAD_REQUEST,
@@ -95,7 +98,7 @@ def update(id: str, body: UserSchema, current_user: Dict = Depends(is_authentica
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para actualizar usuarios"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
     
     import uuid
     # Convertir role_id a UUID si es string
@@ -138,7 +141,7 @@ def delete_user(id: str, current_user: Dict = Depends(is_authenticated), is_auth
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Solo administradores pueden eliminar usuarios"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
     user = user_model.delete_user(id, db=db_session)
     if not user:
         HTTPException(

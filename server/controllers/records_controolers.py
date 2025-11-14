@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Request, Query
 from fastapi.responses import JSONResponse
 from services.records_services import RecordService
-from database.db import SessionLocal
+from database.db import get_db
 from models.schemas.record_schema import RecordSchema
 from typing import Dict
 from dependencies.is_auth import is_authenticated
@@ -23,7 +23,7 @@ def get_records(current_user: Dict = Depends(is_authenticated), is_authorized: b
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para listar registros"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
     try: 
         print("📋 Obteniendo records de la base de datos...")
         records = record_service.get_records(db=db_session)
@@ -47,8 +47,6 @@ def get_records(current_user: Dict = Depends(is_authenticated), is_authorized: b
             content="Error interno en el servidor al obtener los antecedentes",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-    finally:
-        db_session.close()
 
 @router.get("/search", status_code=status.HTTP_200_OK)
 def search_records(
@@ -72,7 +70,7 @@ def search_records(
             detail="No tienes permiso para buscar antecedentes"
         )
     
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         # Preparar filtros
         filters = {}
@@ -122,8 +120,6 @@ def search_records(
             content={"error": "Error interno al buscar antecedentes", "detail": str(e)},
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-    finally:
-        db_session.close()
 
 @router.get("/{id}")
 def get_record_by_id(id: str, current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all_or_viewer)):
@@ -132,7 +128,7 @@ def get_record_by_id(id: str, current_user: Dict = Depends(is_authenticated), is
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para ver este registro"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         record = record_service.get_record(record_id=id, db=db_session)
         if not record:
@@ -180,8 +176,6 @@ def get_record_by_id(id: str, current_user: Dict = Depends(is_authenticated), is
             content="Error interno en el servidor al obtener el antecedente",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )       
-    finally:
-        db_session.close()
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)
 def create_record(record: RecordSchema, request: Request, current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all)):
@@ -190,7 +184,7 @@ def create_record(record: RecordSchema, request: Request, current_user: Dict = D
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para crear registros"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         print("Datos recibidos para crear antecedente:", {
             "title": record.title,
@@ -264,8 +258,6 @@ def create_record(record: RecordSchema, request: Request, current_user: Dict = D
             status_code=500,
             content=f"Error interno en el servidor al intentar crear el antecedente: {str(e)}"
         )
-    finally:
-        db_session.close()
 
 
 @router.patch("/update/{id}", status_code=status.HTTP_200_OK)
@@ -275,7 +267,7 @@ def update_record(id: str, record: RecordSchema, request: Request, current_user:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para actualizar registros"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
     try:
         result = record_service.update_record(
             record_id=id,
@@ -328,7 +320,7 @@ def stats(current_user: Dict = Depends(is_authenticated), is_authorized: bool = 
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para ver estadísticas de registros"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
     try: 
         stats = record_service.stats(db=db_session)
         return CustomJSONResponse(content=stats)
@@ -338,8 +330,6 @@ def stats(current_user: Dict = Depends(is_authenticated), is_authorized: bool = 
             status_code= status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno en el servidor al obtener las estadisticas."
         )
-    finally:
-        db_session.close()
 
 @router.delete("/{id}", status_code=status.HTTP_200_OK)
 def delete_report(id: str, request: Request, current_user: Dict = Depends(is_authenticated), is_authorized: bool = Depends(check_rol_all)):
@@ -348,7 +338,7 @@ def delete_report(id: str, request: Request, current_user: Dict = Depends(is_aut
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para eliminar registros"
         )
-    db_session = SessionLocal()
+    db_session = get_db()
     try: 
         # Primero obtenemos el antecedente para incluirlo en el log
         record_to_delete = record_service.get_record(record_id=id, db=db_session)
@@ -390,5 +380,3 @@ def delete_report(id: str, request: Request, current_user: Dict = Depends(is_aut
             status_code=500,
             detail="Error al intentar eliminar un antecedente!"
         )
-    finally:
-        db_session.close()
