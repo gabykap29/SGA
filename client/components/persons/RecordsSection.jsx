@@ -236,7 +236,7 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
                       className="text-white px-3 py-2 shadow-sm"
                       style={{ fontSize: '0.8rem', borderRadius: '8px' }}
                     >
-                      {record.title || 'Sin tipo'} ({record.type_relationship  || 'N/A'}) 
+                      {record.title || 'Sin título'} - {record.type_record || 'N/A'} ({record.type_relationship || 'N/A'}) 
                     </Badge>
                     <Button
                       variant="dark"

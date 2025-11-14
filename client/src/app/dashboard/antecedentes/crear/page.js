@@ -14,7 +14,8 @@ export default function CreateRecord() {
     title: '',
     date: new Date().toISOString().split('T')[0],
     content: '',
-    observations: ''
+    observations: '',
+    type_record: 'JUDICIAL'
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -162,6 +163,23 @@ export default function CreateRecord() {
                     <Form.Control.Feedback type="invalid">
                       {errors.date}
                     </Form.Control.Feedback>
+                  </Form.Group>
+
+                  <Form.Group className="mb-3">
+                    <Form.Label>Tipo de Antecedente <span className="text-danger">*</span></Form.Label>
+                    <Form.Select
+                      name="type_record"
+                      value={formData.type_record}
+                      onChange={handleChange}
+                      disabled={loading}
+                    >
+                      <option value="JUDICIAL">Judicial</option>
+                      <option value="POLICIAL">Policial</option>
+                      <option value="PERIODISTICO">Periodístico</option>
+                      <option value="REDES_SOCIALES">Redes Sociales</option>
+                      <option value="TESTIMONIO">Testimonio</option>
+                      <option value="OTRO">Otro</option>
+                    </Form.Select>
                   </Form.Group>
 
                   <Form.Group className="mb-3">

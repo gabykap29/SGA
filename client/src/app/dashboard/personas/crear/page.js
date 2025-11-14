@@ -266,8 +266,10 @@ export default function CreatePerson() {
     
     // Si estamos en el paso de antecedentes, vincular automáticamente
     if (activeStep === 3 && personData) {
-      // handleRecordsLink espera un objeto 'antecedent', no un array
-      handleRecordsLink(record);
+      // Extraer el type_relationship del record retornado por el backend
+      const typeRelationship = record.type_relationship || 'Denunciado';
+      // handleRecordsLink espera un objeto 'antecedent' y el tipo de relación
+      handleRecordsLink(record, typeRelationship);
     }
   };
 

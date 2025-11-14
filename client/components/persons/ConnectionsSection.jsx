@@ -75,19 +75,19 @@ const ConnectionsSection = ({ personId, refreshKey, onRefresh }) => {
     setSearchPerformed(true);
     
     try {
-      const result = await personService.searchPersons(searchQuery);
+      // Buscar por DNI/Identificación específicamente
+      const result = await personService.searchPersonByDniForLinker(searchQuery);
       if (result.success) {
         // Filtrar la propia persona
-        const filtered = result.data.filter(person => 
-          person.person_id !== personId
-        );
-        setSearchResults(filtered);
-        
-        if (filtered.length === 0) {
-          toast.info('No se encontraron personas con ese criterio de búsqueda');
+        const person = result.data;
+        if (person.person_id !== personId) {
+          setSearchResults([person]);
+        } else {
+          setSearchResults([]);
+          toast.info('No puede vincularse a sí mismo');
         }
       } else {
-        toast.error(result.error || 'Error al buscar personas');
+        toast.error(result.error || 'Persona no encontrada con ese DNI');
         setSearchResults([]);
       }
     } catch (error) {
@@ -315,7 +315,7 @@ const ConnectionsSection = ({ personId, refreshKey, onRefresh }) => {
                     <FiSearch />
                   </InputGroup.Text>
                   <Form.Control
-                    placeholder="Buscar por nombre, apellido o documento..."
+                    placeholder="Ingrese el número de DNI/Identificación..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -346,6 +346,10 @@ const ConnectionsSection = ({ personId, refreshKey, onRefresh }) => {
                 onChange={(e) => setRelationshipType(e.target.value)}
               >
                 <optgroup label="Relaciones Personales">
+                  <option value="HERMANO/A">HERMANO/A</option>
+                  <option value="PADRE/MADRE">Padre/Madre</option>
+                  <option value="PRIMO/A">Primo/a</option>
+                  
                   <option value="FAMILIAR">Familiar</option>
                   <option value="AMIGO">Amigo</option>
                   <option value="COLEGA">Colega</option>
@@ -374,7 +378,7 @@ const ConnectionsSection = ({ personId, refreshKey, onRefresh }) => {
               </div>
             ) : !searchPerformed ? (
               <Alert variant="info" className="m-3">
-                Ingrese un criterio de búsqueda para encontrar personas y vincularlas.
+                Ingrese un número de DNI/Identificación en el campo de búsqueda para encontrar personas y vincularlas.
               </Alert>
             ) : filteredPersons.length === 0 ? (
               <Alert variant="warning" className="m-3">

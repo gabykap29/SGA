@@ -102,7 +102,16 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
   };
 
   const formatIdentification = (person) => {
-    return `${person.identification_type} ${person.identification}`;
+    // Mapeo de tipos de identificación
+    const identificationTypes = {
+      'DNI': 'DNI',
+      'PASAPORTE': 'Pasaporte',
+      'CEDULA': 'Cédula',
+      'identification_type': 'Identificación'
+    };
+    
+    const type = identificationTypes[person.identification_type] || person.identification_type || 'ID';
+    return `${type}: ${person.identification}`;
   };
 
   return (
@@ -112,7 +121,7 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
           <div>
             <h5 className="fw-bold mb-1">Vincular con Otras Personas</h5>
             <p className="text-muted small mb-0">
-              Busque por DNI/Identificación para vincular con otras personas registradas en el sistema
+              Busque por número de DNI/Identificación para vincular con otras personas registradas en el sistema
             </p>
           </div>
           <Button 
@@ -221,7 +230,7 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
         ) : !searchPerformed ? (
           <Alert variant="info" className="mb-0">
             <FiInfo className="me-2" /> 
-            Ingrese un criterio de búsqueda para encontrar personas y vincularlas.
+            Ingrese el número de DNI/Identificación en el campo de búsqueda para encontrar personas y vincularlas.
           </Alert>
         ) : filteredPersons.length === 0 ? (
           <Alert variant="warning" className="mb-0">

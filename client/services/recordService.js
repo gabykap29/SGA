@@ -75,8 +75,8 @@ class RecordService {
   async createRecord(recordData) {
     try {
       // Extraemos solo los campos que el backend espera
-      const { title, date, content, observations, type_record, category } = recordData;
-      const recordDataToSend = { title, date, content, observations, type_record, category };
+      const { title, date, content, observations, type_record, category, type_relationship } = recordData;
+      const recordDataToSend = { title, date, content, observations, type_record, category, type_relationship };
       
       const response = await fetch(`${this.baseURL}/records/create`, {
         method: 'POST',

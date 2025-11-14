@@ -13,12 +13,24 @@ const CreateRecordModal = ({ show, onHide, onRecordCreated }) => {
     observations: '',
     category: 'PENAL',
     type_record: 'JUDICIAL',
-    date: new Date().toISOString().split('T')[0] // Añadimos la fecha actual como valor predeterminado
+    date: new Date().toISOString().split('T')[0], // Fecha actual como valor predeterminado
+    type_relationship: 'Denunciado' // Tipo de vinculación por defecto
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isDuplicateError, setIsDuplicateError] = useState(false);
+
+  const relationshipTypes = [
+    'Denunciado',
+    'Denunciante',
+    'Testigo',
+    'Autor',
+    'Víctima',
+    'Sospechoso',
+    'Implicado',
+    'Querellante'
+  ];
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -61,7 +73,8 @@ const CreateRecordModal = ({ show, onHide, onRecordCreated }) => {
           observations: '',
           category: 'PENAL',
           type_record: 'JUDICIAL',
-          date: new Date().toISOString().split('T')[0]
+          date: new Date().toISOString().split('T')[0],
+          type_relationship: 'Denunciado'
         });
         onRecordCreated(result.data);
         onHide();
@@ -129,24 +142,6 @@ const CreateRecordModal = ({ show, onHide, onRecordCreated }) => {
             />
           </Form.Group>
 
-          <Form.Group className="mb-3">
-            <Form.Label className="fw-medium">
-              Categoría <span className="text-danger">*</span>
-            </Form.Label>
-            <Form.Select 
-              name="category" 
-              value={formData.category} 
-              onChange={handleInputChange}
-            >
-              <option value="PENAL">Penal</option>
-              <option value="CIVIL">Civil</option>
-              <option value="COMERCIAL">Comercial</option>
-              <option value="FAMILIAR">Familiar</option>
-              <option value="LABORAL">Laboral</option>
-              <option value="ADMINISTRATIVO">Administrativo</option>
-              <option value="OTRO">Otro</option>
-            </Form.Select>
-          </Form.Group>
 
           <Form.Group className="mb-3">
             <Form.Label className="fw-medium">
@@ -164,6 +159,26 @@ const CreateRecordModal = ({ show, onHide, onRecordCreated }) => {
               <option value="TESTIMONIO">Testimonio</option>
               <option value="OTRO">Otro</option>
             </Form.Select>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-medium">
+              Tipo de Vinculación <span className="text-danger">*</span>
+            </Form.Label>
+            <Form.Select 
+              name="type_relationship" 
+              value={formData.type_relationship} 
+              onChange={handleInputChange}
+            >
+              {relationshipTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </Form.Select>
+            <Form.Text className="text-muted">
+              Indica qué rol tiene la persona respecto a este antecedente
+            </Form.Text>
           </Form.Group>
 
           <Form.Group className="mb-3">

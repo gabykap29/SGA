@@ -249,7 +249,7 @@ class PersonService {
 
       for (const recordId of recordIds) {
         try {
-          const response = await fetch(`${this.baseURL}/persons/${personId}/record/${recordId}?type_relationship=${typeRelationship}`, {
+          const response = await fetch(`${this.baseURL}/persons/${personId}/record/${recordId}?type_relationship=${encodeURIComponent(typeRelationship)}`, {
             method: 'PATCH',
             headers: this.getHeaders()
           });

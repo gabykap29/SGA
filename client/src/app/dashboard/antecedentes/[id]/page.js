@@ -188,6 +188,12 @@ export default function RecordDetail() {
                 <Card.Body className="p-4">
                   <Tab.Content>
                     <Tab.Pane eventKey="details">
+                      <div className="mb-4">
+                        <h6 className="fw-bold text-muted small mb-2">Tipo de Antecedente</h6>
+                        <Badge bg="dark" className="px-3 py-2 fs-6">
+                          {record.type_record || 'No especificado'}
+                        </Badge>
+                      </div>
                       <h5 className="fw-bold text-dark mb-3">Contenido</h5>
                       <p className="text-dark" style={{ whiteSpace: 'pre-wrap' }}>
                         {record.description || 'No hay contenido disponible.'}

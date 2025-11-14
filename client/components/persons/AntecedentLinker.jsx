@@ -29,6 +29,16 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedAntecedentDetail, setSelectedAntecedentDetail] = useState(null);
   const [typeRelationship, setTypeRelationship] = useState('Denunciado');
+  
+  // Estados para el formulario de filtros
+  const [filterForm, setFilterForm] = useState({
+    title: '',
+    type_record: '',
+    dateFrom: '',
+    dateTo: '',
+    observations: '',
+    content: ''
+  });
 
   const relationshipTypes = [
     { value: 'Denunciado', label: 'Denunciado' },
@@ -48,19 +58,44 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
   }, []);
 
   useEffect(() => {
-    // Este efecto ya no es necesario porque no filtramos localmente
-  }, [searchTerm, showOnlyAvailable, availableAntecedents, linkedAntecedents]);
+    // Este efecto se ejecuta cuando se limpian los filtros
+  }, [showOnlyAvailable, availableAntecedents, linkedAntecedents]);
 
   const searchAntecedents = async () => {
-    if (!searchTerm.trim()) {
-      toast.warning('Ingrese un término de búsqueda');
+    // Verificar que al menos un campo esté completado
+    const hasFilters = Object.values(filterForm).some(value => value && value.toString().trim());
+    
+    if (!hasFilters) {
+      toast.warning('Ingrese al menos un criterio de búsqueda');
       return;
     }
 
     setLoadingAntecedents(true);
     try {
-      // Buscar antecedentes en el backend
-      const result = await recordService.searchRecords(searchTerm, {});
+      // Construir parámetros de búsqueda según los filtros completados
+      const filters = {};
+      
+      if (filterForm.title?.trim()) {
+        filters.title = filterForm.title.trim();
+      }
+      if (filterForm.type_record?.trim()) {
+        filters.type_record = filterForm.type_record.trim();
+      }
+      if (filterForm.observations?.trim()) {
+        filters.observations = filterForm.observations.trim();
+      }
+      if (filterForm.content?.trim()) {
+        filters.content = filterForm.content.trim();
+      }
+      if (filterForm.dateFrom) {
+        filters.date_from = filterForm.dateFrom;
+      }
+      if (filterForm.dateTo) {
+        filters.date_to = filterForm.dateTo;
+      }
+      
+      // Buscar antecedentes en el backend (sin searchTerm, solo filtros)
+      const result = await recordService.searchRecords(null, filters);
       
       if (result.success) {
         let filtered = result.data || [];
@@ -74,7 +109,9 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
         setFilteredAntecedents(filtered);
         
         if (filtered.length === 0) {
-          toast.info('No se encontraron antecedentes con ese término de búsqueda');
+          toast.info('No se encontraron antecedentes con los criterios especificados');
+        } else {
+          toast.success(`Se encontraron ${filtered.length} antecedente(s)`);
         }
       } else {
         toast.error(result.error || 'Error al buscar antecedentes');
@@ -87,6 +124,19 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
     } finally {
       setLoadingAntecedents(false);
     }
+  };
+
+  const handleClearFilters = () => {
+    setFilterForm({
+      title: '',
+      type_record: '',
+      dateFrom: '',
+      dateTo: '',
+      observations: '',
+      content: ''
+    });
+    setFilteredAntecedents([]);
+    setSelectedAntecedents([]);
   };
 
   const handleSearchKeyPress = (e) => {
@@ -232,6 +282,7 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
                 <tr>
                   <th>ID</th>
                   <th>Título</th>
+                  <th>Tipo</th>
                   <th>Contenido</th>
                   <th>Fecha</th>
                   <th>Tipo de Vinculación</th>
@@ -249,6 +300,11 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
                       {antecedent.observations && (
                         <small className="text-muted">{antecedent.observations}</small>
                       )}
+                    </td>
+                    <td>
+                      <Badge bg="secondary" className="text-white">
+                        {antecedent.type_record || 'N/A'}
+                      </Badge>
                     </td>
                     <td>
                       <small className="text-muted">
@@ -299,50 +355,174 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
       {!isView && (
         <Card className="mb-4">
           <Card.Header className="bg-white">
-            <h6 className="mb-0 fw-bold">
-              <FiSearch className="me-2" />
-              Vincular Nuevos Antecedentes
-            </h6>
+            <div className="d-flex justify-content-between align-items-center">
+              <h6 className="mb-0 fw-bold">
+                <FiFilter className="me-2" />
+                Buscar y Vincular Antecedentes
+              </h6>
+              <Form.Check
+                type="switch"
+                id="show-available"
+                label="Solo disponibles"
+                checked={showOnlyAvailable}
+                onChange={(e) => setShowOnlyAvailable(e.target.checked)}
+                disabled={!personId}
+                className="mb-0"
+              />
+            </div>
           </Card.Header>
           <Card.Body>
-          <Row>
-            <Col md={9}>
-              <InputGroup className="mb-3">
-                <InputGroup.Text>
-                  <FiSearch />
-                </InputGroup.Text>
-                <Form.Control
-                  type="text"
-                  placeholder="Buscar antecedentes por título, contenido u observaciones... (Presiona Enter)"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyPress={handleSearchKeyPress}
-                  disabled={!personId || loadingAntecedents}
-                />
-              </InputGroup>
-            </Col>
-            <Col md={3}>
-              <div className="d-flex gap-2">
-                <Form.Check
-                  type="switch"
-                  id="show-available"
-                  label="Solo disponibles"
-                  checked={showOnlyAvailable}
-                  onChange={(e) => setShowOnlyAvailable(e.target.checked)}
-                  disabled={!personId}
-                />
-                <Button 
-                  variant="outline-secondary" 
-                  size="sm"
-                  onClick={searchAntecedents}
-                  disabled={loadingAntecedents || !personId || !searchTerm.trim()}
-                  title="Buscar antecedentes"
-                >
-                  <FiSearch size={14} />
-                </Button>
-              </div>
-            </Col>
-          </Row>
+            {/* Formulario de Filtros */}
+            <Form>
+              <Row className="g-2">
+                {/* Título */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-bold small text-dark mb-2">
+                      <FiFileText className="me-1" size={14} />
+                      Título
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="Buscar por título del antecedente"
+                      value={filterForm.title}
+                      onChange={(e) => setFilterForm({...filterForm, title: e.target.value})}
+                      disabled={!personId || loadingAntecedents}
+                      className="shadow-sm"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Tipo de Antecedente */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-bold small text-dark mb-2">
+                      <FiFileText className="me-1" size={14} />
+                      Tipo de Antecedente
+                    </Form.Label>
+                    <Form.Select
+                      value={filterForm.type_record}
+                      onChange={(e) => setFilterForm({...filterForm, type_record: e.target.value})}
+                      disabled={!personId || loadingAntecedents}
+                      className="shadow-sm"
+                    >
+                      <option value="">-- Seleccionar tipo --</option>
+                      <option value="PENAL">Penal</option>
+                      <option value="CIVIL">Civil</option>
+                      <option value="CRIMINAL">Criminal</option>
+                      <option value="ADMINISTRATIVO">Administrativo</option>
+                      <option value="LABORAL">Laboral</option>
+                      <option value="OTRO">Otro</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+
+                {/* Observaciones */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-bold small text-dark mb-2">
+                      <FiSearch className="me-1" size={14} />
+                      Observaciones
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="Buscar por observaciones"
+                      value={filterForm.observations}
+                      onChange={(e) => setFilterForm({...filterForm, observations: e.target.value})}
+                      disabled={!personId || loadingAntecedents}
+                      className="shadow-sm"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Contenido */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-bold small text-dark mb-2">
+                      <FiSearch className="me-1" size={14} />
+                      Contenido
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="Buscar en el contenido"
+                      value={filterForm.content}
+                      onChange={(e) => setFilterForm({...filterForm, content: e.target.value})}
+                      disabled={!personId || loadingAntecedents}
+                      className="shadow-sm"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Fecha Desde */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-bold small text-dark mb-2">
+                      <FiCalendar className="me-1" size={14} />
+                      Fecha Desde
+                    </Form.Label>
+                    <Form.Control
+                      type="date"
+                      value={filterForm.dateFrom}
+                      onChange={(e) => setFilterForm({...filterForm, dateFrom: e.target.value})}
+                      disabled={!personId || loadingAntecedents}
+                      className="shadow-sm"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Fecha Hasta */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-bold small text-dark mb-2">
+                      <FiCalendar className="me-1" size={14} />
+                      Fecha Hasta
+                    </Form.Label>
+                    <Form.Control
+                      type="date"
+                      value={filterForm.dateTo}
+                      onChange={(e) => setFilterForm({...filterForm, dateTo: e.target.value})}
+                      disabled={!personId || loadingAntecedents}
+                      className="shadow-sm"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              {/* Botones de Acción del Formulario */}
+              <Row className="g-2 mt-2">
+                <Col>
+                  <div className="d-flex gap-2">
+                    <Button 
+                      variant="primary" 
+                      onClick={searchAntecedents}
+                      disabled={loadingAntecedents || !personId}
+                      className="shadow-sm"
+                    >
+                      {loadingAntecedents ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" />
+                          Buscando...
+                        </>
+                      ) : (
+                        <>
+                          <FiSearch className="me-2" size={14} />
+                          Buscar Antecedentes
+                        </>
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline-secondary" 
+                      onClick={handleClearFilters}
+                      disabled={!personId}
+                      className="shadow-sm"
+                    >
+                      <FiRefreshCw className="me-2" size={14} />
+                      Limpiar Filtros
+                    </Button>
+                  </div>
+                </Col>
+              </Row>
+            </Form>
 
           {/* Selector de tipo de vinculación */}
           {selectedAntecedents.length > 0 && (
@@ -452,6 +632,7 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
                     </th>
                     <th>ID</th>
                     <th>Título</th>
+                    <th>Tipo</th>
                     <th>Contenido</th>
                     <th>Fecha</th>
                     <th>Observaciones</th>
@@ -475,6 +656,11 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
                       </td>
                       <td>
                         <div className="fw-medium">{antecedent.title}</div>
+                      </td>
+                      <td>
+                        <Badge bg="secondary" className="text-white">
+                          {antecedent.type_record || 'N/A'}
+                        </Badge>
                       </td>
                       <td>
                         <small className="text-muted">
