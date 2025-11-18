@@ -1,24 +1,28 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from typing import AsyncGenerator
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.orm import declarative_base
 from config.config import database_url
 
 if database_url is None:
     database_url = ""
 
-engine = create_engine(database_url, echo=True)
-SessionLocal = sessionmaker(bind = engine, autoflush= False, autocommit=False)
+engine = create_async_engine(database_url, echo=True)
+SessionLocal = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    autoflush=False,
+    autocommit=False,
+    expire_on_commit=False,
+)
 Base = declarative_base()
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    async with SessionLocal() as session:
+        yield session
 
 
-def init_database():
-        Base.metadata.create_all(bind=engine)
-        print("✅ Tablas creadas")
-        return True
+async def init_database():
+    """Funcion para crear las tablas si no existen"""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)

@@ -1,9 +1,10 @@
+from services.logs_services import LogsService
 from database.db import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
 from services.users_services import UserService
 from fastapi import HTTPException, status, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi import APIRouter
-# from models.schemas.token_schemas import TokenData
 from typing import Annotated
 from config.config import token_expires_minutes
 from datetime import timedelta
@@ -11,38 +12,23 @@ from utils.jwt import create_access_token
 
 user_service = UserService()
 auth_router = APIRouter()
+logging_service = LogsService()
 
 @auth_router.post("/login")
-async def login(request: Request, formdata: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    db_session = get_db()
+async def login(request: Request, formdata: Annotated[OAuth2PasswordRequestForm, Depends()], db: AsyncSession = Depends(get_db)):
     try:
-        user = user_service.login(formdata.username, formdata.password, db=db_session)
+        
+        user = await user_service.login(formdata.username, formdata.password, db)
         if not user:
-            # Registrar intento fallido de inicio de sesión
-            try:
-                # Crear el log manualmente para evitar problemas con la sesión
-                from models.Logs import Logs
-                import uuid
-                from datetime import datetime
-                
-                new_log = Logs(
-                    log_id=uuid.uuid4(),
-                    user_id=None,
-                    action="LOGIN_FAILED",
-                    entity_type="USER",
-                    entity_id=None,
-                    description=f"Intento fallido de inicio de sesión para el usuario: {formdata.username}",
-                    ip_address=request.client.host if request.client else None,
-                    created_at=datetime.utcnow()
-                )
-                
-                db_session.add(new_log)
-                db_session.commit()
-                
-            except Exception as log_error:
-                print(f"Error al registrar log de intento fallido: {log_error}")
-                db_session.rollback()
-                
+            await logging_service.create_log(
+                user_id=None,
+                action="LOGIN_FAILED",
+                entity_type="USER",
+                entity_id=None,
+                description=f"Intento de inicio de sesión fallido para usuario: {formdata.username}",
+                ip_address=request.client.host if request.client else None,
+                db=db
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Usuario o contraseña incorrectos!",
@@ -80,38 +66,17 @@ async def login(request: Request, formdata: Annotated[OAuth2PasswordRequestForm,
                 "role_name": user.roles.name if user.roles else None
             }
         }
-        
-        # Registrar inicio de sesión exitoso - pero sin usar la relación de usuario
-        try:
-            # Crear el log manualmente para evitar problemas con la sesión
-            from models.Logs import Logs
-            import uuid
-            from datetime import datetime
-            
-            new_log = Logs(
-                log_id=uuid.uuid4(),
-                user_id=uuid.UUID(user_id) if user_id else None,
-                action="LOGIN_SUCCESS",
-                entity_type="USER",
-                entity_id=user_id,
-                description=f"Inicio de sesión exitoso: {user.username}",
-                ip_address=request.client.host if request.client else None,
-                created_at=datetime.utcnow()
-            )
-            
-            db_session.add(new_log)
-            db_session.commit()
-            
-        except Exception as log_error:
-            print(f"Error al registrar log: {log_error}")
-            # Hacer rollback en caso de error pero continuar
-            db_session.rollback()
-        
+        await logging_service.create_log(
+            user_id=user.id,
+            action="LOGIN_SUCCESS",
+            entity_type="USER",
+            entity_id=str(user.id),
+            description=f"Inicio de sesión exitoso para usuario: {user.username}",
+            ip_address=request.client.host if request.client else None,
+            db=db
+        )
         return response_data
 
-    except HTTPException:
-        # Re-lanzar HTTPException sin modificarla para que FastAPI la maneje correctamente
-        raise
     except Exception as e:
         # Solo atrapar excepciones inesperadas (no HTTPException)
         print(f"Error inesperado en login: {e}")

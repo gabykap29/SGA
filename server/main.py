@@ -10,9 +10,6 @@ from controllers.persons_controllers import router as person_router
 from controllers.records_controolers import router as record_router
 from controllers.files_controllers import router as files_router
 from controllers.logs_controllers import router as logs_router
-
-# Importar todos los modelos para que SQLAlchemy pueda mapear las relaciones
-# Importar todos los modelos para que SQLAlchemy pueda mapear las relaciones
 import models
 from sqlalchemy.orm import configure_mappers
 
@@ -52,19 +49,17 @@ async def startup_event():
         print(f"⚠️  Advertencia al configurar mappers: {e}")
     
     # 2. Inicializar la base de datos (crear tablas)
-    if init_database():
+    db = await init_database()
+    if db:
         print("✅ Base de datos inicializada")
         
         # 3. Luego crear los roles
         print("📋 Creando roles...")
-        create_roles()
+        await create_roles()
         
         # 4. Finalmente crear el usuario admin
         print("👤 Creando usuario administrador...")
-        create_admin()
-
-    else:
-        print("❌ Error al inicializar la base de datos")
+        await create_admin()
 
 
 

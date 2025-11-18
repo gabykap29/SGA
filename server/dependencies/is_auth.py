@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from typing import Annotated
 from utils.jwt import decode_access_token
@@ -14,13 +14,8 @@ def is_authenticated(token: Annotated[str, Depends(oatth_scheme)]) -> dict:
     try:
         return decode_access_token(token=token)
     except HTTPException as http_ex:
-        # Re-lanzar las excepciones HTTP tal como están
-        raise http_ex
+        return False
     except Exception as e:
         print("Error en is_authenticated:", e)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Error de autenticación",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        return False
     

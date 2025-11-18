@@ -35,17 +35,7 @@ def decode_access_token(token: str) -> dict:
         return token_data
     except PyJWTError as jwt_err:
         print(f"Error al decodificar el token: {jwt_err}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Token inválido o expirado: {str(jwt_err)}",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        return False
     except Exception as e:
         print(f"Error inesperado al decodificar el token: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error inesperado al procesar el token: {str(e)}",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        return False

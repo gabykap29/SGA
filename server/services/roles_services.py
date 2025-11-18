@@ -1,11 +1,15 @@
 from models.Roles import Roles
-from database.db import SessionLocal
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 class RolesService:
     def __init__(self):
         self.roleModel = Roles 
-    def create_roles(self, db:Session):
+    async def create_roles(self, db:AsyncSession):
         try:
             roles_list = [
                 self.roleModel(name="ADMIN"),
@@ -13,28 +17,28 @@ class RolesService:
                 self.roleModel(name="USERS"),
                 self.roleModel(name="VIEW")
             ]
-            db.add_all(roles_list)
-            db.commit()
-            print("Roles cargados con exito!")
+            await db.add_all(roles_list)
+            await db.commit()
+            logger.info("Roles cargados con exito!")
             
         except Exception as e:
-            print("Error al crear los roles", e)
-        finally:
-            db.close()
-    def get_roles(self, db: Session):
+            logger.error("Error al crear los roles", e)
+    async def get_roles(self, db: AsyncSession):
         try:
-            return db.query(self.roleModel).all()
+            stm = select(self.roleModel)
+            result = await db.execute(stm)
+            return result.scalars().all()
+        
         except Exception as e:
-            print("Error al obtener los roles", e)
+            logger.error("Error al obtener los roles", e)
             return False
-        finally:
-            db.close()
             
-    def findRoleByName(self, name: str, db:Session):
+    async def findRoleByName(self, name: str, db:AsyncSession):
         try:
-            return db.query(self.roleModel).filter(self.roleModel.name == name).first()
+            smt =  select(self.roleModel).filter(self.roleModel.name == name)
+            result = await db.execute(smt)
+            return result.scalars().first()
+        
         except Exception as e:
-            print("Error al obtener los roles", e)
+            logger.info("Error al obtener los roles", e)
             return False
-        finally:
-            db.close()

@@ -1,176 +1,250 @@
 from models.Record import Records
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 from models.Recortds_Persons import RecordsPersons
 import uuid
 from typing import Optional
 from models.Persons import Persons
 from sqlalchemy import func, or_
+import asyncio
+
 
 class RecordService:
     def __init__(self) -> None:
         self.recordModel = Records
         self.personModel = Persons
 
-    def get_records(self, db: Session):
-        records = db.query(self.recordModel).limit(50).options(
-            joinedload(self.recordModel.person_relationships).joinedload(RecordsPersons.person)
+    async def get_records(self, db: AsyncSession):
+        records = (
+            select(self.recordModel)
+            .options(
+                selectinload(self.recordModel.person_relationships)
+                .joinedload(RecordsPersons.person)
+                .joinedload(self.personModel.users),
+                selectinload(self.recordModel.files),
+            )
+            .limit(50)
         )
-        if not records: 
+        result = await db.execute(records)
+        records = result.scalars().unique().all()
+        if not records:
             return []
         return records
-    
-    def get_record(self, record_id: str, db: Session):
+
+    async def get_record(self, record_id: str, db: AsyncSession):
         try:
-            # Convertir el record_id a un objeto UUID
             record_uuid = uuid.UUID(record_id)
         except ValueError:
-            print(f"Error: record_id mal formado: {record_id}")
             return None
 
-        record = db.query(self.recordModel).filter(self.recordModel.record_id == record_uuid).first()
+        stm = (
+            select(self.recordModel)
+            .options(
+                selectinload(self.recordModel.person_relationships)
+                .joinedload(RecordsPersons.person)
+                .joinedload(self.personModel.users),
+                selectinload(self.recordModel.files),
+            )
+            .filter(self.recordModel.record_id == record_uuid)
+        )
+        result = await db.execute(stm)
+        record = result.scalars().first()
+
         if not record:
             return None
 
         return record
 
-    def create_record(self, title: str, date: datetime, content: str, observations: str, db: Session, type_record: str = "PENAL"):
-        is_exist = db.query(self.recordModel).filter(
+    async def create_record(
+        self,
+        title: str,
+        date: datetime,
+        content: str,
+        observations: str,
+        db: AsyncSession,
+        type_record: str = "PENAL",
+    ):
+        smt_is_exist = select(self.recordModel).filter(
             func.upper(self.recordModel.title) == func.upper(title)
-        ).first()
+        )
+        result = await db.execute(smt_is_exist)
+        is_exist = result.scalars().first()
 
         if is_exist is not None:
             return f"EL antecedente a cargar ya existe! {title}"
 
-        new_record = self.recordModel(title=title, date=date, content=content, observations=observations, type_record=type_record)
+        new_record = self.recordModel(
+            title=title,
+            date=date,
+            content=content,
+            observations=observations,
+            type_record=type_record,
+        )
         db.add(new_record)
-        db.commit()
-        db.refresh(new_record)  # Refrescamos para obtener el objeto con todos sus atributos
+        await db.commit()
+        await db.refresh(new_record)
 
         return new_record
-    
-    def stats(self, db: Session):
-        last_month = datetime.now() - timedelta(days=30)
-        cant_person = db.query(self.personModel).count()
-        cant_record = db.query(self.recordModel).count()
-        cant_month = db.query(self.personModel).filter(self.personModel.created_at >= last_month).count()
 
+    async def stats(self, db: AsyncSession):
+        last_month = datetime.now() - timedelta(days=30)
+        stmt_person = select(func.count()).select_from(self.personModel)
+
+        stmt_record = select(func.count()).select_from(self.recordModel)
+
+        stmt_month = (
+            select(func.count())
+            .select_from(self.personModel)
+            .filter(self.personModel.created_at >= last_month)
+        )
+
+        result_person, result_record, result_month = await asyncio.gather(
+            db.execute(stmt_person), db.execute(stmt_record), db.execute(stmt_month)
+        )
+
+        # 3. Extraer el valor escalar (el número)
         return {
             "stats": {
-                "cant_person":cant_person,
-                "cant_record": cant_record,
-                "cant_month": cant_month                
-            }   
+                "cant_person": result_person.scalar(),
+                "cant_record": result_record.scalar(),
+                "cant_month": result_month.scalar(),
+            }
         }
 
+    async def update_record(
+        self,
+        record_id: str,
+        title: str,
+        date: str,
+        content: str,
+        observations: str,
+        db: AsyncSession,
+    ):
+        stm_is_exist = select(self.recordModel).filter(
+            self.recordModel.record_id == record_id
+        )
+        result = await db.execute(stm_is_exist)
+        is_exist = result.scalars().first()
 
-
-    def update_record(self, record_id: str,title: str, date: str, content:str, observations: str, db: Session):
-        is_exist = db.query(self.recordModel).filter(self.recordModel.record_id == record_id).first()
-
-        if not is_exist: 
+        if not is_exist:
             return False
-        
+
         setattr(is_exist, "title", title)
         setattr(is_exist, "date", date)
         setattr(is_exist, "content", content)
         setattr(is_exist, "observations", observations)
 
-        db.commit()
+        await db.commit()
         return True
 
-    def delete_record(self, record_id: str, db: Session): 
-        is_exist = db.query(self.recordModel).filter(self.recordModel.record_id == record_id).first()
+    async def delete_record(self, record_id: str, db: AsyncSession):
+        stm_is_exist = select(self.recordModel).filter(
+            self.recordModel.record_id == record_id
+        )
+        result = await db.execute(stm_is_exist)
+        is_exist = result.scalars().first()
+
         if not is_exist:
             return False
-        
+
         db.delete(is_exist)
-        db.commit()
+        await db.commit()
 
         return True
-        
-    def search_records(self, db: Session, search_term: Optional[str] = None, **filters):
-        """
-        Busca antecedentes por término genérico o por campos específicos.
-        
-        Args:
-            db: Sesión de base de datos
-            search_term: Término de búsqueda genérico (busca en título, contenido, observaciones, tipo)
-            filters: Filtros específicos como:
-                - title: Búsqueda en título
-                - content: Búsqueda en contenido
-                - observations: Búsqueda en observaciones
-                - type_record: Tipo de registro
-                - date_from: Fecha inicial (YYYY-MM-DD)
-                - date_to: Fecha final (YYYY-MM-DD)
-                - person_name: Nombre de la persona relacionada
-        
-        Returns:
-            Lista de antecedentes que coinciden con los criterios de búsqueda
-        """
-        # Base query con eager loading
-        query = db.query(self.recordModel).options(
-            joinedload(self.recordModel.person_relationships).joinedload(RecordsPersons.person)
-        )
-        
-        # Si hay un término de búsqueda genérico, buscar en múltiples campos
-        if search_term:
-            search_pattern = f"%{search_term}%"
-            query = query.filter(
-                or_(
-                    self.recordModel.title.ilike(search_pattern),
-                    self.recordModel.content.ilike(search_pattern),
-                    self.recordModel.observations.ilike(search_pattern),
-                    self.recordModel.type_record.ilike(search_pattern)
+
+    async def search_records(
+            self, db: AsyncSession, search_term: Optional[str] = None, **filters
+        ):
+            # 1. Definimos la consulta BASE CON LAS RELACIONES CARGADAS
+            stmt = (
+                select(self.recordModel)
+                .options(
+                    # --- Carga de la Cadena de Personas ---
+                    selectinload(self.recordModel.person_relationships) # 1. Lista de relaciones
+                    .joinedload(RecordsPersons.person)                  # 2. La Persona
+                    .joinedload(self.personModel.users),                # 3. El Creador de la Persona (¡Vital!)
+
+                    # --- Carga de Archivos ---
+                    selectinload(self.recordModel.files),
                 )
-            ).limit(50)
-        
-        # Filtros específicos por campo
-        if filters.get('title'):
-            query = query.filter(self.recordModel.title.ilike(f"%{filters['title']}%"))
-        
-        if filters.get('content'):
-            query = query.filter(self.recordModel.content.ilike(f"%{filters['content']}%"))
-        
-        if filters.get('observations'):
-            query = query.filter(self.recordModel.observations.ilike(f"%{filters['observations']}%"))
-        
-        if filters.get('type_record'):
-            query = query.filter(self.recordModel.type_record.ilike(f"%{filters['type_record']}%"))
-        
-        # Filtro por rango de fechas
-        if filters.get('date_from'):
-            try:
-                date_from = datetime.fromisoformat(filters['date_from'])
-                query = query.filter(self.recordModel.date >= date_from)
-            except:
-                pass
-        
-        if filters.get('date_to'):
-            try:
-                date_to = datetime.fromisoformat(filters['date_to'])
-                # Agregar un día para incluir todos los registros de ese día
-                date_to = date_to + timedelta(days=1)
-                query = query.filter(self.recordModel.date <= date_to)
-            except:
-                pass
-        
-        # Filtro por nombre de persona relacionada
-        if filters.get('person_name'):
-            person_pattern = f"%{filters['person_name']}%"
-            # Filtrar registros que tengan personas relacionadas con nombre coincidente
-            # Usar una consulta separada para evitar conflictos de UUID
-            matching_ids = db.query(self.recordModel.record_id).join(
-                RecordsPersons, self.recordModel.record_id == RecordsPersons.record_id
-            ).join(
-                Persons, RecordsPersons.person_id == Persons.person_id
-            ).filter(
-                or_(
-                    Persons.names.ilike(person_pattern),
-                    Persons.lastnames.ilike(person_pattern)
+            )
+
+            # 2. Si hay término de búsqueda genérico (usamos OR)
+            if search_term and search_term.strip():
+                term = f"%{search_term.strip().lower()}%"
+                stmt = stmt.filter(
+                    or_(
+                        self.recordModel.title.ilike(term),
+                        self.recordModel.content.ilike(term),
+                        self.recordModel.observations.ilike(term),
+                        self.recordModel.type_record.ilike(term),
+                    )
                 )
-            ).distinct()
-            
-            query = query.filter(self.recordModel.record_id.in_(matching_ids))
-        
-        return query.all()
+
+            # 3. Filtros específicos (vamos encadenando .filter)
+            if filters.get("title"):
+                stmt = stmt.filter(self.recordModel.title.ilike(f"%{filters['title']}%"))
+
+            if filters.get("content"):
+                stmt = stmt.filter(self.recordModel.content.ilike(f"%{filters['content']}%"))
+
+            if filters.get("observations"):
+                stmt = stmt.filter(
+                    self.recordModel.observations.ilike(f"%{filters['observations']}%")
+                )
+
+            if filters.get("type_record"):
+                stmt = stmt.filter(
+                    self.recordModel.type_record.ilike(f"%{filters['type_record']}%")
+                )
+
+            # 4. Filtros de Fechas
+            if filters.get("date_from"):
+                try:
+                    date_from = datetime.fromisoformat(filters["date_from"])
+                    stmt = stmt.filter(self.recordModel.date >= date_from)
+                except ValueError:
+                    pass 
+
+            if filters.get("date_to"):
+                try:
+                    date_to = datetime.fromisoformat(filters["date_to"])
+                    # Agregamos un día para incluir el límite superior completo
+                    stmt = stmt.filter(self.recordModel.date < date_to + timedelta(days=1))
+                except ValueError:
+                    pass
+
+            # 5. Filtro complejo: Nombre de persona relacionada
+            if filters.get("person_name"):
+                person_pattern = f"%{filters['person_name']}%"
+
+                # Creamos una SUBCONSULTA (Select) para obtener los IDs de records
+                subquery_ids = (
+                    select(self.recordModel.record_id)
+                    .join(
+                        RecordsPersons, self.recordModel.record_id == RecordsPersons.record_id
+                    )
+                    .join(Persons, RecordsPersons.person_id == Persons.person_id)
+                    .filter(
+                        or_(
+                            Persons.names.ilike(person_pattern),
+                            Persons.lastnames.ilike(person_pattern),
+                        )
+                    )
+                )
+
+                # Aplicamos el filtro usando la subconsulta
+                stmt = stmt.filter(self.recordModel.record_id.in_(subquery_ids))
+
+            # 6. FINALMENTE Ejecutamos
+            try:
+                result = await db.execute(stmt)
+                # .unique() es OBLIGATORIO aquí porque usamos selectinload/joinedload mezclados
+                records = result.scalars().unique().all()
+                return records
+
+            except Exception as e:
+                print(f"Error en search_records: {e}") 
+                return []
