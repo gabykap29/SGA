@@ -96,7 +96,7 @@ export default function PersonView() {
       
       if (result.success) {
         toast.success('Persona eliminada correctamente');
-        router.push('/dashboard/personas');
+        router.push('/dashboard/personas/buscar');
       } else {
         setShowDeleteModal(false);
         toast.error(result.error || 'Error al eliminar la persona');

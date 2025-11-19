@@ -12,7 +12,8 @@ const CreateRecordModal = ({ show, onHide, onRecordCreated }) => {
     content: '',
     observations: '',
     category: 'PENAL',
-    type_record: 'JUDICIAL',
+    type_record: 'ROBO',
+    customTypeRecord: '',
     date: new Date().toISOString().split('T')[0], // Fecha actual como valor predeterminado
     type_relationship: 'Denunciado' // Tipo de vinculación por defecto
   });
@@ -61,9 +62,19 @@ const CreateRecordModal = ({ show, onHide, onRecordCreated }) => {
       return;
     }
 
+    if (formData.type_record === 'OTROS' && !formData.customTypeRecord?.trim()) {
+      setError('Debe especificar el tipo de antecedente cuando selecciona "Otros"');
+      return;
+    }
+
     try {
       setLoading(true);
-      const result = await recordService.createRecord(formData);
+      const dataToSend = {
+        ...formData,
+        type_record: formData.type_record === 'OTROS' ? formData.customTypeRecord : formData.type_record
+      };
+      delete dataToSend.customTypeRecord;
+      const result = await recordService.createRecord(dataToSend);
 
       if (result.success) {
         toast.success('Antecedente creado exitosamente');
@@ -72,7 +83,8 @@ const CreateRecordModal = ({ show, onHide, onRecordCreated }) => {
           content: '',
           observations: '',
           category: 'PENAL',
-          type_record: 'JUDICIAL',
+          type_record: 'ROBO',
+          customTypeRecord: '',
           date: new Date().toISOString().split('T')[0],
           type_relationship: 'Denunciado'
         });
@@ -152,14 +164,32 @@ const CreateRecordModal = ({ show, onHide, onRecordCreated }) => {
               value={formData.type_record} 
               onChange={handleInputChange}
             >
-              <option value="JUDICIAL">Judicial</option>
-              <option value="POLICIAL">Policial</option>
-              <option value="PERIODISTICO">Periodístico</option>
-              <option value="REDES_SOCIALES">Redes Sociales</option>
-              <option value="TESTIMONIO">Testimonio</option>
-              <option value="OTRO">Otro</option>
+              <option value="ROBO">Robo</option>
+              <option value="ROBO_DE_MOTO">Robo de Moto</option>
+              <option value="ROBO_DE_AUTO">Robo de Auto</option>
+              <option value="HURTO">Hurto</option>
+              <option value="VIOLENCIA_DE_GENERO">Violencia de Género</option>
+              <option value="OTROS">Otros</option>
             </Form.Select>
           </Form.Group>
+
+          {formData.type_record === 'OTROS' && (
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-medium">
+                Especificar tipo de antecedente <span className="text-danger">*</span>
+              </Form.Label>
+              <Form.Control
+                type="text"
+                name="customTypeRecord"
+                value={formData.customTypeRecord}
+                onChange={handleInputChange}
+                placeholder="Ingrese el tipo de antecedente"
+              />
+              <Form.Text className="text-muted">
+                Describa el tipo de antecedente que no está en las opciones anteriores
+              </Form.Text>
+            </Form.Group>
+          )}
 
           <Form.Group className="mb-3">
             <Form.Label className="fw-medium">

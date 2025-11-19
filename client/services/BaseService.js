@@ -3,19 +3,9 @@
  * Maneja autenticación, errores de sesión y respuestas
  */
 
-import { registerSessionErrorCallback } from '../utils/apiInterceptor';
-
 class BaseService {
   constructor(baseURL = null) {
     this.baseURL = baseURL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-    
-    // Registrar el callback para errores de sesión
-    if (typeof window !== 'undefined') {
-      import('../components/providers/SessionErrorProvider').then(module => {
-        const { useSessionError } = module;
-        // Este será llamado desde el interceptor
-      });
-    }
   }
 
   /**
@@ -98,6 +88,18 @@ class BaseService {
   }
 
   /**
+   * Dispara un evento de error de sesión para ser capturado por el provider
+   */
+  triggerSessionError(message) {
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const event = new CustomEvent('session-error', {
+        detail: { message }
+      });
+      document.dispatchEvent(event);
+    }
+  }
+
+  /**
    * Realiza una petición fetch con manejo de errores de sesión
    */
   async fetch(url, options = {}) {
@@ -117,23 +119,11 @@ class BaseService {
         if (this.isSessionError(response, responseText)) {
           const errorMessage = this.buildErrorMessage(response.status, responseText);
           
-          // Mostrar el modal de sesión expirada
+          // Disparar evento para que el provider lo capture
+          this.triggerSessionError(errorMessage);
+
+          // Limpiar datos de sesión
           if (typeof window !== 'undefined') {
-            // Esperar a que el DOM esté listo
-            const showModal = () => {
-              const event = new CustomEvent('session-error', {
-                detail: { message: errorMessage }
-              });
-              document.dispatchEvent(event);
-            };
-
-            if (document.readyState === 'loading') {
-              document.addEventListener('DOMContentLoaded', showModal);
-            } else {
-              showModal();
-            }
-
-            // Limpiar datos de sesión
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             localStorage.removeItem('token_type');

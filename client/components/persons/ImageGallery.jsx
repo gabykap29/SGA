@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Modal, Badge } from 'react-bootstrap';
-import { 
-  FiImage, 
-  FiZoomIn, 
-  FiDownload, 
+import {
+  FiImage,
+  FiZoomIn,
+  FiDownload,
   FiTrash2,
   FiEye,
   FiX,
-  FiPlus
+  FiPlus,
+  FiUpload
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import AddImageModal from './AddImageModal';
@@ -17,8 +18,7 @@ import personService from '../../services/personService';
 
 const ImageGallery = ({ images = [], personId, onUpdate }) => {
   const [selectedImage, setSelectedImage] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [showAddImageModal, setShowAddImageModal] = useState(false);
+  const [showAddImage, setShowAddImage] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [imageUrls, setImageUrls] = useState({});
 
@@ -27,31 +27,30 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
     if (!img) return false;
     // Verificar que tenga las propiedades mínimas necesarias
     return img.file_id && (
-      img.mimetype?.startsWith('image/') || 
-      img.mime_type?.startsWith('image/') || 
-      img.file_type === 'image' || 
+      img.mimetype?.startsWith('image/') ||
+      img.mime_type?.startsWith('image/') ||
+      img.file_type === 'image' ||
       (img.original_filename && /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(img.original_filename))
     );
   }) : [];
 
   const openModal = (image) => {
     setSelectedImage(image);
-    setShowModal(true);
+    setShowAddImage(false); // Asegurarse de que el otro modal esté cerrado
   };
 
   const closeModal = () => {
     setSelectedImage(null);
-    setShowModal(false);
   };
 
   const handleAddImage = async ({ file, description }) => {
     setUploading(true);
     try {
       const result = await personService.uploadFiles(personId, [{ file, description }]);
-      
+
       if (result.success) {
         toast.success('Imagen subida correctamente');
-        setShowAddImageModal(false);
+        setShowAddImage(false);
         if (onUpdate) onUpdate();
       } else {
         toast.error(result.error || 'Error al subir la imagen');
@@ -161,7 +160,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
           border: '1px solid #dee2e6',
           borderRadius: '4px'
         }}>
-          <div 
+          <div
             className="rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center"
             style={{
               width: '60px',
@@ -174,7 +173,23 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
           </div>
           <h5 className="fw-bold text-dark mb-2">No hay imágenes</h5>
           <p className="text-muted mb-4">Esta persona no tiene imágenes adjuntas.</p>
+          {/* Botón para añadir imagen */}
+
+          <div className="mb-3 text-center">
+            <Button variant="dark" onClick={() => setShowAddImage(true)}>
+              <FiUpload className="me-2" size={16} />
+              Añadir Imagen
+            </Button>
+          </div>
+
         </div>
+        {/* Modal para añadir imagen */}
+        <AddImageModal
+          show={showAddImage}
+          onHide={() => setShowAddImage(false)}
+          onUpload={handleAddImage}
+          isLoading={uploading}
+        />
       </div>
     );
   }
@@ -186,10 +201,10 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
           <h4 className="mb-1 fw-bold text-dark">Galería de Imágenes ({validImages.length})</h4>
           <small className="text-muted">Fotos y documentos visuales</small>
         </div>
-        <Button 
-          variant="dark" 
+        <Button
+          variant="dark"
           size="sm"
-          onClick={() => setShowAddImageModal(true)}
+          onClick={() => setShowAddImage(true)}
           className="px-3 py-2"
           style={{
             backgroundColor: '#212529',
@@ -198,7 +213,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
             color: 'white'
           }}
         >
-          <FiPlus className="me-2" size={16} />
+          <FiUpload className="me-2" size={16} />
           Subir imagen
         </Button>
       </div>
@@ -206,12 +221,12 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
       <Row className="g-3 px-3">
         {validImages.map((image, index) => (
           <Col md={6} lg={4} key={image.file_id || index} className="mb-4">
-            <Card className="h-100" style={{ 
+            <Card className="h-100" style={{
               backgroundColor: 'white',
               border: '1px solid #dee2e6',
               borderRadius: '4px'
             }}>
-              <div 
+              <div
                 className="position-relative overflow-hidden"
                 style={{ height: '200px', cursor: 'pointer' }}
                 onClick={() => openModal(image)}
@@ -230,7 +245,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
                   onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
                   onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
                 />
-                <div 
+                <div
                   className="position-absolute top-0 end-0 m-2"
                   style={{
                     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -261,7 +276,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
                     </small>
                   </div>
                   <div className="d-flex gap-1">
-                    <Button 
+                    <Button
                       size="sm"
                       title="Ver"
                       onClick={() => openModal(image)}
@@ -275,7 +290,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
                     >
                       <FiEye size={12} />
                     </Button>
-                    <Button 
+                    <Button
                       size="sm"
                       title="Descargar"
                       onClick={() => downloadImage(image)}
@@ -289,7 +304,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
                     >
                       <FiDownload size={12} />
                     </Button>
-                    <Button 
+                    <Button
                       size="sm"
                       title="Eliminar"
                       onClick={() => deleteImage(image)}
@@ -312,7 +327,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
       </Row>
 
       {/* Modal para visualizar imagen */}
-      <Modal show={showModal} onHide={closeModal} size="lg" centered>
+      <Modal show={!!selectedImage} onHide={closeModal} size="lg" centered>
         <Modal.Body className="p-0" style={{ backgroundColor: '#f8f9fa' }}>
           {selectedImage && (
             <div className="position-relative">
@@ -363,7 +378,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
                   )}
                 </div>
                 <div className="d-flex gap-2">
-                  <Button 
+                  <Button
                     onClick={() => downloadImage(selectedImage)}
                     style={{
                       backgroundColor: '#212529',
@@ -375,7 +390,7 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
                     <FiDownload className="me-2" size={16} />
                     Descargar
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => deleteImage(selectedImage)}
                     style={{
                       backgroundColor: '#e74c3c',
@@ -396,13 +411,11 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
 
 
       {/* Modal para añadir imagen */}
-      <AddImageModal 
-        show={showAddImageModal} 
-        onHide={() => {
-          setShowAddImageModal(false);
-        }} 
-        onUpload={handleAddImage} 
-        isLoading={uploading} 
+      <AddImageModal
+        show={showAddImage}
+        onHide={() => setShowAddImage(false)}
+        onUpload={handleAddImage}
+        isLoading={uploading}
       />
     </div>
   );

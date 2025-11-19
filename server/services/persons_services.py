@@ -2,7 +2,7 @@ from models.Persons import Persons
 from models.Record import Records
 from models.Users import Users
 from models.Recortds_Persons import RecordsPersons
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, selectinload, with_loader_criteria
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import or_, and_, select
 from typing import Optional
@@ -59,30 +59,42 @@ class PersonsService:
             return []
         return persons
 
+    # Asegúrate de importar tu modelo de archivos, asumiremos que se llama FileModel
+    # O si es genérico, obtén la clase del mapper como estabas intentando
+
     async def get_person(self, person_id: str, db: AsyncSession):
         try:
             person_uuid = uuid.UUID(person_id)
         except ValueError:
             return False
 
+        # Obtenemos la clase del modelo de archivos dinámicamente si es necesario
+        # (Aunque es mejor importar la clase FileModel directamente si puedes)
+        FileClass = self.personModel.files.property.mapper.class_
+
         smt = (
             select(self.personModel)
             .options(
-                joinedload(self.personModel.users),
-                joinedload(self.personModel.record_relationships).joinedload(
+                selectinload(self.personModel.users),
+                # Aquí combinamos selectinload con joinedload
+                selectinload(self.personModel.record_relationships).joinedload(
                     RecordsPersons.record
                 ),
-                joinedload(
-                    self.personModel.files
-                ),  # Cargar archivos (puede ser lista vacía)
+                # OPCIÓN A: Cargar todos los archivos y filtrar en Python (más seguro/fácil)
+                selectinload(self.personModel.files),
+                # OPCIÓN B: Filtrar en la query (Requiere SQLAlchemy 1.4+)
+                # Esto aplica el filtro a la carga de 'files' definida arriba
+                with_loader_criteria(FileClass, FileClass.is_active),
             )
             .filter(self.personModel.person_id == person_uuid)
         )
+
         result = await db.execute(smt)
         person = result.scalars().first()
 
         if not person:
             return False
+
         return person
 
     async def create_person(
@@ -340,11 +352,15 @@ class PersonsService:
                 RecordsPersons.record_id == uuid.UUID(record_id),
             )
             result = await db.execute(smt)
-            relationship = result.scalars().first()
-            if not relationship:
+            relationships = result.scalars().all()
+
+            if not relationships:
                 logger.error("La relación entre la persona y el registro no existe!")
                 return False
-            db.delete(relationship)
+
+            for relationship in relationships:
+                await db.delete(relationship)
+
             await db.commit()
             return True
         except Exception as e:
@@ -459,22 +475,7 @@ class PersonsService:
                 print(f"DEBUG: Persona a desvinculación {disconnect_uuid} no existe")
                 return False
 
-            # Primero, listar todos los vínculos existentes para debugging
-            stm_all = select(self.connectionType).filter(
-                or_(
-                    self.connectionType.person_id == person.person_id,
-                    self.connectionType.person_id == connection.person_id,
-                )
-            )
-            result_all = await db.execute(stm_all)
-            all_connections = result_all.scalars().all()
-            print(f"DEBUG: Total de vínculos encontrados: {len(all_connections)}")
-            for conn in all_connections:
-                print(
-                    f"  - Vínculo: {conn.person_id} <-> {conn.connection} (tipo: {conn.connection_type})"
-                )
-
-            # Buscar el vínculo específico
+            # Buscar TODOS los vínculos específicos
             rel = select(self.connectionType).filter(
                 or_(
                     and_(
@@ -488,18 +489,21 @@ class PersonsService:
                 )
             )
             result = await db.execute(rel)
-            rel = result.scalars().first()
+            rels = result.scalars().all()
 
-            if not rel:
+            if not rels:
                 print(
                     f"DEBUG: No existe vínculo entre {person_uuid} y {disconnect_uuid}"
                 )
                 return False
 
-            print(f"DEBUG: Vínculo encontrado, eliminando: {rel.connection_id}")
-            db.delete(rel)
+            print(f"DEBUG: {len(rels)} vínculos encontrados, eliminando...")
+
+            for r in rels:
+                await db.delete(r)
+
             await db.commit()
-            print("DEBUG: Vínculo eliminado exitosamente")
+            print("DEBUG: Vínculos eliminados exitosamente")
             return True
         except Exception as e:
             logger.error("Error al intentar desvinculación la persona", e)
@@ -507,16 +511,20 @@ class PersonsService:
             raise e
 
     async def delete_person(self, person_id: str, db: AsyncSession):
-        is_exist = select(self.personModel).filter(
-            self.personModel.person_id == person_id
-        )
-        result = await db.execute(is_exist)
-        is_exist = result.scalars().first()
-        if not is_exist:
-            return "La persona no existe!"
-        db.delete(is_exist)
-        await db.commit()
-        return True
+        try:
+            is_exist = select(self.personModel).filter(
+                self.personModel.person_id == uuid.UUID(person_id)
+            )
+            result = await db.execute(is_exist)
+            is_exist = result.scalars().first()
+            if not is_exist:
+                return "La persona no existe!"
+            db.delete(is_exist)
+            await db.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error al eliminar la persona: {e}")
+            return False
 
     async def get_linked_persons(self, person_id: str, db: AsyncSession):
         """

@@ -3,7 +3,6 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "react-toastify/dist/ReactToastify.css";
 import "./globals.css";
 import ToastProvider from "../../components/providers/ToastProvider";
-import SessionErrorProvider from "../../components/providers/SessionErrorProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,11 +23,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <body className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning={true}>
-        <SessionErrorProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </SessionErrorProvider>
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );

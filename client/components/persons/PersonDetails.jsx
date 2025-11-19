@@ -1,10 +1,10 @@
 'use client';
 
 import { Card, Row, Col, Badge, Button } from 'react-bootstrap';
-import { 
-  FiUser, 
-  FiMapPin, 
-  FiCalendar, 
+import {
+  FiUser,
+  FiMapPin,
+  FiCalendar,
   FiEdit2,
   FiGlobe,
   FiCreditCard,
@@ -80,7 +80,7 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
     setUploading(true);
     try {
       const result = await personService.uploadFiles(person.person_id, [{ file, description }]);
-      
+
       if (result.success) {
         toast.success('Imagen subida correctamente');
         setShowAddImage(false);
@@ -98,7 +98,7 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
   };
 
   return (
-    <div style={{ 
+    <div style={{
       backgroundColor: '#f5f5f5',
       minHeight: '400px',
       padding: '0'
@@ -146,7 +146,7 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
             border: '1px solid #dee2e6',
             borderRadius: '4px'
           }}>
-            <Card.Header className="border-bottom" style={{backgroundColor: '#f5f5f5'}}>
+            <Card.Header className="border-bottom" style={{ backgroundColor: '#f5f5f5' }}>
               <h6 className="mb-0 fw-bold text-dark">
                 <FiUser className="me-2" size={16} />
                 Datos Personales
@@ -171,7 +171,7 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
             border: '1px solid #dee2e6',
             borderRadius: '4px'
           }}>
-            <Card.Header className="border-bottom" style={{backgroundColor: '#f5f5f5'}}>
+            <Card.Header className="border-bottom" style={{ backgroundColor: '#f5f5f5' }}>
               <h6 className="mb-0 fw-bold text-dark">
                 <FiCreditCard className="me-2" size={16} />
                 Identificación
@@ -200,7 +200,7 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
             border: '1px solid #dee2e6',
             borderRadius: '4px'
           }}>
-            <Card.Header className="border-bottom" style={{backgroundColor: '#f5f5f5'}}>
+            <Card.Header className="border-bottom" style={{ backgroundColor: '#f5f5f5' }}>
               <h6 className="mb-0 fw-bold text-dark">
                 <FiMapPin className="me-2" size={16} />
                 Ubicación
@@ -229,7 +229,7 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
             border: '1px solid #dee2e6',
             borderRadius: '4px'
           }}>
-            <Card.Header className="border-bottom" style={{backgroundColor: '#f5f5f5'}}>
+            <Card.Header className="border-bottom" style={{ backgroundColor: '#f5f5f5' }}>
               <h6 className="mb-0 fw-bold text-dark">
                 <FiCalendar className="me-2" size={16} />
                 Información del Sistema
@@ -247,19 +247,19 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
                 <div className="fw-semibold text-dark">
                   {person.updated_at ? formatDate(person.updated_at) : 'N/A'}
                 </div>
-                
+
               </div>
               <div className="mb-3">
                 <label className="form-label text-muted small">Observaciones</label>
                 <div className="fw-semibold text-dark">
                   {person.observations ? person.observations : 'N/A'}
                 </div>
-                
+
               </div>
               {!isView && (
                 <div className="mb-3">
-                  <Button 
-                    variant="dark" 
+                  <Button
+                    variant="dark"
                     size="sm"
                     onClick={() => onUpdate && onUpdate()}
                     style={{
@@ -287,7 +287,7 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
             border: '1px solid #dee2e6',
             borderRadius: '4px'
           }}>
-            <Card.Header className="border-bottom" style={{backgroundColor: '#f5f5f5'}}>
+            <Card.Header className="border-bottom" style={{ backgroundColor: '#f5f5f5' }}>
               <h6 className="mb-0 fw-bold text-dark">
                 <FiLink className="me-2" size={16} />
                 Personas Relacionadas ({linkedPersons.length})
@@ -310,7 +310,6 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
                         <th>Nombre</th>
                         <th>Documento</th>
                         <th>Tipo de Relación</th>
-                        <th>Provincia</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -329,9 +328,6 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
                               {linkedPerson.connection_type || linkedPerson.type_relationship || 'N/A'}
                             </Badge>
                           </td>
-                          <td className="text-muted small">
-                            {linkedPerson.province || 'N/A'}
-                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -343,11 +339,11 @@ const PersonDetails = ({ person, onUpdate, onDelete }) => {
         </Col>
       </Row>
 
-      <AddImageModal 
-        show={showAddImage} 
-        onHide={() => setShowAddImage(false)} 
-        onUpload={handleAddImage} 
-        isLoading={uploading} 
+      <AddImageModal
+        show={showAddImage}
+        onHide={() => setShowAddImage(false)}
+        onUpload={handleAddImage}
+        isLoading={uploading}
       />
     </div>
   );

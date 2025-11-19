@@ -79,14 +79,16 @@ async def get_person(
         # Serializar archivos con mime_type
         files = []
         for f in getattr(person, "files", []):
-            files.append({
-                "file_id": f.file_id,
-                "original_filename": f.original_filename,
-                "file_type": f.file_type,
-                "file_size": f.file_size,
-                "mime_type": getattr(f, "mime_type", None),
-                "created_at": f.created_at,
-            })
+            files.append(
+                {
+                    "file_id": f.file_id,
+                    "original_filename": f.original_filename,
+                    "file_type": f.file_type,
+                    "file_size": f.file_size,
+                    "mime_type": getattr(f, "mime_type", None),
+                    "created_at": f.created_at,
+                }
+            )
         # Construir respuesta serializada
         person_dict = person.__dict__.copy()
         person_dict["files"] = files
@@ -270,53 +272,6 @@ async def load_persons_from_csv(
         )
 
 
-@router.delete("/delete/{id}", status_code=status.HTTP_200_OK)
-async def delete_person(
-    id: str,
-    current_user: Dict = Depends(is_authenticated),
-    is_authorized: bool = Depends(check_rol_all),
-    db_session: AsyncSession = Depends(get_db),
-):
-    if not is_authorized:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No tienes permiso para eliminar personas",
-        )
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no autenticado"
-        )
-    try:
-        deleted = await person_service.delete_person(person_id=id, db=db_session)
-        logs_services.create_log(
-            user_id=current_user.get("user_id"),
-            action="Eliminación de persona",
-            entity_type="PERSON",
-            description=f"Se eliminó la persona con ID {id}",
-            ip_address=current_user.get("ip_address"),
-            db=db_session,
-        )
-        if type(deleted) is str:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No se pudo eliminar porque la persona no existe o tiene antecedentes vinculados!",
-            )
-        return {"status": "success", "message": "Persona eliminada correctamente!"}
-    except Exception as e:
-        logs_services.create_log(
-            user_id=current_user.get("user_id"),
-            action="Error al eliminar persona",
-            entity_type="PERSON",
-            description=f"Error al eliminar la persona con ID {id}: {str(e)}",
-            ip_address=current_user.get("ip_address"),
-            db=db_session,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error en el servidor al eliminar la persona",
-        )
-
-
 @router.patch("/{person_id}/record/{record_id}", status_code=HTTP_200_OK)
 async def add_person_to_record(
     person_id: str,
@@ -429,20 +384,22 @@ async def get_person_by_dni(
 
         # Retornar datos básicos de la persona sin intentar validar relaciones
         # RETORNAR COMO ARRAY para consistencia con el cliente
-        return [{
-            "person_id": person.person_id,
-            "identification": person.identification,
-            "identification_type": person.identification_type,
-            "names": person.names,
-            "lastnames": person.lastnames,
-            "address": person.address,
-            "province": person.province,
-            "country": person.country,
-            "observations": person.observations,
-            "created_at": person.created_at,
-            "updated_at": person.updated_at,
-            "created_by": person.created_by,
-        }]
+        return [
+            {
+                "person_id": person.person_id,
+                "identification": person.identification,
+                "identification_type": person.identification_type,
+                "names": person.names,
+                "lastnames": person.lastnames,
+                "address": person.address,
+                "province": person.province,
+                "country": person.country,
+                "observations": person.observations,
+                "created_at": person.created_at,
+                "updated_at": person.updated_at,
+                "created_by": person.created_by,
+            }
+        ]
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -507,7 +464,9 @@ async def get_person_records(
         )
 
     try:
-        records = await person_service.get_person_records(person_id=person_id, db=db_session)
+        records = await person_service.get_person_records(
+            person_id=person_id, db=db_session
+        )
 
         if isinstance(records, str):
             # Si es un string, es un mensaje de error
@@ -521,6 +480,49 @@ async def get_person_records(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno en el servidor al obtener antecedentes de la persona",
+        )
+
+
+@router.delete("/delete/{person_id}", status_code=status.HTTP_200_OK)
+async def remove_person(
+    person_id: str,
+    current_user: Dict = Depends(is_authenticated),
+    is_authorized: bool = Depends(check_rol_all),
+    db_session: AsyncSession = Depends(get_db),
+):
+    "Elimina a una persona de la base de datos"
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No tienes permiso para eliminar personas",
+        )
+
+    try:
+        if not person_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Se requiere un ID de persona!",
+            )
+
+        result = await person_service.delete_person(person_id=person_id, db=db_session)
+        print("resultado de eliminar: ", result)
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No se pudo eliminar la persona!",
+            )
+
+        return {
+            "status": "success",
+            "message": "Persona eliminada correctamente!",
+        }
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print("Error interno en el servidor al eliminar la persona", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno en el servidor al eliminar la persona",
         )
 
 

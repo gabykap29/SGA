@@ -9,53 +9,26 @@ import personService from '../../services/personService';
 const LoadPersonsFromCSV = ({ onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [lastResult, setLastResult] = useState(null);
-  const [statusPoll, setStatusPoll] = useState(null);
-  const [pollingInterval, setPollingInterval] = useState(null);
-
-  const checkStatus = async () => {
-    const result = await personService.getLoadCsvStatus();
-    if (result.success) {
-      const data = result.data;
-      setStatusPoll(data);
-      if (!data.is_loading || data.status === 'completed' || data.status === 'failed') {
-        setLoading(false);
-      }
-    }
-  };
-
-  const startStatusPolling = () => {
-    checkStatus(); // Initial check
-    const interval = setInterval(checkStatus, 2000); // Poll every 2 seconds
-    setPollingInterval(interval);
-  };
-
-  const stopStatusPolling = () => {
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
-      setPollingInterval(null);
-    }
-  };
+  // No polling: backend performs bulk create and returns final result
 
   const handleLoadPersons = async () => {
     try {
       setLoading(true);
       setLastResult(null);
-      setStatusPoll(null);
-
       const result = await personService.loadPersonsFromCSV();
 
       if (result.success) {
         const data = result.data;
-        if (data.status === 'started' || data.status === 'loading') {
-          startStatusPolling();
-          toast.info(data.message || 'Carga iniciada. Monitoreando progreso...');
+        // Backend now performs bulk create and returns final status immediately
+        setLoading(false);
+        const variant = data && data.status === 'completed' ? 'success' : 'info';
+        setLastResult({ type: variant, message: data && data.message ? data.message : 'Carga finalizada' });
+        if (data && data.status === 'completed') {
+          toast.success(data.message || 'Carga completada');
         } else {
-          setLoading(false);
-          setLastResult({ type: data.status === 'completed' ? 'success' : 'info', message: data.message });
-          if(data.status === 'completed') toast.success(data.message);
-          else toast.info(data.message);
-          if (onSuccess) onSuccess(data);
+          toast.info(data && data.message ? data.message : 'Carga procesada');
         }
+        if (onSuccess) onSuccess(data);
       } else {
         setLoading(false);
         setLastResult({ type: 'danger', message: result.error });
@@ -69,33 +42,7 @@ const LoadPersonsFromCSV = ({ onSuccess }) => {
       toast.error(errorMessage);
     }
   };
-
-  useEffect(() => {
-    return () => stopStatusPolling(); // Cleanup on unmount
-  }, []);
-
-  useEffect(() => {
-    if (statusPoll) {
-        if (statusPoll.is_loading) {
-            setLastResult({
-                type: 'info',
-                message: statusPoll.message,
-                showProgress: true,
-                progress: statusPoll.progress,
-                total: statusPoll.total
-            });
-        } else if (statusPoll.status === 'completed') {
-            setLastResult({ type: 'success', message: statusPoll.message });
-            toast.success(statusPoll.message);
-            stopStatusPolling();
-            if (onSuccess) onSuccess(statusPoll);
-        } else if (statusPoll.status === 'failed') {
-            setLastResult({ type: 'danger', message: statusPoll.message });
-            toast.error(statusPoll.message);
-            stopStatusPolling();
-        }
-    }
-  }, [statusPoll]);
+  // No status polling: backend returns final result after bulk insert
 
   const calculateProgress = () => {
     if (!lastResult || !lastResult.total || lastResult.total === 0) return 0;

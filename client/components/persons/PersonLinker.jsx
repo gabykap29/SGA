@@ -45,15 +45,22 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
       // Usar el endpoint específico de búsqueda por DNI
       const result = await personService.searchPersonByDniForLinker(searchQuery);
       if (result.success) {
-        // El endpoint retorna una sola persona, envolverla en array
-        const person = result.data;
+        // El endpoint retorna un array, obtener el primer elemento
+        const personArray = result.data;
         
-        // Filtrar la propia persona
-        if (person.person_id !== personId) {
-          setSearchResults([person]);
+        if (Array.isArray(personArray) && personArray.length > 0) {
+          const person = personArray[0];
+          
+          // Filtrar la propia persona
+          if (person.person_id !== personId) {
+            setSearchResults([person]);
+          } else {
+            setSearchResults([]);
+            toast.info('No puede vincularse a sí mismo');
+          }
         } else {
           setSearchResults([]);
-          toast.info('No puede vincularse a sí mismo');
+          toast.error('Persona no encontrada');
         }
       } else {
         toast.error(result.error || 'Persona no encontrada');

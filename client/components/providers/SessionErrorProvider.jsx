@@ -38,7 +38,7 @@ export function SessionErrorProvider({ children }) {
   }, []);
 
   /**
-   * Maneja el cierre del modal y redirige al login
+   * Maneja el cierre del modal y redirige a la página principal
    */
   const handleSessionModalClose = useCallback(() => {
     setShowSessionModal(false);
@@ -48,8 +48,8 @@ export function SessionErrorProvider({ children }) {
     localStorage.removeItem('user');
     localStorage.removeItem('token_type');
     
-    // Redirigir al login
-    router.push('/login');
+    // Redirigir a la página principal
+    router.push('/');
   }, [router]);
 
   /**

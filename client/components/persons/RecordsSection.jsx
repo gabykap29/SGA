@@ -2,15 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { Card, Button, Row, Col, Badge, Alert, Modal, Form, Table } from 'react-bootstrap';
-import { 
-  FiFileText, 
-  FiPlus, 
-  FiEye, 
-  FiLink, 
+import {
+  FiFileText,
+  FiPlus,
+  FiEye,
+  FiLink,
   FiX,
   FiCalendar,
   FiUser,
-  FiSearch,
   FiFilter
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
@@ -62,17 +61,6 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
     }
   };
 
-  const getRecordTypeColor = (type) => {
-    switch (type?.toLowerCase()) {
-      case 'criminal': return 'danger';
-      case 'civil': return 'primary';
-      case 'administrativo': return 'warning';
-      case 'penal': return 'dark';
-      case 'laboral': return 'success';
-      default: return 'secondary';
-    }
-  };
-
   const getRecordTypeBorderColor = (type) => {
     switch (type?.toLowerCase()) {
       case 'criminal': return '#e74c3c';
@@ -93,7 +81,7 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
     try {
       // Aquí deberías implementar la vinculación en el backend
       await recordService.linkPersonToRecord(personId, selectedRecord.record_id);
-      
+
       toast.success('Antecedente vinculado exitosamente');
       setShowLinkModal(false);
       setSelectedRecord(null);
@@ -107,9 +95,8 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
   const handleUnlinkRecord = async (record) => {
     if (window.confirm(`¿Está seguro de que desea desvincular el antecedente "${record.record_number}"?`)) {
       try {
-        // Aquí deberías implementar la desvinculación en el backend
         await recordService.unlinkPersonFromRecord(personId, record.record_id);
-        
+
         toast.success('Antecedente desvinculado exitosamente');
         onUpdate?.();
       } catch (error) {
@@ -119,7 +106,7 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
     }
   };
 
-  const filteredRecords = availableRecords.filter(record => 
+  const filteredRecords = availableRecords.filter(record =>
     record.record_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     record.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     record.record_type?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -135,7 +122,7 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <div className="d-flex align-items-center mb-2">
-            <div 
+            <div
               className="rounded-circle me-3 d-flex align-items-center justify-content-center shadow-sm"
               style={{
                 width: '50px',
@@ -153,9 +140,9 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
           </div>
         </div>
         <div className="d-flex gap-2 align-items-center">
-          <Badge 
-            bg="dark" 
-            pill 
+          <Badge
+            bg="dark"
+            pill
             className="px-3 py-2 shadow-sm"
             style={{ fontSize: '0.9rem' }}
           >
@@ -163,8 +150,8 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
           </Badge>
           {!isView && (
             <>
-              <Button 
-                variant="dark" 
+              <Button
+                variant="dark"
                 size="sm"
                 className="px-3 py-2"
                 onClick={() => setShowLinkModal(true)}
@@ -178,7 +165,7 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
                 <FiLink className="me-2" size={16} />
                 Vincular antecedente
               </Button>
-              <Button 
+              <Button
                 variant="primary"
                 size="sm"
                 className="px-3 py-2"
@@ -205,7 +192,7 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
           border: '1px solid #dee2e6',
           borderRadius: '4px'
         }}>
-          <div 
+          <div
             className="rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center"
             style={{
               width: '60px',
@@ -231,12 +218,12 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
               }}>
                 <Card.Header className="border-0 bg-transparent pb-0">
                   <div className="d-flex justify-content-between align-items-start">
-                    <Badge 
-                      bg="dark" 
+                    <Badge
+                      bg="dark"
                       className="text-white px-3 py-2 shadow-sm"
                       style={{ fontSize: '0.8rem', borderRadius: '8px' }}
                     >
-                      {record.title || 'Sin título'} - {record.type_record || 'N/A'} ({record.type_relationship || 'N/A'}) 
+                      {record.title || 'Sin título'} - {record.type_record || 'N/A'} ({record.type_relationship || 'N/A'})
                     </Badge>
                     <Button
                       variant="dark"
@@ -254,13 +241,13 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
                     </Button>
                   </div>
                 </Card.Header>
-                
+
                 <Card.Body className="pt-2">
                   <div className="mb-3">
                     <h6 className="fw-bold mb-1 text-dark">
                       {record.record_number}
                     </h6>
-                    <p className="text-muted small mb-0" style={{ 
+                    <p className="text-muted small mb-0" style={{
                       display: '-webkit-box',
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: 'vertical',
@@ -275,7 +262,7 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
                       <FiCalendar className="me-2" size={14} />
                       <span>Fecha: {formatDate(record.date)}</span>
                     </div>
-                    
+
                     {record.court && (
                       <div className="d-flex align-items-center mb-2 text-muted small">
                         <FiUser className="me-2" size={14} />
@@ -285,8 +272,8 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
 
                     {record.status && (
                       <div className="small">
-                        <Badge 
-                          bg={record.status === 'active' ? 'success' : 'secondary'} 
+                        <Badge
+                          bg={record.status === 'active' ? 'success' : 'secondary'}
                           className="text-white px-2 py-1"
                           style={{ borderRadius: '6px' }}
                         >
@@ -298,9 +285,9 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
                 </Card.Body>
 
                 <Card.Footer className="border-0 bg-transparent pt-0">
-                  <Button 
-                    variant="dark" 
-                    size="sm" 
+                  <Button
+                    variant="dark"
+                    size="sm"
                     className="w-100 shadow-sm"
                     onClick={() => {
                       // Navegar a la vista del antecedente
@@ -428,7 +415,7 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
                 </thead>
                 <tbody>
                   {filteredRecords.map((record) => (
-                    <tr 
+                    <tr
                       key={record.record_id}
                       className={selectedRecord?.record_id === record.record_id ? 'table-primary' : ''}
                       style={{ cursor: 'pointer' }}
@@ -444,7 +431,7 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
                       </td>
                       <td className="fw-semibold">{record.record_number}</td>
                       <td>
-                        <Badge 
+                        <Badge
                           bg="dark"
                           className="text-white"
                           style={{ borderRadius: '6px' }}
@@ -453,8 +440,8 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
                         </Badge>
                       </td>
                       <td>
-                        <span 
-                          className="text-truncate d-block" 
+                        <span
+                          className="text-truncate d-block"
                           style={{ maxWidth: '200px' }}
                           title={record.description}
                         >
@@ -471,18 +458,18 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
             </div>
           )}
         </Modal.Body>
-        
+
         <Modal.Footer className="border-0" style={{ background: '#f8f9fa' }}>
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             onClick={() => setShowLinkModal(false)}
             className="shadow-sm"
             style={{ borderRadius: '8px' }}
           >
             Cancelar
           </Button>
-          <Button 
-            variant="dark" 
+          <Button
+            variant="dark"
             onClick={handleLinkRecord}
             disabled={!selectedRecord}
             className="shadow-sm"

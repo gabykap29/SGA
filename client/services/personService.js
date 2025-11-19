@@ -65,7 +65,13 @@ class PersonService extends BaseService {
 
   // Eliminar una persona
   async deletePerson(personId) {
-    return this.delete(`/persons/delete/${personId}`);
+    const res = await this.delete(`/persons/delete/${personId}`);
+    
+    if (res.success) {
+      return { success: true, data: res.data };
+    }
+    
+    return { success: false, error: res.error };
   }
 
   // Subir archivos para una persona
@@ -221,6 +227,12 @@ class PersonService extends BaseService {
   async searchPersons(searchTerm) {
     try {
       if (typeof searchTerm === 'object' && searchTerm !== null) {
+        // Si solo hay una clave 'identification', usar el endpoint específico para DNI
+        if (Object.keys(searchTerm).length === 1 && searchTerm.identification) {
+          return this.post(`/persons/search-dni/${encodeURIComponent(searchTerm.identification.trim())}`, {});
+        }
+
+        // Para búsquedas con otros criterios, usar el endpoint genérico
         const params = new URLSearchParams();
         for (const key in searchTerm) {
           if (searchTerm[key]) {
@@ -258,21 +270,24 @@ class PersonService extends BaseService {
   }
 
   async searchPersonByDniForLinker(identification) {
+    let person;
+    
     try {
       if (!identification || !identification.trim()) {
         return { success: false, error: 'Debe proporcionar un número de identificación' };
       }
+          
 
-      return this.post(`/persons/search-dni/${encodeURIComponent(identification.trim())}`, {});
+      const result = await this.post(`/persons/search-dni/${encodeURIComponent(identification.trim())}`, {});
+      return result;
     } catch (error) {
       return { success: false, error: 'Error de conexión' };
     }
   }
 
-  // Obtener estado de carga del padron
-  async getLoadCsvStatus() {
-    return this.get('/persons/load-csv/status/');
-  }
+  // Nota: el endpoint /persons/load-csv/status/ fue removido del backend.
+  // Ya no existe `getLoadCsvStatus` porque ahora el backend devuelve
+  // el resultado final tras el bulk create.
 }
 
 export default new PersonService();

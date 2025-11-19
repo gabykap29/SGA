@@ -194,8 +194,16 @@ const FileManager = ({ personId, files = [], onFilesUpload, onFileDelete, loadin
   const handleViewFile = async (file) => {
     if (!checkAuth()) return;
     
+    // Validar que el archivo tiene un file_id válido (no es un archivo local sin subir)
+    const fileId = file.file_id || file.id;
+    
+    // Si no tiene file_id ni id, o el id no es un UUID (tiene caracteres de timestamp)
+    if (!fileId || (!file.file_id && typeof fileId === 'number')) {
+      toast.error('El archivo aún no ha sido subido al servidor. Por favor, suba los archivos primero.');
+      return;
+    }
+    
     try {
-      const fileId = file.id || file.file_id;
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/files/${fileId}/download`, {
         method: 'GET',
         headers: getAuthHeaders()
@@ -211,7 +219,7 @@ const FileManager = ({ personId, files = [], onFilesUpload, onFileDelete, loadin
         if (response.status === 401 || response.status === 403) {
           toast.error('Sesión expirada. Por favor, inicie sesión nuevamente.');
         } else {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({}));
           toast.error(errorData.detail || 'Error al acceder al archivo');
         }
       }
@@ -225,9 +233,14 @@ const FileManager = ({ personId, files = [], onFilesUpload, onFileDelete, loadin
   const handleDownloadFile = async (file) => {
     if (!checkAuth()) return;
     
+    // Validar que el archivo tiene un file_id válido
+    if (!file.file_id) {
+      toast.error('El archivo aún no ha sido subido al servidor. Por favor, suba los archivos primero.');
+      return;
+    }
+    
     try {
-      const fileId = file.id || file.file_id;
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/files/${fileId}/download`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/files/${file.file_id}/download`, {
         method: 'GET',
         headers: getAuthHeaders()
       });
@@ -247,7 +260,7 @@ const FileManager = ({ personId, files = [], onFilesUpload, onFileDelete, loadin
         if (response.status === 401 || response.status === 403) {
           toast.error('Sesión expirada. Por favor, inicie sesión nuevamente.');
         } else {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({}));
           toast.error(errorData.detail || 'Error al descargar el archivo');
         }
       }
@@ -261,10 +274,15 @@ const FileManager = ({ personId, files = [], onFilesUpload, onFileDelete, loadin
   const handleDeleteFile = async (file) => {
     if (!checkAuth()) return;
     
+    // Validar que el archivo tiene un file_id válido
+    if (!file.file_id) {
+      toast.error('El archivo aún no ha sido subido al servidor. Por favor, suba los archivos primero.');
+      return;
+    }
+    
     if (window.confirm('¿Está seguro de que desea eliminar este archivo?')) {
       try {
-        const fileId = file.id || file.file_id;
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/files/${fileId}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/files/${file.file_id}`, {
           method: 'DELETE',
           headers: getAuthHeaders()
         });
@@ -273,13 +291,13 @@ const FileManager = ({ personId, files = [], onFilesUpload, onFileDelete, loadin
           toast.success('Archivo eliminado exitosamente');
           // Llamar callback para actualizar la lista
           if (onFileDelete) {
-            onFileDelete(fileId);
+            onFileDelete(file.file_id);
           }
         } else {
           if (response.status === 401 || response.status === 403) {
             toast.error('Sesión expirada. Por favor, inicie sesión nuevamente.');
           } else {
-            const errorData = await response.json();
+            const errorData = await response.json().catch(() => ({}));
             toast.error(errorData.detail || 'Error al eliminar el archivo');
           }
         }
@@ -337,39 +355,9 @@ const FileManager = ({ personId, files = [], onFilesUpload, onFileDelete, loadin
       {selectedFiles.length > 0 && (
         <Card className="mb-4">
           <Card.Header className="bg-white">
-            <div className="d-flex justify-content-between align-items-center">
-              <h6 className="mb-0 fw-bold">
-                Archivos Seleccionados ({selectedFiles.length})
-              </h6>
-              <div>
-                <Button 
-                  variant="outline-secondary" 
-                  size="sm" 
-                  onClick={() => setSelectedFiles([])}
-                  className="me-2"
-                >
-                  Limpiar Todo
-                </Button>
-                <Button 
-                  variant="dark" 
-                  size="sm" 
-                  onClick={handleUpload}
-                  disabled={loading || !personId}
-                >
-                  {loading ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" />
-                      Subiendo...
-                    </>
-                  ) : (
-                    <>
-                      <FiUpload className="me-2" />
-                      Subir Archivos
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
+            <h6 className="mb-0 fw-bold">
+              Archivos Seleccionados ({selectedFiles.length})
+            </h6>
           </Card.Header>
           <Card.Body className="p-3">
             {selectedFiles.map((file) => {
@@ -423,6 +411,35 @@ const FileManager = ({ personId, files = [], onFilesUpload, onFileDelete, loadin
                 </div>
               );
             })}
+            
+            {/* Botones de acción - REPOSITIONADO ABAJO */}
+            <div className="mt-4 pt-3 border-top d-flex justify-content-end gap-2">
+              <Button 
+                variant="outline-secondary" 
+                size="sm" 
+                onClick={() => setSelectedFiles([])}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                variant="success" 
+                size="sm" 
+                onClick={handleUpload}
+                disabled={loading || !personId}
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" />
+                    Subiendo...
+                  </>
+                ) : (
+                  <>
+                    <FiUpload className="me-2" />
+                    Subir Archivos
+                  </>
+                )}
+              </Button>
+            </div>
           </Card.Body>
         </Card>
       )}
