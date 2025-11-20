@@ -25,11 +25,11 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
   const [selectedAntecedents, setSelectedAntecedents] = useState([]);
   const [loadingAntecedents, setLoadingAntecedents] = useState(false);
   const [showOnlyAvailable, setShowOnlyAvailable] = useState(true);
-  
+
   // Estado para el modal de detalles
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedAntecedentDetail, setSelectedAntecedentDetail] = useState(null);
-  
+
   const [typeRelationship, setTypeRelationship] = useState('Denunciado');
 
   // Filter form state
@@ -308,15 +308,7 @@ const AntecedentLinker = ({ personId, linkedAntecedents = [], onLink, onUnlink, 
                 <Col md={6}>
                   <Form.Group>
                     <Form.Label className="fw-bold small text-dark mb-2"><FiFileText className="me-1" size={14} /> Tipo de Antecedente</Form.Label>
-                    <Form.Select value={filterForm.type_record} onChange={e => setFilterForm({ ...filterForm, type_record: e.target.value })} disabled={!personId || loadingAntecedents} className="shadow-sm">
-                      <option value="">-- Seleccionar tipo --</option>
-                      <option value="PENAL">Penal</option>
-                      <option value="CIVIL">Civil</option>
-                      <option value="CRIMINAL">Criminal</option>
-                      <option value="ADMINISTRATIVO">Administrativo</option>
-                      <option value="LABORAL">Laboral</option>
-                      <option value="OTRO">Otro</option>
-                    </Form.Select>
+                    <Form.Control type='text' placeholder="Buscar por tipo de antecedente" value={filterForm.type_record} onChange={e => setFilterForm({ ...filterForm, type_record: e.target.value })} disabled={!personId || loadingAntecedents} className="shadow-sm" />
                   </Form.Group>
                 </Col>
                 <Col md={6}>

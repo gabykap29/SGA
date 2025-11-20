@@ -534,20 +534,14 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
                   <Form.Label className="fw-bold small text-dark mb-2">
                     <FiFileText className="me-1" size={14} /> Tipo de Antecedente
                   </Form.Label>
-                  <Form.Select
+                  <Form.Control
+                    type="text"
+                    placeholder="Buscar por tipo de antecedente"
                     value={filterForm.type_record}
                     onChange={e => setFilterForm({ ...filterForm, type_record: e.target.value })}
                     disabled={loading}
                     className="shadow-sm"
-                  >
-                    <option value="">-- Seleccionar tipo --</option>
-                    <option value="PENAL">Penal</option>
-                    <option value="CIVIL">Civil</option>
-                    <option value="CRIMINAL">Criminal</option>
-                    <option value="ADMINISTRATIVO">Administrativo</option>
-                    <option value="LABORAL">Laboral</option>
-                    <option value="OTRO">Otro</option>
-                  </Form.Select>
+                  />
                 </Form.Group>
               </Col>
               <Col md={6}>
