@@ -76,6 +76,7 @@ async def get_person(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="La persona no existe!"
             )
+
         # Serializar archivos con mime_type
         files = []
         for f in getattr(person, "files", []):
@@ -85,10 +86,12 @@ async def get_person(
                     "original_filename": f.original_filename,
                     "file_type": f.file_type,
                     "file_size": f.file_size,
+                    "description": getattr(f, "description", None),
                     "mime_type": getattr(f, "mime_type", None),
                     "created_at": f.created_at,
                 }
             )
+
         # Construir respuesta serializada
         person_dict = person.__dict__.copy()
         person_dict["files"] = files

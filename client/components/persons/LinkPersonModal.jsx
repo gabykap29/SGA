@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Modal, Form, Button, Spinner, Alert, Table, Badge, InputGroup, Row, Col } from 'react-bootstrap';
 import { FiSearch, FiLink, FiX, FiUser, FiTag } from 'react-icons/fi';
-import personService from '../../services/personService'; 
-import recordService from '../../services/recordService'; 
+import personService from '../../services/personService';
+import recordService from '../../services/recordService';
 import { toast } from 'react-toastify';
 
 const LinkPersonModal = ({ show, onHide, recordId, onPersonLinked, currentLinkedPersons = [] }) => {
@@ -26,30 +26,41 @@ const LinkPersonModal = ({ show, onHide, recordId, onPersonLinked, currentLinked
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    
+
     if (!searchQuery.trim()) {
       toast.warning('Ingrese un número de DNI/Identificación');
       return;
     }
-    
+
     try {
       setIsSearching(true);
       setSearchPerformed(true);
-      
+
       // Usar el endpoint específico de búsqueda por DNI
       const result = await personService.searchPersonByDniForLinker(searchQuery);
-      
+
       if (result.success) {
-        const person = result.data;
-        // Verificar si la persona ya está vinculada
-        const isAlreadyLinked = currentLinkedPersons.some(rel => rel.person_id === person.person_id);
-        
-        if (isAlreadyLinked) {
-          toast.info('Esta persona ya está vinculada a este antecedente');
+        // El backend devuelve un array, no un objeto único
+        const personsData = Array.isArray(result.data) ? result.data : [result.data];
+
+        if (personsData.length === 0) {
+          toast.info('No se encontró ninguna persona con ese DNI');
           setPersons([]);
-        } else {
-          setPersons([person]);
+          return;
         }
+
+        // Verificar si la persona ya está vinculada
+        const availablePersons = personsData.filter(person => {
+          const isAlreadyLinked = currentLinkedPersons.some(
+            rel => rel.person_id === person.person_id
+          );
+          if (isAlreadyLinked) {
+            toast.info(`${person.names} ${person.lastnames} ya está vinculado(a) a este antecedente`);
+          }
+          return !isAlreadyLinked;
+        });
+
+        setPersons(availablePersons);
       } else {
         toast.error(result.error || 'Persona no encontrada');
         setPersons([]);
@@ -66,9 +77,9 @@ const LinkPersonModal = ({ show, onHide, recordId, onPersonLinked, currentLinked
   const handleLinkPerson = async (personId) => {
     try {
       setLinkingPerson(personId);
-      
+
       const result = await recordService.linkPersonToRecord(personId, recordId, typeRelationship);
-      
+
       if (result.success) {
         toast.success('Persona vinculada exitosamente');
         // Actualizar la lista de personas
@@ -89,8 +100,8 @@ const LinkPersonModal = ({ show, onHide, recordId, onPersonLinked, currentLinked
   };
 
   return (
-    <Modal 
-      show={show} 
+    <Modal
+      show={show}
       onHide={onHide}
       backdrop="static"
       size="lg"
@@ -100,9 +111,9 @@ const LinkPersonModal = ({ show, onHide, recordId, onPersonLinked, currentLinked
         <Modal.Title as="h5" className="fw-bold text-dark">
           Vincular Persona Existente
         </Modal.Title>
-        <Button 
-          variant="link" 
-          onClick={onHide} 
+        <Button
+          variant="link"
+          onClick={onHide}
           className="text-dark ms-auto p-0"
         >
           <FiX size={20} />
@@ -166,9 +177,9 @@ const LinkPersonModal = ({ show, onHide, recordId, onPersonLinked, currentLinked
               onChange={(e) => setSearchQuery(e.target.value)}
               className="border-start-0 ps-0"
             />
-            <Button 
-              variant="dark" 
-              type="submit" 
+            <Button
+              variant="dark"
+              type="submit"
               disabled={isSearching}
             >
               {isSearching ? (
@@ -182,7 +193,7 @@ const LinkPersonModal = ({ show, onHide, recordId, onPersonLinked, currentLinked
             </Button>
           </InputGroup>
         </Form>
-            
+
         <div>
           {isSearching ? (
             <div className="text-center py-5">
@@ -203,7 +214,7 @@ const LinkPersonModal = ({ show, onHide, recordId, onPersonLinked, currentLinked
                   </thead>
                   <tbody>
                     {persons.map(person => (
-                      <tr key={person.id}>
+                      <tr key={person.person_id || person.id}>
                         <td>{person.names} {person.lastnames}</td>
                         <td>
                           <Badge bg="dark" className="py-1 px-2">

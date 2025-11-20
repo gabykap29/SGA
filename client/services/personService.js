@@ -35,7 +35,9 @@ class PersonService extends BaseService {
 
   // Obtener una persona por ID
   async getPersonById(personId) {
-    const result = await this.get(`/persons/${personId}`);
+    // Agregar timestamp para evitar caché
+    const timestamp = new Date().getTime();
+    const result = await this.get(`/persons/${personId}?_t=${timestamp}`);
     
     if (result.success) {
       // Normalizar datos

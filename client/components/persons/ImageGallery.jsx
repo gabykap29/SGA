@@ -122,6 +122,8 @@ const ImageGallery = ({ images = [], personId, onUpdate }) => {
     const fetchImages = async () => {
       const urls = {};
       for (const img of validImages) {
+        console.log("valid image: ", validImages);
+
         try {
           const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
           const response = await fetch(`${baseURL}/files/${img.file_id}/download`, {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Row, Col, Form, Button, Table, Spinner, Alert, Badge, InputGroup, Accordion, ListGroup } from 'react-bootstrap';
+import { Card, Row, Col, Form, Button, Table, Spinner, Alert, Badge, InputGroup, Accordion, ListGroup, Pagination } from 'react-bootstrap';
 import { FiCalendar, FiFilter, FiSearch, FiRefreshCw, FiActivity, FiDatabase, FiUser, FiClock, FiInfo } from 'react-icons/fi';
 import UserActivitySummary from '../../../../../components/dashboard/UserActivitySummary';
 import LoadPersonsFromCSV from '../../../../../components/admin/LoadPersonsFromCSV';
@@ -57,6 +57,13 @@ export default function LogsPage() {
     action: '',
     entity_type: '',
   });
+  
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalLogs, setTotalLogs] = useState(0);
+  
   const [isPermissionError, setIsPermissionError] = useState(false);
 
   // Cargar logs al montar el componente
@@ -74,7 +81,7 @@ export default function LogsPage() {
     return () => {
       mounted = false;
     };
-  }, [isAdmin]);
+  }, [isAdmin, page, pageSize]);
 
   const loadLogs = async () => {
     setLoading(true);
@@ -82,7 +89,7 @@ export default function LogsPage() {
     setIsPermissionError(false);
     try {
       // Convertir fechas si están presentes
-      const apiFilters = { ...filters };
+      const apiFilters = { ...filters, page, size: pageSize };
       
       if (filters.start_date) {
         apiFilters.start_date = new Date(filters.start_date);
@@ -98,7 +105,14 @@ export default function LogsPage() {
       const result = await logsService.getLogs(apiFilters);
       
       if (result.success) {
-        setLogs(result.data);
+        if (result.data.data) {
+            setLogs(result.data.data);
+            setTotalPages(result.data.pages);
+            setTotalLogs(result.data.total);
+        } else {
+            setLogs(result.data);
+            setTotalLogs(result.data.length);
+        }
       } else {
         if (result.isPermissionError) {
           console.error('Error de permisos al cargar logs:', result.error);
@@ -151,6 +165,7 @@ export default function LogsPage() {
 
   const handleSubmitFilters = (e) => {
     e.preventDefault();
+    setPage(1);
     loadLogs();
   };
 
@@ -161,6 +176,8 @@ export default function LogsPage() {
       action: '',
       entity_type: '',
     });
+    setPage(1);
+    loadLogs();
   };
 
   // Si no es admin, mostrar mensaje de error
@@ -292,15 +309,7 @@ export default function LogsPage() {
                 <Button 
                   variant="outline-secondary" 
                   size="sm"
-                  onClick={() => {
-                    setFilters({
-                      start_date: '',
-                      end_date: '',
-                      action: '',
-                      entity_type: '',
-                    });
-                    loadLogs();
-                  }}
+                  onClick={handleClearFilters}
                   className="d-flex align-items-center"
                 >
                   <FiRefreshCw size={12} className="me-1" />
@@ -396,7 +405,7 @@ export default function LogsPage() {
                 </h6>
                 {logs.length > 0 && (
                   <Badge bg="primary" pill className="px-3">
-                    {logs.length} registros
+                    {totalLogs} registros
                   </Badge>
                 )}
               </div>
@@ -418,6 +427,7 @@ export default function LogsPage() {
                   <p className="text-muted small mb-0">Intenta ajustar los filtros de búsqueda</p>
                 </div>
               ) : (
+                <>
                 <div className="table-responsive">
                   <Table hover className="align-middle mb-0 modern-logs-table">
                     <thead className="table-light">
@@ -497,6 +507,30 @@ export default function LogsPage() {
                     </tbody>
                   </Table>
                 </div>
+                
+                <div className="d-flex justify-content-between align-items-center p-3 border-top bg-light bg-opacity-10">
+                  <div className="text-muted small">
+                    Mostrando {logs.length} de {totalLogs} registros
+                  </div>
+                  <Pagination className="mb-0 shadow-sm">
+                    <Pagination.First onClick={() => setPage(1)} disabled={page === 1} />
+                    <Pagination.Prev onClick={() => setPage(prev => Math.max(prev - 1, 1))} disabled={page === 1} />
+                    
+                    {page > 2 && <Pagination.Item onClick={() => setPage(1)}>1</Pagination.Item>}
+                    {page > 3 && <Pagination.Ellipsis />}
+                    
+                    {page > 1 && <Pagination.Item onClick={() => setPage(page - 1)}>{page - 1}</Pagination.Item>}
+                    <Pagination.Item active>{page}</Pagination.Item>
+                    {page < totalPages && <Pagination.Item onClick={() => setPage(page + 1)}>{page + 1}</Pagination.Item>}
+                    
+                    {page < totalPages - 2 && <Pagination.Ellipsis />}
+                    {page < totalPages - 1 && <Pagination.Item onClick={() => setPage(totalPages)}>{totalPages}</Pagination.Item>}
+                    
+                    <Pagination.Next onClick={() => setPage(prev => Math.min(prev + 1, totalPages))} disabled={page === totalPages} />
+                    <Pagination.Last onClick={() => setPage(totalPages)} disabled={page === totalPages} />
+                  </Pagination>
+                </div>
+                </>
               )}
             </Card.Body>
           </Card>

@@ -50,12 +50,12 @@ class LogsService {
         queryParams.append('user_id', filters.user_id);
       }
       
-      if (filters.skip) {
-        queryParams.append('skip', filters.skip.toString());
+      if (filters.page) {
+        queryParams.append('page', filters.page.toString());
       }
       
-      if (filters.limit) {
-        queryParams.append('limit', filters.limit.toString());
+      if (filters.size) {
+        queryParams.append('size', filters.size.toString());
       }
       
       const url = `${this.baseURL}/logs${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
