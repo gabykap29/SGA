@@ -14,11 +14,14 @@ from passlib.context import CryptContext
 # Instancia global (solo se crea una vez)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
+
 def get_password_hash(password):
     return pwd_context.hash(password)
+
 
 class UserService:
     def __init__(self):
@@ -37,12 +40,12 @@ class UserService:
 
         if not user:
             print("Usuario no encontrado!")
-            return False # O mejor: return None
+            return False  # O mejor: return None
 
         # 2. Verificar contraseña usando la función global
         if not user.passwd:
             return False
-            
+
         # Usamos la función global verify_password
         if not verify_password(password, user.passwd):
             return False
@@ -50,10 +53,10 @@ class UserService:
         # 3. Actualizar último login
         try:
             user.last_login = datetime.now()
-            await db.commit() # Guardamos la fecha
+            await db.commit()  # Guardamos la fecha
             return user
         except Exception as e:
-            await db.rollback() # Por seguridad
+            await db.rollback()  # Por seguridad
             print(f"Error actualizando login: {e}")
             return False
 
@@ -80,7 +83,7 @@ class UserService:
 
             # 2. Hashear contraseña (usando la función global)
             pass_encrypt = get_password_hash(passwd)
-            
+
             new_user = self.userModel(
                 names=names,
                 lastname=lastname,
@@ -90,19 +93,20 @@ class UserService:
             )
 
             # 3. Añadir a sesión (SIN AWAIT) - ERROR CRÍTICO CORREGIDO
-            db.add(new_user) 
-            
+            db.add(new_user)
+
             # 4. Guardar y Refrescar (CON AWAIT)
             await db.commit()
             await db.refresh(new_user)
-            
+
             return new_user
-            
+
         except Exception as e:
             # 5. Rollback en caso de error - ERROR CRÍTICO CORREGIDO
-            await db.rollback() 
+            await db.rollback()
             print(f"Error al crear el usuario: {e}")
             return False
+
     async def create_admin_user(self, db: AsyncSession):
         roles_service = RolesService()
         role_admin = await roles_service.findRoleByName(name="ADMIN", db=db)
@@ -131,27 +135,30 @@ class UserService:
 
     async def get_users(self, db: AsyncSession):
         try:
-            users = (
+            stmt = (
                 select(
                     self.userModel.id,
                     self.userModel.names,
                     self.userModel.lastname,
                     self.userModel.username,
                     self.userModel.last_login,
-                    self.roleModel.name.label("role_name"),
-                )
-                .join(self.roleModel)
-                .options(joinedload(self.userModel.roles))
+                    self.roleModel.name.label(
+                        "role_name"
+                    ),  # Etiqueta útil para el dict
+                ).join(self.roleModel)  # Esto hace el INNER JOIN
             )
-            result = await db.execute(users)
-            users = result.scalars().all()
+
+            result = await db.execute(stmt)
+            users = result.mappings().all()
 
             if not users:
                 return []
+
             return users
+
         except Exception as e:
             print("Error al obtener los usuarios", e)
-            return False
+            return []  # Es mejor devolver lista vacía que False para mantener consistencia de tipos
 
     async def get_user(self, id: uuid.UUID, db: AsyncSession):
         try:

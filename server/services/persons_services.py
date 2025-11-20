@@ -1,12 +1,15 @@
 from models.Persons import Persons
 from models.Record import Records
+from models.Files import Files
 from models.Users import Users
 from models.Recortds_Persons import RecordsPersons
 from sqlalchemy.orm import joinedload, selectinload, with_loader_criteria
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import or_, and_, select
+from sqlalchemy import or_, and_, select, func
 from typing import Optional
 from models.Connection_Type import ConnectionType
+from database.db import SessionLocal as async_session
+import asyncio
 import json
 import uuid
 import pandas
@@ -59,32 +62,25 @@ class PersonsService:
             return []
         return persons
 
-    # Asegúrate de importar tu modelo de archivos, asumiremos que se llama FileModel
-    # O si es genérico, obtén la clase del mapper como estabas intentando
-
     async def get_person(self, person_id: str, db: AsyncSession):
         try:
             person_uuid = uuid.UUID(person_id)
         except ValueError:
             return False
 
-        # Obtenemos la clase del modelo de archivos dinámicamente si es necesario
-        # (Aunque es mejor importar la clase FileModel directamente si puedes)
-        FileClass = self.personModel.files.property.mapper.class_
-
         smt = (
             select(self.personModel)
             .options(
-                selectinload(self.personModel.users),
-                # Aquí combinamos selectinload con joinedload
-                selectinload(self.personModel.record_relationships).joinedload(
+                joinedload(self.personModel.users),
+                joinedload(self.personModel.record_relationships).joinedload(
                     RecordsPersons.record
                 ),
-                # OPCIÓN A: Cargar todos los archivos y filtrar en Python (más seguro/fácil)
-                selectinload(self.personModel.files),
-                # OPCIÓN B: Filtrar en la query (Requiere SQLAlchemy 1.4+)
-                # Esto aplica el filtro a la carga de 'files' definida arriba
-                with_loader_criteria(FileClass, FileClass.is_active),
+                selectinload(
+                    self.personModel.files
+                ),  # Solo dile que cargue los archivos
+                # 2. CORRECCIÓN AQUÍ:
+                # Usa la CLASE "Files", no "self.personModel.files"
+                with_loader_criteria(Files, Files.is_active),
             )
             .filter(self.personModel.person_id == person_uuid)
         )
@@ -94,7 +90,6 @@ class PersonsService:
 
         if not person:
             return False
-
         return person
 
     async def create_person(
@@ -203,58 +198,55 @@ class PersonsService:
         names: Optional[str] = None,
         lastname: Optional[str] = None,
         identification: Optional[str] = None,
-        gender: Optional[str] = None,
         address: Optional[str] = None,
-        nationality: Optional[str] = None,
+        country: Optional[str] = None,
     ):
         """
         Busca personas por campos específicos de forma dinámica.
         """
-
-        query = select(self.personModel).options(
-            joinedload(self.personModel.users),
-            joinedload(self.personModel.record_relationships).joinedload(
-                RecordsPersons.record
-            ),
-            joinedload(self.personModel.files),
-        )
-        filters = []
-
-        if names and names.strip():
-            filters.append(self.personModel.names.ilike(f"%{names.strip()}%"))
-        if lastname and lastname.strip():
-            filters.append(self.personModel.lastnames.ilike(f"%{lastname.strip()}%"))
-        if identification and identification.strip():
-            filters.append(
-                self.personModel.identification.ilike(f"%{identification.strip()}%")
-            )
-        if gender and gender.strip():
-            filters.append(self.personModel.gender.ilike(f"%{gender.strip()}%"))
-        if address and address.strip():
-            filters.append(self.personModel.address.ilike(f"%{address.strip()}%"))
-        if nationality and nationality.strip():
-            filters.append(
-                self.personModel.nationality.ilike(f"%{nationality.strip()}%")
-            )
-
-        if not filters:
-            return []
-
         try:
-            smt = query.filter(and_(*filters)).limit(30)
-            result = await db.execute(smt)
-            persons = result.scalars().unique().all()
-            if not persons:
+            query = select(self.personModel).options(
+                selectinload(self.personModel.record_relationships).joinedload(
+                    RecordsPersons.record
+                ),
+                selectinload(self.personModel.files),
+                joinedload(self.personModel.users),
+            )
+
+            filters = []
+
+            if identification and identification.strip():
+                filters.append(
+                    self.personModel.identification.like(f"{identification.strip()}%")
+                )
+            text_fields = {
+                names: self.personModel.names,
+                lastname: self.personModel.lastnames,
+                address: self.personModel.address,
+                country: self.personModel.country,
+            }
+
+            for value, column in text_fields.items():
+                if value and value.strip():
+                    filters.append(column.ilike(f"%{value.strip()}%"))
+
+            if not filters:
                 return []
-            logger.info(
-                f"Búsqueda por criterios específicos encontró {len(persons)} personas."
-            )
+
+            stmt = query.filter(and_(*filters)).limit(100)
+            result = await db.execute(stmt)
+
+            # .unique() es importante cuando usas joinedload para evitar duplicados en el resultado ORM
+            persons = result.scalars().unique().all()
+
+            if persons:
+                logger.info(f"Búsqueda específica encontró {len(persons)} personas.")
+
             return persons
+
         except Exception as e:
-            logger.error(
-                f"Error durante la búsqueda en la base de datos: {e}", exc_info=True
-            )
-            raise e
+            logger.error(f"Error en search_person: {e}", exc_info=True)
+            raise e  # Re-lanzar la excepción para que el controlador la maneje (HTTP 500)
 
     async def update_person(
         self,
@@ -352,15 +344,11 @@ class PersonsService:
                 RecordsPersons.record_id == uuid.UUID(record_id),
             )
             result = await db.execute(smt)
-            relationships = result.scalars().all()
-
-            if not relationships:
+            relationship = result.scalars().first()
+            if not relationship:
                 logger.error("La relación entre la persona y el registro no existe!")
                 return False
-
-            for relationship in relationships:
-                await db.delete(relationship)
-
+            db.delete(relationship)
             await db.commit()
             return True
         except Exception as e:
@@ -376,11 +364,6 @@ class PersonsService:
         db: AsyncSession,
     ):
         try:
-            print(
-                f"DEBUG add_person_connection: person_id={person_id}, person_to_connect={person_to_connect}, connection_type={connection_type}"
-            )
-
-            # Convertir las cadenas de texto a objetos UUID para la consulta
             try:
                 person_uuid = uuid.UUID(person_id)
                 connect_uuid = uuid.UUID(person_to_connect)
@@ -388,10 +371,6 @@ class PersonsService:
                 logger.error(f"Error al convertir UUID: {e}")
                 print(f"ERROR: Error al convertir UUID: {e}")
                 return False
-
-            print(
-                f"DEBUG: UUIDs convertidos exitosamente: {person_uuid}, {connect_uuid}"
-            )
 
             smt = select(self.personModel).filter(
                 self.personModel.person_id == person_uuid
@@ -441,89 +420,63 @@ class PersonsService:
         self, person_id: str, person_to_disconnect: str, db: AsyncSession
     ):
         """
-        Desvincula una persona de otra (elimina la conexión/relación)
+        Desvincula una persona de otra (elimina la conexión/relación).
+        Elimina vínculos en ambas direcciones si existen.
         """
         try:
-            # Convertir las cadenas de texto a objetos UUID para la consulta
             try:
                 person_uuid = uuid.UUID(person_id)
                 disconnect_uuid = uuid.UUID(person_to_disconnect)
             except ValueError as e:
                 logger.error(f"Error al convertir UUID: {e}")
-                print(f"Error al convertir UUID: {e}")
                 return False
 
-            print(f"DEBUG: Buscando vínculo entre {person_uuid} y {disconnect_uuid}")
+            stmt = select(self.connectionType).filter(
+                or_(
+                    and_(
+                        self.connectionType.person_id == person_uuid,
+                        # Asegúrate que .connection sea la columna UUID, si es relationship usa .connection_id
+                        self.connectionType.connection == disconnect_uuid,
+                    ),
+                    and_(
+                        self.connectionType.person_id == disconnect_uuid,
+                        self.connectionType.connection == person_uuid,
+                    ),
+                )
+            )
 
+            result = await db.execute(stmt)
+            relationships = result.scalars().all()
+
+            if not relationships:
+                return False
+
+            for rel in relationships:
+                await db.delete(rel)
+            await db.commit()
+            return True
+
+        except Exception as e:
+            logger.error(f"Error crítico desvinculando: {e}")
+            await db.rollback()
+            return False
+
+    async def delete_person(self, person_id: str, db: AsyncSession):
+        try:
+            person_uuid = uuid.UUID(person_id)
             smt = select(self.personModel).filter(
                 self.personModel.person_id == person_uuid
             )
             result = await db.execute(smt)
-            person = result.scalars().first()
-            if not person:
-                logger.error("La persona no existe!")
-                print(f"DEBUG: Persona {person_uuid} no existe")
-                return False
-
-            connection = select(self.personModel).filter(
-                self.personModel.person_id == disconnect_uuid
-            )
-            result = await db.execute(connection)
-            connection = result.scalars().first()
-            if not connection:
-                logger.error("La persona a desvinculación no existe!")
-                print(f"DEBUG: Persona a desvinculación {disconnect_uuid} no existe")
-                return False
-
-            # Buscar TODOS los vínculos específicos
-            rel = select(self.connectionType).filter(
-                or_(
-                    and_(
-                        self.connectionType.person_id == person.person_id,
-                        self.connectionType.connection == connection.person_id,
-                    ),
-                    and_(
-                        self.connectionType.person_id == connection.person_id,
-                        self.connectionType.connection == person.person_id,
-                    ),
-                )
-            )
-            result = await db.execute(rel)
-            rels = result.scalars().all()
-
-            if not rels:
-                print(
-                    f"DEBUG: No existe vínculo entre {person_uuid} y {disconnect_uuid}"
-                )
-                return False
-
-            print(f"DEBUG: {len(rels)} vínculos encontrados, eliminando...")
-
-            for r in rels:
-                await db.delete(r)
-
-            await db.commit()
-            print("DEBUG: Vínculos eliminados exitosamente")
-            return True
-        except Exception as e:
-            logger.error("Error al intentar desvinculación la persona", e)
-            print(f"ERROR: {str(e)}")
-            raise e
-
-    async def delete_person(self, person_id: str, db: AsyncSession):
-        try:
-            is_exist = select(self.personModel).filter(
-                self.personModel.person_id == uuid.UUID(person_id)
-            )
-            result = await db.execute(is_exist)
-            is_exist = result.scalars().first()
-            if not is_exist:
+            person_to_delete = result.scalars().first()
+            if not person_to_delete:
                 return "La persona no existe!"
-            db.delete(is_exist)
+            await db.delete(person_to_delete)
             await db.commit()
             return True
         except Exception as e:
-            logger.error(f"Error al eliminar la persona: {e}")
+            logger.error(f"Error al eliminar la persona: {e}", exc_info=True)
+            await db.rollback()
             return False
 
     async def get_linked_persons(self, person_id: str, db: AsyncSession):
@@ -656,73 +609,76 @@ class PersonsService:
             raise e
 
     async def load_persons(self, db: AsyncSession, user_id: str):
-        """
-        Inicia la carga de personas desde CSV en un thread separado.
-        Retorna inmediatamente el estado de la solicitud.
-        """
         global _load_status, _load_lock
         self.user_id = user_id
+
         try:
             with _load_lock:
                 if _load_status["is_loading"]:
                     return {
                         "status": "loading",
                         "message": "Ya hay una carga en progreso",
-                        "progress": _load_status["progress"],
-                        "is_loading": True,
+                        # ...
                     }
 
-                # Verificar si ya hay suficientes personas
-                smt = select(self.personModel).count()
+                # CORRECCIÓN PREVIA: Count seguro
+                smt = select(func.count()).select_from(self.personModel)
                 result = await db.execute(smt)
-                count = result.scalar()
+                count = result.scalar() or 0  # Protegemos contra None
+
                 if count >= 5:
                     return {
                         "status": "skipped",
-                        "message": "Ya hay suficientes personas en la base de datos",
+                        "message": "Ya hay suficientes personas",
                         "is_loading": False,
                     }
 
-                # Iniciar la carga en un thread separado
+                # Configurar estado inicial
                 _load_status["is_loading"] = True
                 _load_status["status"] = "loading"
                 _load_status["progress"] = 0
                 _load_status["start_time"] = datetime.now()
-                _load_status["message"] = "Iniciando carga del padrón..."
 
-            # Iniciar thread de carga
-            thread = threading.Thread(
-                target=self._load_persons_background, args=(db,), daemon=True
-            )
-            thread.start()
+            # CORRECCIÓN CRÍTICA:
+            # 1. No usamos threading.Thread
+            # 2. Usamos asyncio.create_task para que corra en el loop asíncrono
+            # 3. NO pasamos 'db', la tarea creará su propia sesión
+            asyncio.create_task(self._load_persons_background())
 
             return {
                 "status": "started",
-                "message": "Carga iniciada. Por favor, espera...",
+                "message": "Carga iniciada en segundo plano.",
                 "is_loading": True,
             }
-        except Exception as e:
-            logger.error(f"Error al iniciar carga de personas: {e}")
-            with _load_lock:
-                _load_status["is_loading"] = False
-                _load_status["status"] = "failed"
-            return {
-                "status": "error",
-                "message": f"Error al iniciar la carga: {str(e)}",
-                "is_loading": False,
-            }
 
-    async def _load_persons_background(self, db: AsyncSession):
+        except Exception as e:
+            # ... manejo de error ...
+            return {"status": "error", "message": str(e)}
+
+    async def _load_persons_background(self):
         """
-        Función que se ejecuta en un thread separado para cargar personas desde CSV.
+        Esta función corre en background. Debe gestionar SU PROPIA sesión.
         """
         global _load_status, _load_lock
-        try:
-            persons = pandas.read_csv("padron.csv", encoding="latin-1")
-            data_to_json = json.loads(persons.to_json(orient="records"))
 
-            await db.bulk_save_objects(
-                [
+        # IMPORTANTE: Creamos un nuevo scope de base de datos
+        # porque la sesión del request original ya murió.
+        async with async_session() as db:
+            try:
+                # OPTIMIZACIÓN: Pandas es bloqueante (síncrono).
+                # Leer un CSV grande bloqueará todo tu servidor FastAPI.
+                # Lo ejecutamos en un thread pool para no congelar la API.
+                loop = asyncio.get_running_loop()
+                # Ejecutamos la lectura del CSV en un hilo aparte
+                data_to_json = await loop.run_in_executor(None, self._read_csv_sync)
+
+                if not data_to_json:
+                    raise Exception("El CSV está vacío o no se pudo leer")
+
+                # Insertar en la BD (esto sí es async y rápido)
+                # Nota: bulk_save_objects es legacy, mejor usar add_all o insert core
+                # pero para este ejemplo lo mantengo si te funciona.
+                objects_to_save = [
                     self.personModel(
                         identification=str(item["identification"]),
                         identification_type="DNI",
@@ -735,18 +691,31 @@ class PersonsService:
                     )
                     for item in data_to_json
                 ]
-            )
-            await db.commit()
-            with _load_lock:
-                _load_status["is_loading"] = False
-                _load_status["progress"] = 100
-                _load_status["status"] = "completed"
-                _load_status["message"] = "Carga completada exitosamente."
-            logger.warning("Carga de personas completada exitosamente.")
-            return True
+
+                db.add_all(
+                    objects_to_save
+                )  # add_all es más moderno que bulk_save_objects en ORM
+                await db.commit()
+
+                with _load_lock:
+                    _load_status["is_loading"] = False
+                    _load_status["status"] = "completed"
+                    _load_status["progress"] = 100
+
+                logger.info("Carga background finalizada exitosamente")
+
+            except Exception as e:
+                logger.error(f"Error background: {e}")
+                with _load_lock:
+                    _load_status["is_loading"] = False
+                    _load_status["status"] = "failed"
+                    _load_status["message"] = str(e)
+
+    def _read_csv_sync(self):
+        """Helper síncrono para leer CSV con pandas sin bloquear el loop"""
+        try:
+            persons = pandas.read_csv("padron.csv", encoding="latin-1")
+            return json.loads(persons.to_json(orient="records"))
         except Exception as e:
-            logger.error(f"Error durante la carga de personas: {e}", exc_info=True)
-            with _load_lock:
-                _load_status["is_loading"] = False
-                _load_status["status"] = "failed"
-                _load_status["message"] = f"Error durante la carga: {str(e)}"
+            logger.error(f"Error leyendo CSV: {e}")
+            return []

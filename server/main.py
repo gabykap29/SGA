@@ -32,37 +32,35 @@ app.include_router(record_router)
 app.include_router(files_router)
 app.include_router(logs_router)
 
+
 @app.get("/")
 def root():
     return {"message": "Hello World"}
+
 
 @app.on_event("startup")
 async def startup_event():
     """Evento que se ejecuta al iniciar la aplicación"""
     print("🚀 Iniciando aplicación...")
-    
+
     # 1. Primero configurar los mappers de SQLAlchemy
     try:
         configure_mappers()
         print("✅ Mappers de SQLAlchemy configurados")
     except Exception as e:
         print(f"⚠️  Advertencia al configurar mappers: {e}")
-    
-    # 2. Inicializar la base de datos (crear tablas)
-    db = await init_database()
-    if db:
-        print("✅ Base de datos inicializada")
-        
-        # 3. Luego crear los roles
-        print("📋 Creando roles...")
-        await create_roles()
-        
-        # 4. Finalmente crear el usuario admin
-        print("👤 Creando usuario administrador...")
-        await create_admin()
 
+    # 2. Inicializar la base de datos (crear tablas)
+    await init_database()
+    await create_roles()
+    admin = await create_admin()
+    if admin:
+        print("✅ Usuario administrador creado exitosamente")
+    else:
+        print("ℹ️  Usuarios ya existentes. Omitiendo creación de admin.")
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="", port=8000, reload=True)

@@ -24,7 +24,12 @@ class Persons(Base):
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     users = relationship("Users", back_populates="persons")
-    record_relationships = relationship("RecordsPersons", back_populates="person")
+    record_relationships = relationship(
+        "RecordsPersons",
+        back_populates="person",
+        cascade="all, delete-orphan",
+        lazy="select",
+    )
     # Una persona puede tener cero o más archivos (relación opcional)
     files = relationship(
         "Files", back_populates="person", cascade="all, delete-orphan", lazy="select"
@@ -34,11 +39,9 @@ class Persons(Base):
         "ConnectionType",
         foreign_keys="[ConnectionType.person_id]",
         back_populates="person",
-        cascade="all, delete-orphan",
     )
     connections_as_connection = relationship(
         "ConnectionType",
         foreign_keys="[ConnectionType.connection]",
         back_populates="connection_person",
-        cascade="all, delete-orphan",
     )

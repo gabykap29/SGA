@@ -13,7 +13,7 @@ from models.schemas.file_schemas import (
 from typing import List, Optional, Dict
 import io
 from dependencies.is_auth import is_authenticated
-from dependencies.checked_role import check_rol_all
+from dependencies.checked_role import check_rol_all, check_rol_all_or_viewer
 
 router = APIRouter(tags=["Files"], prefix="/files")
 files_service = FilesService()
@@ -71,9 +71,11 @@ async def upload_file(
             description=description,
             db=db,
         )
-        
+
         print("DEBUG upload endpoint: Archivo retornado del servicio")
-        print(f"  - file_id: {uploaded_file.file_id} (tipo: {type(uploaded_file.file_id)})")
+        print(
+            f"  - file_id: {uploaded_file.file_id} (tipo: {type(uploaded_file.file_id)})"
+        )
         print(f"  - original_filename: {uploaded_file.original_filename}")
 
         return uploaded_file
@@ -91,7 +93,7 @@ async def upload_file(
 async def get_file_info(
     file_id: str,
     current_user: Dict = Depends(is_authenticated),
-    is_authorized: bool = Depends(check_rol_all),
+    is_authorized: bool = Depends(check_rol_all_or_viewer),
     db: AsyncSession = Depends(get_db),
 ):
     if not is_authorized:
@@ -116,7 +118,7 @@ async def get_file_info(
 async def download_file(
     file_id: str,
     current_user: Dict = Depends(is_authenticated),
-    is_authorized: bool = Depends(check_rol_all),
+    is_authorized: bool = Depends(check_rol_all_or_viewer),
     db: AsyncSession = Depends(get_db),
 ):
     if not is_authorized:
@@ -181,7 +183,7 @@ async def get_files_by_person(
 async def get_files_by_record(
     record_id: str,
     current_user: Dict = Depends(is_authenticated),
-    is_authorized: bool = Depends(check_rol_all),
+    is_authorized: bool = Depends(check_rol_all_or_viewer),
     db: Session = Depends(get_db),
 ):
     if not is_authorized:
@@ -319,9 +321,7 @@ async def list_all_files(
     """
     try:
         # Construir query base
-        stm = select(files_service.fileModel).filter(
-            files_service.fileModel.is_active
-        )
+        stm = select(files_service.fileModel).filter(files_service.fileModel.is_active)
         query = db.execute(stm)
 
         # Filtrar por tipo si se especifica

@@ -126,15 +126,13 @@ async def search_person(
             detail="No tienes permiso para realizar esta acción",
         )
     try:
-        print("📊 Llamando a person_service.search_person()")
         persons = await person_service.search_person(
             db=db_session,
             names=names,
             lastname=lastname,
             identification=identification,
-            gender=gender,
             address=address,
-            nationality=nationality,
+            country=nationality,
         )
         if not persons:
             return []
@@ -185,7 +183,13 @@ async def create_person(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error al crear la persona o la persona no tiene ID",
             )
-
+        await logs_services.create_log(
+            user_id=user_id,
+            action="CREATE",
+            entity_type="PERSON",
+            entity_id=person.person_id,
+            db=db_session,
+        )
         # La respuesta se valida automáticamente con response_model=PersonResponse
         return person
 
@@ -234,6 +238,13 @@ async def update_person(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="No se pudo actualizar porque la persona no existe!",
             )
+        await logs_services.create_log(
+            user_id=current_user["user_id"],
+            action="UPDATE",
+            entity_type="PERSON",
+            entity_id=id,
+            db=db_session,
+        )
 
         return {"status": "success", "mensaje": "Persona actualizada correctamente!"}
     except Exception as e:
@@ -269,6 +280,62 @@ async def load_persons_from_csv(
             print("Error critico al cargar personas desde CSV", e),
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error en el servidor al cargar personas desde CSV",
+        )
+
+
+@router.delete("/delete/{id}", status_code=status.HTTP_200_OK)
+async def delete_person(
+    id: str,
+    current_user: Dict = Depends(is_authenticated),
+    is_authorized: bool = Depends(check_rol_all),
+    db_session: AsyncSession = Depends(get_db),
+):
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No tienes permiso para eliminar personas",
+        )
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no autenticado"
+        )
+    try:
+        deleted = await person_service.delete_person(person_id=id, db=db_session)
+        await logs_services.create_log(
+            user_id=current_user.get("user_id"),
+            action="DELETE",
+            entity_type="PERSON",
+            entity_id=id,
+            description=f"Se eliminó la persona con ID {id}",
+            ip_address=current_user.get("ip_address"),
+            db=db_session,
+        )
+        if type(deleted) is str:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No se pudo eliminar porque la persona no existe o tiene antecedentes vinculados!",
+            )
+
+        if deleted is False:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error al eliminar la persona. Consulte los logs del servidor.",
+            )
+
+        return {"status": "success", "message": "Persona eliminada correctamente!"}
+    except Exception as e:
+        await logs_services.create_log(
+            user_id=current_user.get("user_id"),
+            action="DELETE",
+            entity_type="PERSON",
+            entity_id=id,
+            description=f"Error al eliminar la persona con ID {id}: {str(e)}",
+            ip_address=current_user.get("ip_address"),
+            db=db_session,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error en el servidor al eliminar la persona",
         )
 
 
@@ -349,6 +416,15 @@ async def add_person_connection(
                 status_code=400,
                 detail="Error al vincular la persona, verifique los campos.",
             )
+        await logs_services.create_log(
+            user_id=current_user.get("user_id"),
+            action="UPDATE",
+            entity_type="PERSON",
+            entity_id=person_id,
+            description=f"Se vinculo la persona con ID {person_to_connect} a la persona con ID {person_id}",
+            ip_address=current_user.get("ip_address"),
+            db=db_session,
+        )
         return True
     except Exception as e:
         print(f"Error en add_person_connection: {str(e)}")
@@ -483,49 +559,6 @@ async def get_person_records(
         )
 
 
-@router.delete("/delete/{person_id}", status_code=status.HTTP_200_OK)
-async def remove_person(
-    person_id: str,
-    current_user: Dict = Depends(is_authenticated),
-    is_authorized: bool = Depends(check_rol_all),
-    db_session: AsyncSession = Depends(get_db),
-):
-    "Elimina a una persona de la base de datos"
-    if not is_authorized:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No tienes permiso para eliminar personas",
-        )
-
-    try:
-        if not person_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Se requiere un ID de persona!",
-            )
-
-        result = await person_service.delete_person(person_id=person_id, db=db_session)
-        print("resultado de eliminar: ", result)
-        if not result:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No se pudo eliminar la persona!",
-            )
-
-        return {
-            "status": "success",
-            "message": "Persona eliminada correctamente!",
-        }
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        print("Error interno en el servidor al eliminar la persona", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error interno en el servidor al eliminar la persona",
-        )
-
-
 @router.delete("/{person_id}/record/{record_id}", status_code=status.HTTP_200_OK)
 async def remove_person_record(
     person_id: str,
@@ -553,12 +586,20 @@ async def remove_person_record(
         result = await person_service.remove_record(
             person_id=person_id, record_id=record_id, db=db_session
         )
-
         if not result:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No se pudo desvinculación el antecedente de la persona!",
             )
+        await logs_services.create_log(
+            user_id=current_user["user_id"],
+            action="DELETE",
+            entity_type="PERSON",
+            entity_id=person_id,
+            description=f"Se desvinculo el antecedente con ID {record_id} de la persona con ID {person_id}",
+            ip_address=current_user.get("ip_address"),
+            db=db_session,
+        )
 
         return {
             "status": "success",
@@ -611,6 +652,15 @@ async def remove_person_connection(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No se pudo desvinculación la persona!",
             )
+        await logs_services.create_log(
+            user_id=current_user["user_id"],
+            action="DELETE",
+            entity_type="PERSON",
+            description=f"Se desvinculo la persona con ID {person_to_disconnect} de la persona con ID {person_id}",
+            ip_address=current_user.get("ip_address"),
+            entity_id=person_id,
+            db=db_session,
+        )
 
         return {"status": "success", "message": "Persona desvinculada correctamente!"}
     except HTTPException as e:

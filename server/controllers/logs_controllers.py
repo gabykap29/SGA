@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from database.db import get_db
 from datetime import datetime, timedelta
-from models.schemas.logs_schemas import LogResponse
+from models.schemas.logs_schemas import PaginatedLogResponse
 from services.logs_services import logs_service
 from middlewares.auth_middlewares import is_autenticate as is_authenticated
 from dependencies.checked_role import check_rol_admin
@@ -11,7 +11,7 @@ from dependencies.checked_role import check_rol_admin
 router = APIRouter(prefix="/logs", tags=["logs"])
 
 
-@router.get("", response_model=List[LogResponse])
+@router.get("", response_model=PaginatedLogResponse)
 async def get_logs(
     request: Request,
     start_date: Optional[datetime] = Query(None),
@@ -19,11 +19,11 @@ async def get_logs(
     action: Optional[str] = Query(None),
     entity_type: Optional[str] = Query(None),
     user_id: Optional[str] = Query(None),
-    skip: int = Query(0),
-    limit: int = Query(100),
     current_user: Dict = Depends(is_authenticated),
     is_admin: bool = Depends(check_rol_admin),
     db_session=Depends(get_db),
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1, le=100),
 ):
     """
     Obtiene los registros de logs con filtros opcionales.
@@ -48,7 +48,14 @@ async def get_logs(
         if user_id:
             filters["user_id"] = user_id
 
-        logs = await logs_service.get_logs(db_session, skip, limit, filters)
+        # Calcular skip
+        skip = (page - 1) * size
+
+        # Obtener total de registros
+        total = await logs_service.count_logs(db_session, filters)
+
+        # Obtener logs paginados
+        logs = await logs_service.get_logs(db_session, skip, size, filters)
 
         # Enriquecer los resultados con información del usuario
         response_logs = []
@@ -74,7 +81,16 @@ async def get_logs(
             }
             response_logs.append(log_dict)
 
-        return response_logs
+        # Calcular total de páginas
+        pages = (total + size - 1) // size if size > 0 else 0
+
+        return {
+            "total": total,
+            "page": page,
+            "size": size,
+            "pages": pages,
+            "data": response_logs,
+        }
     except Exception as e:
         print(f"Error al obtener logs: {e}")
         raise HTTPException(

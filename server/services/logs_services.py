@@ -3,7 +3,7 @@ from models.Logs import Logs
 from datetime import datetime
 from typing import Dict, Optional, List
 from uuid import UUID
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 from sqlalchemy.orm import joinedload
 
 
@@ -24,6 +24,14 @@ class LogsService:
         """
         Crea un nuevo registro de log en la base de datos
         """
+
+        # Convertir user_id a UUID si es string
+        if user_id and isinstance(user_id, str):
+            try:
+                user_id = UUID(user_id)
+            except ValueError:
+                print(f"Error: user_id {user_id} no es un UUID válido")
+                user_id = None
 
         log = self.model(
             # log_id se genera automáticamente por el valor default
@@ -56,21 +64,7 @@ class LogsService:
         stmt = select(self.model).options(joinedload(self.model.user))
 
         # 2. Aplicar filtros sobre el 'statement'
-        if filters:
-            if filters.get("start_date") and filters.get("end_date"):
-                stmt = stmt.filter(
-                    self.model.created_at >= filters["start_date"],
-                    self.model.created_at <= filters["end_date"],
-                )
-
-            if filters.get("action"):
-                stmt = stmt.filter(self.model.action == filters["action"])
-
-            if filters.get("entity_type"):
-                stmt = stmt.filter(self.model.entity_type == filters["entity_type"])
-
-            if filters.get("user_id"):
-                stmt = stmt.filter(self.model.user_id == filters["user_id"])
+        stmt = self._apply_filters(stmt, filters)
 
         # 3. Aplicar orden y paginación sobre el 'statement'
         # Es importante que offset y limit se apliquen antes de ejecutar
@@ -94,7 +88,6 @@ class LogsService:
         result = await db.execute(stm)
         return result.scalars().first()
 
-    
     async def delete_logs_older_than(self, db: AsyncSession, date: datetime) -> int:
         """
         Elimina logs más antiguos que la fecha especificada
@@ -103,7 +96,40 @@ class LogsService:
         stm = delete(self.model).where(self.model.created_at < date)
         result = await db.execute(stm)
         await db.commit()
-        return result.rowcount if hasattr(result, 'rowcount') else None
+        return result.rowcount if hasattr(result, "rowcount") else None
+
+    async def count_logs(self, db: AsyncSession, filters: Optional[Dict] = None) -> int:
+        """
+        Cuenta el total de logs que coinciden con los filtros
+        """
+        stmt = select(func.count()).select_from(self.model)
+        stmt = self._apply_filters(stmt, filters)
+        result = await db.execute(stmt)
+        return result.scalar() or 0
+
+    def _apply_filters(self, stmt, filters: Optional[Dict]):
+        """
+        Aplica los filtros comunes al statement
+        """
+        if not filters:
+            return stmt
+
+        if filters.get("start_date") and filters.get("end_date"):
+            stmt = stmt.filter(
+                self.model.created_at >= filters["start_date"],
+                self.model.created_at <= filters["end_date"],
+            )
+
+        if filters.get("action"):
+            stmt = stmt.filter(self.model.action == filters["action"])
+
+        if filters.get("entity_type"):
+            stmt = stmt.filter(self.model.entity_type == filters["entity_type"])
+
+        if filters.get("user_id"):
+            stmt = stmt.filter(self.model.user_id == filters["user_id"])
+
+        return stmt
 
 
 logs_service = LogsService()
