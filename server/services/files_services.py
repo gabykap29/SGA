@@ -6,8 +6,10 @@ from models.Persons import Persons
 from models.Record import Records
 from models.Users import Users
 from utils.file_encryption import FileEncryption, FileValidator
+from utils.image_resize import resize_image_stream
 from config.file_storage import FileStorageConfig
 from typing import List, Optional, BinaryIO, Tuple
+
 import uuid
 import os
 
@@ -28,25 +30,25 @@ class FilesService:
     @staticmethod
     def _normalize_uuid(uuid_str: str) -> str:
         """
-        Normaliza un UUID que puede venir sin guiones (32 caracteres) 
+        Normaliza un UUID que puede venir sin guiones (32 caracteres)
         o con guiones (36 caracteres)
-        
+
         Args:
             uuid_str: UUID en formato 36e6b6e7de754811a91ec1426e80abc5 o 36e6b6e7-de75-4811-a91e-c1426e80abc5
-            
+
         Returns:
             UUID en formato estándar con guiones
         """
         uuid_str = str(uuid_str).strip()
-        
+
         # Si ya tiene guiones, retornar tal cual
-        if '-' in uuid_str:
+        if "-" in uuid_str:
             return uuid_str
-        
+
         # Si tiene 32 caracteres sin guiones, agregar guiones
         if len(uuid_str) == 32:
             return f"{uuid_str[0:8]}-{uuid_str[8:12]}-{uuid_str[12:16]}-{uuid_str[16:20]}-{uuid_str[20:32]}"
-        
+
         # Si no es un formato válido, retornar tal cual y dejar que uuid.UUID lance el error
         return uuid_str
 
@@ -115,14 +117,34 @@ class FilesService:
             record_uuid = None
             if record_id:
                 record_uuid = uuid.UUID(record_id)
-                smt = (select(self.recordModel).filter(
+                smt = select(self.recordModel).filter(
                     self.recordModel.record_id == record_uuid
-                ))
+                )
                 result = await db.execute(smt)
                 record = result.scalars().first()
 
                 if not record:
                     raise ValueError("El record especificado no existe")
+
+            # Redimensionar si es imagen
+            if file_type == "image":
+                try:
+                    # El resize devuelve un nuevo stream (BytesIO)
+                    file_stream = resize_image_stream(file_stream, mime_type)
+
+                    # Actualizar tamaño del archivo después del resize
+                    file_stream.seek(0, 2)  # Ir al final
+                    file_size = file_stream.tell()
+                    file_stream.seek(0)  # Volver al inicio
+
+                    print(
+                        f"DEBUG: Imagen redimensionada. Nuevo tamaño: {file_size} bytes"
+                    )
+
+                except Exception as e:
+                    print(f"Error al redimensionar imagen: {e}")
+                    # Si falla el redimensionado, lanzamos error para no guardar basura
+                    raise ValueError(f"Error al procesar la imagen: {str(e)}")
 
             # Obtener directorio de almacenamiento
             storage_path = FileStorageConfig.get_storage_path(file_type)
@@ -150,7 +172,7 @@ class FilesService:
             db.add(new_file)
             await db.commit()
             await db.refresh(new_file)
-            
+
             print("DEBUG upload_file: Archivo subido exitosamente")
             print(f"  - file_id: {new_file.file_id} (tipo: {type(new_file.file_id)})")
             print(f"  - original_filename: {new_file.original_filename}")
@@ -177,22 +199,24 @@ class FilesService:
         Obtiene un archivo por su ID
         """
         try:
-            print(f"DEBUG get_file_by_id: file_id recibido = {file_id}, tipo = {type(file_id)}, longitud = {len(file_id)}")
-            
+            print(
+                f"DEBUG get_file_by_id: file_id recibido = {file_id}, tipo = {type(file_id)}, longitud = {len(file_id)}"
+            )
+
             # Normalizar file_id
             normalized_id = self._normalize_uuid(file_id)
             print(f"DEBUG: ID normalizado a: {normalized_id}")
-            
+
             file_uuid = uuid.UUID(normalized_id)
             print(f"DEBUG: UUID válido: {file_uuid}")
-            
+
             # Primero, buscar SIN el filtro is_active para ver si existe
             stm_check = select(self.fileModel).filter(
                 self.fileModel.file_id == file_uuid
             )
             result_check = await db.execute(stm_check)
             file_check = result_check.scalars().first()
-            
+
             if file_check:
                 print("DEBUG: Archivo encontrado en BD")
                 print(f"  - file_id: {file_check.file_id}")
@@ -200,39 +224,40 @@ class FilesService:
                 print(f"  - original_filename: {file_check.original_filename}")
             else:
                 print(f"DEBUG: Archivo NO encontrado en BD con file_id={file_uuid}")
-            
+
             # Ahora buscar CON el filtro is_active
-            stm = (
-                select(self.fileModel)
-                .filter(
-                    self.fileModel.file_id == file_uuid,
-                    self.fileModel.is_active,
-                )
+            stm = select(self.fileModel).filter(
+                self.fileModel.file_id == file_uuid,
+                self.fileModel.is_active,
             )
             result = await db.execute(stm)
             file_record = result.scalars().first()
-            
+
             if file_record:
                 print("DEBUG: Archivo está activo y listo para usar")
                 return file_record
             else:
                 if file_check:
-                    print(f"DEBUG: Archivo existe pero NO está activo (is_active={file_check.is_active})")
+                    print(
+                        f"DEBUG: Archivo existe pero NO está activo (is_active={file_check.is_active})"
+                    )
                 else:
                     print("DEBUG: Archivo no existe en la BD")
                 return None
-                
+
         except ValueError as e:
             print(f"Error al convertir file_id a UUID: {file_id}, error: {str(e)}")
             return None
 
-    async def get_files_by_person(self, person_id: str, db: AsyncSession) -> List[Files]:
+    async def get_files_by_person(
+        self, person_id: str, db: AsyncSession
+    ) -> List[Files]:
         """
         Obtiene todos los archivos de una persona
         """
         try:
             person_uuid = uuid.UUID(person_id)
-            stm =  (
+            stm = (
                 select(self.fileModel)
                 .options(joinedload(self.fileModel.record))
                 .filter(
@@ -246,14 +271,16 @@ class FilesService:
         except ValueError:
             return []
 
-    async def get_files_by_record(self, record_id: str, db: AsyncSession) -> List[Files]:
+    async def get_files_by_record(
+        self, record_id: str, db: AsyncSession
+    ) -> List[Files]:
         """
         Obtiene todos los archivos asociados a un record
         """
         try:
             record_uuid = uuid.UUID(record_id)
             # TEMPORALMENTE SIN JOINEDLOAD
-            stm =  (
+            stm = (
                 select(self.fileModel)
                 .filter(
                     self.fileModel.record_id == record_uuid,
@@ -266,7 +293,9 @@ class FilesService:
         except ValueError:
             return []
 
-    async def download_file(self, file_id: str, db: AsyncSession) -> Tuple[bytes, str, str]:
+    async def download_file(
+        self, file_id: str, db: AsyncSession
+    ) -> Tuple[bytes, str, str]:
         """
         Descarga y desencripta un archivo
 
@@ -277,34 +306,38 @@ class FilesService:
             FileNotFoundError: Si el archivo no existe
             ValueError: Si hay error en la desencriptación
         """
-        print(f"DEBUG download_file: file_id recibido = {file_id}, tipo = {type(file_id)}")
-        
+        print(
+            f"DEBUG download_file: file_id recibido = {file_id}, tipo = {type(file_id)}"
+        )
+
         # Obtener información del archivo
         file_record = await self.get_file_by_id(file_id, db)
-        
+
         if not file_record:
             print(f"DEBUG: get_file_by_id retornó None para file_id {file_id}")
-            
+
             # Hacer una búsqueda manual para verificar qué archivos existen
             normalized_id = self._normalize_uuid(file_id)
             print(f"DEBUG: ID normalizado: {normalized_id}")
-            
+
             stm_all = select(self.fileModel).filter(self.fileModel.is_active)
             result_all = await db.execute(stm_all)
             all_files = result_all.scalars().all()
             print(f"DEBUG: Total de archivos activos en BD: {len(all_files)}")
             for f in all_files:
                 print(f"  - file_id en BD: {f.file_id} (tipo: {type(f.file_id)})")
-            
+
             raise FileNotFoundError("Archivo no encontrado")
-        
-        print(f"DEBUG: Archivo encontrado - file_id: {file_record.file_id}, encrypted_filename: {file_record.encrypted_filename}")
+
+        print(
+            f"DEBUG: Archivo encontrado - file_id: {file_record.file_id}, encrypted_filename: {file_record.encrypted_filename}"
+        )
 
         # Construir ruta del archivo encriptado
         file_path = FileStorageConfig.get_full_file_path(
             str(file_record.file_type), str(file_record.encrypted_filename)
         )
-        
+
         print(f"DEBUG: Buscando archivo en ruta: {file_path}")
 
         # Desencriptar archivo
@@ -330,13 +363,10 @@ class FilesService:
             # Normalizar file_id
             normalized_id = self._normalize_uuid(file_id)
             file_uuid = uuid.UUID(normalized_id)
-            
-            stm = (
-                select(self.fileModel)
-                .filter(
-                    self.fileModel.file_id == file_uuid,
-                    self.fileModel.is_active,
-                )
+
+            stm = select(self.fileModel).filter(
+                self.fileModel.file_id == file_uuid,
+                self.fileModel.is_active,
             )
             result = await db.execute(stm)
             file_record = result.scalars().first()
@@ -365,13 +395,10 @@ class FilesService:
             # Normalizar file_id
             normalized_id = self._normalize_uuid(file_id)
             file_uuid = uuid.UUID(normalized_id)
-            
-            stm = (
-                select(self.fileModel)
-                .filter(
-                    self.fileModel.file_id == file_uuid,
-                    self.fileModel.is_active,
-                )
+
+            stm = select(self.fileModel).filter(
+                self.fileModel.file_id == file_uuid,
+                self.fileModel.is_active,
             )
             result = await db.execute(stm)
             file_record = result.scalars().first()
@@ -399,7 +426,7 @@ class FilesService:
             # Normalizar file_id
             normalized_id = self._normalize_uuid(file_id)
             file_uuid = uuid.UUID(normalized_id)
-            
+
             stm = select(self.fileModel).filter(self.fileModel.file_id == file_uuid)
             result = await db.execute(stm)
             file_record = result.scalars().first()
@@ -430,18 +457,27 @@ class FilesService:
         Obtiene estadísticas de archivos del sistema
         """
         from sqlalchemy import func
+
         stats = {}
 
         # Total de archivos activos
-        stm_active = select(func.count()).select_from(self.fileModel).filter(self.fileModel.is_active)
+        stm_active = (
+            select(func.count())
+            .select_from(self.fileModel)
+            .filter(self.fileModel.is_active)
+        )
         result_active = await db.execute(stm_active)
         stats["total_active_files"] = result_active.scalar() or 0
 
         # Archivos por tipo
         for file_type in ["pdf", "image"]:
-            stm_type = select(func.count()).select_from(self.fileModel).filter(
-                self.fileModel.file_type == file_type,
-                self.fileModel.is_active,
+            stm_type = (
+                select(func.count())
+                .select_from(self.fileModel)
+                .filter(
+                    self.fileModel.file_type == file_type,
+                    self.fileModel.is_active,
+                )
             )
             result_type = await db.execute(stm_type)
             stats[f"total_{file_type}_files"] = result_type.scalar() or 0

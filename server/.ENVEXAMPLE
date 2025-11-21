@@ -1,4 +1,4 @@
-DATABASE_URL="mysql+pymysql://USER:PASS@localhost:3306/sga_db"
+DATABASE_URL="mysql+aiomysql://USER:PASS@localhost:3306/sga_db"
 PASS_ADMIN="admin"
 SECRET_KEY="klajshdlkasjdlk"
 HASH_ALGORITHM = "HS256"
