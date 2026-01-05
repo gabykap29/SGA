@@ -5,7 +5,7 @@ from models.Users import Users
 from models.Recortds_Persons import RecordsPersons
 from sqlalchemy.orm import joinedload, selectinload, with_loader_criteria
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import or_, and_, select, func
+from sqlalchemy import or_, and_, select, func, delete
 from typing import Optional
 from models.Connection_Type import ConnectionType
 from database.db import SessionLocal as async_session
@@ -337,20 +337,25 @@ class PersonsService:
         Desvincula un antecedente de una persona (elimina la relación de la tabla intermedia)
         """
         try:
-            smt = select(
-                RecordsPersons,
-            ).filter(
+            stmt = delete(RecordsPersons).where(
                 RecordsPersons.person_id == uuid.UUID(person_id),
                 RecordsPersons.record_id == uuid.UUID(record_id),
             )
-            result = await db.execute(smt)
-            relationship = result.scalars().first()
-            if not relationship:
-                logger.error("La relación entre la persona y el registro no existe!")
-                return False
-            db.delete(relationship)
+            result = await db.execute(stmt)
             await db.commit()
-            return True
+
+            # Verificar si se eliminó algo
+            if result.rowcount > 0:
+                logger.info(
+                    f"Relación eliminada: Person {person_id} - Record {record_id}"
+                )
+                return True
+            else:
+                logger.warning(
+                    f"No se encontró relación para eliminar: Person {person_id} - Record {record_id}"
+                )
+                return False
+
         except Exception as e:
             logger.error("Error al desvinculación una persona con el antecedente", e)
             await db.rollback()
@@ -395,6 +400,31 @@ class PersonsService:
                 return False
 
             print(f"DEBUG: Persona 2 encontrada: {connection.names}")
+
+            # Verificar si ya existe una conexión entre estas personas (en cualquier dirección)
+            smt_check = select(self.connectionType).filter(
+                or_(
+                    and_(
+                        self.connectionType.person_id == person.person_id,
+                        self.connectionType.connection == connection.person_id,
+                    ),
+                    and_(
+                        self.connectionType.person_id == connection.person_id,
+                        self.connectionType.connection == person.person_id,
+                    ),
+                )
+            )
+            result_check = await db.execute(smt_check)
+            existing_conn = result_check.scalars().first()
+
+            if existing_conn:
+                logger.warning(
+                    f"Ya existe una conexión entre {person.names} y {connection.names}"
+                )
+                print(
+                    f"WARN: Ya existe una conexión entre {person.names} y {connection.names}"
+                )
+                return False
 
             rel = self.connectionType(
                 person_id=person.person_id,

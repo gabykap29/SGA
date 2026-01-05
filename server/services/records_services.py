@@ -155,96 +155,99 @@ class RecordService:
         return True
 
     async def search_records(
-            self, db: AsyncSession, search_term: Optional[str] = None, **filters
-        ):
-            # 1. Definimos la consulta BASE CON LAS RELACIONES CARGADAS
-            stmt = (
-                select(self.recordModel)
-                .options(
-                    # --- Carga de la Cadena de Personas ---
-                    selectinload(self.recordModel.person_relationships) # 1. Lista de relaciones
-                    .joinedload(RecordsPersons.person)                  # 2. La Persona
-                    .joinedload(self.personModel.users),                # 3. El Creador de la Persona (¡Vital!)
+        self, db: AsyncSession, search_term: Optional[str] = None, **filters
+    ):
+        # 1. Definimos la consulta BASE CON LAS RELACIONES CARGADAS
+        stmt = select(self.recordModel).options(
+            # --- Carga de la Cadena de Personas ---
+            selectinload(
+                self.recordModel.person_relationships
+            )  # 1. Lista de relaciones
+            .joinedload(RecordsPersons.person)  # 2. La Persona
+            .joinedload(
+                self.personModel.users
+            ),  # 3. El Creador de la Persona (¡Vital!)
+            # --- Carga de Archivos ---
+            selectinload(self.recordModel.files),
+        )
 
-                    # --- Carga de Archivos ---
-                    selectinload(self.recordModel.files),
+        # 2. Si hay término de búsqueda genérico (usamos OR)
+        if search_term and search_term.strip():
+            term = f"%{search_term.strip().lower()}%"
+            stmt = stmt.filter(
+                or_(
+                    self.recordModel.title.ilike(term),
+                    self.recordModel.content.ilike(term),
+                    self.recordModel.observations.ilike(term),
+                    self.recordModel.type_record.ilike(term),
                 )
             )
 
-            # 2. Si hay término de búsqueda genérico (usamos OR)
-            if search_term and search_term.strip():
-                term = f"%{search_term.strip().lower()}%"
-                stmt = stmt.filter(
-                    or_(
-                        self.recordModel.title.ilike(term),
-                        self.recordModel.content.ilike(term),
-                        self.recordModel.observations.ilike(term),
-                        self.recordModel.type_record.ilike(term),
-                    )
-                )
+        # 3. Filtros específicos (vamos encadenando .filter)
+        if filters.get("title"):
+            stmt = stmt.filter(self.recordModel.title.ilike(f"%{filters['title']}%"))
 
-            # 3. Filtros específicos (vamos encadenando .filter)
-            if filters.get("title"):
-                stmt = stmt.filter(self.recordModel.title.ilike(f"%{filters['title']}%"))
+        if filters.get("content"):
+            stmt = stmt.filter(
+                self.recordModel.content.ilike(f"%{filters['content']}%")
+            )
 
-            if filters.get("content"):
-                stmt = stmt.filter(self.recordModel.content.ilike(f"%{filters['content']}%"))
+        if filters.get("observations"):
+            stmt = stmt.filter(
+                self.recordModel.observations.ilike(f"%{filters['observations']}%")
+            )
 
-            if filters.get("observations"):
-                stmt = stmt.filter(
-                    self.recordModel.observations.ilike(f"%{filters['observations']}%")
-                )
+        if filters.get("type_record"):
+            stmt = stmt.filter(
+                self.recordModel.type_record.ilike(f"%{filters['type_record']}%")
+            )
 
-            if filters.get("type_record"):
-                stmt = stmt.filter(
-                    self.recordModel.type_record.ilike(f"%{filters['type_record']}%")
-                )
-
-            # 4. Filtros de Fechas
-            if filters.get("date_from"):
-                try:
-                    date_from = datetime.fromisoformat(filters["date_from"])
-                    stmt = stmt.filter(self.recordModel.date >= date_from)
-                except ValueError:
-                    pass 
-
-            if filters.get("date_to"):
-                try:
-                    date_to = datetime.fromisoformat(filters["date_to"])
-                    # Agregamos un día para incluir el límite superior completo
-                    stmt = stmt.filter(self.recordModel.date < date_to + timedelta(days=1))
-                except ValueError:
-                    pass
-
-            # 5. Filtro complejo: Nombre de persona relacionada
-            if filters.get("person_name"):
-                person_pattern = f"%{filters['person_name']}%"
-
-                # Creamos una SUBCONSULTA (Select) para obtener los IDs de records
-                subquery_ids = (
-                    select(self.recordModel.record_id)
-                    .join(
-                        RecordsPersons, self.recordModel.record_id == RecordsPersons.record_id
-                    )
-                    .join(Persons, RecordsPersons.person_id == Persons.person_id)
-                    .filter(
-                        or_(
-                            Persons.names.ilike(person_pattern),
-                            Persons.lastnames.ilike(person_pattern),
-                        )
-                    )
-                )
-
-                # Aplicamos el filtro usando la subconsulta
-                stmt = stmt.filter(self.recordModel.record_id.in_(subquery_ids))
-
-            # 6. FINALMENTE Ejecutamos
+        # 4. Filtros de Fechas
+        if filters.get("date_from"):
             try:
-                result = await db.execute(stmt)
-                # .unique() es OBLIGATORIO aquí porque usamos selectinload/joinedload mezclados
-                records = result.scalars().unique().all()
-                return records
+                date_from = datetime.fromisoformat(filters["date_from"])
+                stmt = stmt.filter(self.recordModel.date >= date_from)
+            except ValueError:
+                pass
 
-            except Exception as e:
-                print(f"Error en search_records: {e}") 
-                return []
+        if filters.get("date_to"):
+            try:
+                date_to = datetime.fromisoformat(filters["date_to"])
+                # Agregamos un día para incluir el límite superior completo
+                stmt = stmt.filter(self.recordModel.date < date_to + timedelta(days=1))
+            except ValueError:
+                pass
+
+        # 5. Filtro complejo: Nombre de persona relacionada
+        if filters.get("person_name"):
+            person_pattern = f"%{filters['person_name']}%"
+
+            # Creamos una SUBCONSULTA (Select) para obtener los IDs de records
+            subquery_ids = (
+                select(self.recordModel.record_id)
+                .join(
+                    RecordsPersons,
+                    self.recordModel.record_id == RecordsPersons.record_id,
+                )
+                .join(Persons, RecordsPersons.person_id == Persons.person_id)
+                .filter(
+                    or_(
+                        Persons.names.ilike(person_pattern),
+                        Persons.lastnames.ilike(person_pattern),
+                    )
+                )
+            )
+
+            # Aplicamos el filtro usando la subconsulta
+            stmt = stmt.filter(self.recordModel.record_id.in_(subquery_ids))
+
+        # 6. FINALMENTE Ejecutamos
+        try:
+            result = await db.execute(stmt)
+            # .unique() es OBLIGATORIO aquí porque usamos selectinload/joinedload mezclados
+            records = result.scalars().unique().all()
+            return records
+
+        except Exception as e:
+            print(f"Error en search_records: {e}")
+            return []
