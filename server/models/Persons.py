@@ -21,7 +21,11 @@ class Persons(Base):
     observations = Column(Text, nullable=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
     users = relationship("Users", back_populates="persons")
     record_relationships = relationship(

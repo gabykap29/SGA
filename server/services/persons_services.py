@@ -53,8 +53,8 @@ class PersonsService:
                     self.personModel.files
                 ),  # Cargar archivos (puede ser lista vacía)
             )
-            .order_by(self.personModel.created_at.desc())
-            .limit(10)
+            .order_by(self.personModel.updated_at.desc())
+            .limit(20)
         )
         results = await db.execute(smt)
         persons = results.scalars().unique().all()
@@ -278,6 +278,7 @@ class PersonsService:
             setattr(person, "province", province)
             setattr(person, "country", country)
             setattr(person, "observations", observations)
+            setattr(person, "updated_at", datetime.utcnow())
 
             await db.commit()
             return True
@@ -312,10 +313,10 @@ class PersonsService:
             )
             result = await db.execute(smt_relationship)
             existing_relationship = result.scalars().first()
-
             if existing_relationship:
                 logger.info("La relación entre la persona y el registro ya existe!")
                 return False
+            person.updated_at = datetime.utcnow()
 
             # Crear la relación en la tabla intermedia
             relationship = RecordsPersons(
@@ -323,7 +324,7 @@ class PersonsService:
                 record_id=record.record_id,
                 type_relationship=type_relationship,
             )
-
+            db.add(person)
             db.add(relationship)
             await db.commit()
 
@@ -431,11 +432,13 @@ class PersonsService:
                 connection=connection.person_id,
                 connection_type=connection_type,
             )
-
+            person.updated_at = datetime.utcnow()
+            connection.updated_at = datetime.utcnow()
             print(
                 f"DEBUG: Creando vínculo: {rel.person_id} <-> {rel.connection} (tipo: {rel.connection_type})"
             )
-
+            db.add(person)
+            db.add(connection)
             db.add(rel)
             await db.commit()
 

@@ -22,6 +22,7 @@ class RecordSchema(BaseModel):
     record_id: UUID
     title: str
     date: date
+    type_record: str
     content: str
     observations: Optional[str] = None
     create_at: datetime
