@@ -339,7 +339,7 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
                       className="text-white px-3 py-2 shadow-sm"
                       style={{ fontSize: '0.8rem', borderRadius: '8px' }}
                     >
-                      {record.title || 'Sin título'} - {record.type_record || 'N/A'} ({record.type_relationship || 'N/A'})
+                      {record.title || 'Sin título'}  - {record.type_relationship}
                     </Badge>
                     {!isView && (
                       <Button
@@ -361,6 +361,15 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
                 </Card.Header>
 
                 <Card.Body className="pt-2">
+                  <div className="d-flex justify-content-between align-items-start">
+                    <Badge
+                      bg='danger'
+                      className='text-white px-3 py-2 shadow-sm'
+                    >
+                      {record.type_record || 'N/A'}
+                    </Badge>
+                  </div>
+
                   <div className="mb-3">
                     <h6 className="fw-bold mb-1 text-dark">
                       {record.record_number}
@@ -426,59 +435,7 @@ const RecordsSection = ({ personId, linkedRecords = [], onUpdate }) => {
         </Row>
       )}
 
-      {/* Resumen de antecedentes */}
-      {linkedRecords.length > 0 && (
-        <div className="mt-4">
-          <Card className="border-0 shadow-sm" style={{
-            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)'
-          }}>
-            <Card.Body className="p-4">
-              <div className="row text-center">
-                <div className="col-md-3">
-                  <div className="p-3 rounded shadow-sm" style={{
-                    background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)'
-                  }}>
-                    <div className="fw-bold text-primary fs-3">
-                      {linkedRecords.length}
-                    </div>
-                    <small className="text-dark fw-semibold">Total vinculados</small>
-                  </div>
-                </div>
-                <div className="col-md-3">
-                  <div className="p-3 rounded shadow-sm" style={{
-                    background: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)'
-                  }}>
-                    <div className="fw-bold text-danger fs-3">
-                      {linkedRecords.filter(r => r.record_type === 'criminal').length}
-                    </div>
-                    <small className="text-dark fw-semibold">Criminales</small>
-                  </div>
-                </div>
-                <div className="col-md-3">
-                  <div className="p-3 rounded shadow-sm" style={{
-                    background: 'linear-gradient(135deg, #fff3e0 0%, #ffcc82 100%)'
-                  }}>
-                    <div className="fw-bold text-warning fs-3">
-                      {linkedRecords.filter(r => r.record_type === 'administrativo').length}
-                    </div>
-                    <small className="text-dark fw-semibold">Administrativos</small>
-                  </div>
-                </div>
-                <div className="col-md-3">
-                  <div className="p-3 rounded shadow-sm" style={{
-                    background: 'linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)'
-                  }}>
-                    <div className="fw-bold text-success fs-3">
-                      {linkedRecords.filter(r => r.status === 'active').length}
-                    </div>
-                    <small className="text-dark fw-semibold">Activos</small>
-                  </div>
-                </div>
-              </div>
-            </Card.Body>
-          </Card>
-        </div>
-      )}
+
 
       {/* Modal para vincular antecedente */}
       <Modal show={showLinkModal} onHide={() => setShowLinkModal(false)} size="xl">

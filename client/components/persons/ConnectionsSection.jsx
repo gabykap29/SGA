@@ -314,14 +314,30 @@ const ConnectionsSection = ({ personId, refreshKey, onRefresh }) => {
               value={relationshipType}
               onChange={(e) => setRelationshipType(e.target.value)}
             >
-              <optgroup label="Relaciones Personales">
-                <option value="HERMANO/A">HERMANO/A</option>
+              <optgroup label="Relaciones Familiares">
                 <option value="PADRE/MADRE">Padre/Madre</option>
-                <option value="PRIMO/A">Primo/a</option>
-                <option value="FAMILIAR">Familiar</option>
-                <option value="AMIGO">Amigo</option>
-                <option value="COLEGA">Colega</option>
-                <option value="SOCIO">Socio</option>
+                <option value="HERMANO">Hermano</option>
+                <option value="HERMANA">Hermana</option>
+                <option value="HIJO">Hijo</option>
+                <option value="HIJA">Hija</option>
+                <option value="ABUELO">Abuelo</option>
+                <option value="ABUELA">Abuela</option>
+                <option value="NIETO">Nieto</option>
+                <option value="NIETA">Nieta</option>
+                <option value="TIO">Tío</option>
+                <option value="TIA">Tía</option>
+                <option value="SOBRINO">Sobrino</option>
+                <option value="SOBRINA">Sobrina</option>
+                <option value="PRIMO">Primo</option>
+                <option value="PRIMA">Prima</option>
+                <option value="ESPOSO">Esposo</option>
+                <option value="ESPOSA">Esposa</option>
+                <option value="SUEGRO">Suegro</option>
+                <option value="SUEGRA">Suegra</option>
+                <option value="CUÑADO">Cuñado</option>
+                <option value="CUÑADA">Cuñada</option>
+                <option value="PADRINO">Padrino</option>
+                <option value="MADRINA">Madrina</option>
               </optgroup>
               <optgroup label="Relaciones Criminales">
                 <option value="GRUPO_CRIMINAL">Grupo Criminal</option>
@@ -331,6 +347,15 @@ const ConnectionsSection = ({ personId, refreshKey, onRefresh }) => {
                 <option value="LIDER_PANDILLA">Líder de Pandilla</option>
                 <option value="VICTIMA">Víctima</option>
                 <option value="TESTIGO">Testigo</option>
+              </optgroup>
+              <optgroup label="Relaciones Personales">
+                <option value="AMIGO">Amigo</option>
+                <option value="AMIGA">Amiga</option>
+                <option value="CONOCIDO">Conocido</option>
+                <option value="CONOCIDA">Conocida</option>
+                <option value="COLEGA">Colega</option>
+                <option value="COMPAÑERO">Compañero</option>
+                <option value="COMPAÑERA">Compañera</option>
               </optgroup>
               <option value="OTRO">Otro</option>
             </Form.Select>

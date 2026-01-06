@@ -13,10 +13,10 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
     const checkIsMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkIsMobile();
     window.addEventListener('resize', checkIsMobile);
-    
+
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
@@ -134,7 +134,7 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
                 {!isMobile && <th className="fw-bold py-3 px-3 text-dark">Provincia</th>}
                 {!isMobile && <th className="fw-bold py-3 px-3 text-dark">
                   <FiCalendar className="me-2" size={16} />
-                  Fecha
+                  Ultima modificación
                 </th>}
                 {!isMobile && <th className="fw-bold py-3 px-3 text-dark">País</th>}
                 <th className="fw-bold py-3 px-3 text-center text-dark">Acciones</th>
@@ -145,7 +145,7 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
                 <LoadingSkeleton isMobile={isMobile} />
               ) : persons.length > 0 ? (
                 persons.map((person, index) => (
-                  <tr 
+                  <tr
                     key={person.id || index}
                     style={{
                       transition: 'all 0.2s ease',
@@ -164,12 +164,12 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
                   >
                     <td className="py-4 px-3">
                       <div className="d-flex align-items-center">
-                        <div 
+                        <div
                           className="rounded-circle text-white d-flex align-items-center justify-content-center"
-                          style={{ 
-                            width: isMobile ? '40px' : '48px', 
-                            height: isMobile ? '40px' : '48px', 
-                            fontSize: isMobile ? '14px' : '16px', 
+                          style={{
+                            width: isMobile ? '40px' : '48px',
+                            height: isMobile ? '40px' : '48px',
+                            fontSize: isMobile ? '14px' : '16px',
                             fontWeight: 'bold',
                             backgroundColor: '#1b3e61ff',
                             border: '1px solid #dee2e6',
@@ -197,7 +197,7 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
                             {person.identification || 'No especificado'}
                           </span>
                           <br />
-                          <small className="text-muted" style={{ 
+                          <small className="text-muted" style={{
                             padding: '2px 8px',
                             backgroundColor: '#f5f5f5',
                             borderRadius: '4px',
@@ -225,8 +225,8 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
                     )}
                     {!isMobile && (
                       <td className="py-4 px-3">
-                        <span style={{ 
-                          color: 'white', 
+                        <span style={{
+                          color: 'white',
                           fontWeight: '500',
                           background: '#1b3e61ff',
                           padding: '6px 12px',
@@ -234,7 +234,7 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
                           fontSize: '13px',
                           display: 'inline-block'
                         }}>
-                          {formatDate(person.created_at)}
+                          {formatDate(person.updated_at)}
                         </span>
                       </td>
                     )}
@@ -253,7 +253,7 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
                     )}
                     <td className="py-4 px-3" style={{ textAlign: 'center' }}>
                       <div className="d-flex gap-2 justify-content-center" style={{ flexWrap: 'wrap' }}>
-                        <Button 
+                        <Button
                           size={isMobile ? 'sm' : 'sm'}
                           variant="dark"
                           title="Ver detalles"
@@ -262,7 +262,7 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
                         >
                           <FiEye size={isMobile ? 12 : 14} />
                         </Button>
-                        <Button 
+                        <Button
                           size={isMobile ? 'sm' : 'sm'}
                           variant="success"
                           title="Editar"
@@ -284,7 +284,7 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
                       borderRadius: '4px',
                       margin: '20px'
                     }}>
-                      <div 
+                      <div
                         className="d-flex align-items-center justify-content-center mb-3"
                         style={{
                           backgroundColor: '#212529',
@@ -313,7 +313,7 @@ const RecentPersonsTable = ({ persons = [], loading = false }) => {
       </Card.Body>
       {persons.length > 0 && (
         <Card.Footer className="border-0 p-3 text-center">
-          <Button 
+          <Button
             variant="dark"
             onClick={() => router.push('/dashboard/personas/buscar')}
           >

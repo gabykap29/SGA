@@ -2,45 +2,66 @@ services:
   frontend:
     build:
       context: ./client
-    container_name: sga-frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=/api # Pass this as a build argument
     restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=/api # Use relative path for API requests via nginx
+    depends_on:
+      - backend
 
   backend:
     build:
       context: ./server
-    container_name: sga-backend
+      dockerfile: Dockerfile
     restart: unless-stopped
     volumes:
-      - ./server/storage:/app/storage
-    environment:
-      - DATABASE_URL=mysql+pymysql://user:password@db/sga_db
+      - ./storage:/app/storage # Mount the root storage directory for persistence
+    env_file:
+      - ./.env # Load environment variables from .env file
     depends_on:
-      - db
+      db:
+        condition: service_healthy # Wait for db to be healthy before starting
 
-  proxy:
+  nginx:
     build:
       context: ./nginx
-    container_name: sga-proxy
+      dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - frontend
       - backend
 
   db:
-    image: mariadb:10.7
-    container_name: sga-db
+    image: mariadb:10.11
     restart: unless-stopped
+    env_file:
+      - ./.env # Load environment variables from .env file
     environment:
-      MARIADB_ROOT_PASSWORD: rootpassword
-      MARIADB_DATABASE: sga_db
-      MARIADB_USER: user
-      MARIADB_PASSWORD: password
+      # Map variables from .env to the ones expected by the MariaDB image
+      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MARIADB_DATABASE}
+      MYSQL_USER: ${MARIADB_USER}
+      MYSQL_PASSWORD: ${MARIADB_PASSWORD}
     volumes:
       - mariadb_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
+      - ./server/database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "${MARIADB_USER}", "-p${MARIADB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   mariadb_data:
+    driver: local
+
+networks:
+  default:
+    name: sga-network

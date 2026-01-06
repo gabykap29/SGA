@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { Card, Row, Col, Button, Form, Table, Badge, Alert, InputGroup } from 'react-bootstrap';
-import { 
-  FiSearch, 
-  FiPlus, 
-  FiLink, 
-  FiXCircle, 
+import {
+  FiSearch,
+  FiPlus,
+  FiLink,
+  FiXCircle,
   FiEye,
   FiUsers,
   FiUser,
@@ -40,17 +40,17 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
 
     setIsSearching(true);
     setSearchPerformed(true);
-    
+
     try {
       // Usar el endpoint específico de búsqueda por DNI
       const result = await personService.searchPersonByDniForLinker(searchQuery);
       if (result.success) {
         // El endpoint retorna un array, obtener el primer elemento
         const personArray = result.data;
-        
+
         if (Array.isArray(personArray) && personArray.length > 0) {
           const person = personArray[0];
-          
+
           // Filtrar la propia persona
           if (person.person_id !== personId) {
             setSearchResults([person]);
@@ -116,7 +116,7 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
       'CEDULA': 'Cédula',
       'identification_type': 'Identificación'
     };
-    
+
     const type = identificationTypes[person.identification_type] || person.identification_type || 'ID';
     return `${type}: ${person.identification}`;
   };
@@ -131,8 +131,8 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
               Busque por número de DNI/Identificación para vincular con otras personas registradas en el sistema
             </p>
           </div>
-          <Button 
-            variant="outline-primary" 
+          <Button
+            variant="outline-primary"
             size="sm"
             onClick={() => handleSearch()}
             disabled={isSearching}
@@ -153,9 +153,9 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                <Button 
-                  variant="dark" 
-                  type="submit" 
+                <Button
+                  variant="dark"
+                  type="submit"
                   disabled={isSearching}
                 >
                   {isSearching ? 'Buscando...' : 'Buscar'}
@@ -169,8 +169,7 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
               onChange={(e) => setRelationshipType(e.target.value)}
             >
               <optgroup label="Relaciones Familiares">
-                <option value="PADRE">Padre</option>
-                <option value="MADRE">Madre</option>
+                <option value="PADRE/MADRE">Padre/Madre</option>
                 <option value="HERMANO">Hermano</option>
                 <option value="HERMANA">Hermana</option>
                 <option value="HIJO">Hijo</option>
@@ -236,12 +235,12 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
           </div>
         ) : !searchPerformed ? (
           <Alert variant="info" className="mb-0">
-            <FiInfo className="me-2" /> 
+            <FiInfo className="me-2" />
             Ingrese el número de DNI/Identificación en el campo de búsqueda para encontrar personas y vincularlas.
           </Alert>
         ) : filteredPersons.length === 0 ? (
           <Alert variant="warning" className="mb-0">
-            <FiInfo className="me-2" /> 
+            <FiInfo className="me-2" />
             No se encontraron personas que coincidan con la búsqueda "{searchTerm}".
           </Alert>
         ) : (
@@ -250,7 +249,7 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
               <thead className="table-light">
                 <tr>
                   <th width="50">
-                    <Form.Check type="checkbox" onChange={() => {}} />
+                    <Form.Check type="checkbox" onChange={() => { }} />
                   </th>
                   <th>Nombre</th>
                   <th>Identificación</th>
@@ -262,10 +261,10 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
                 {filteredPersons.map(person => {
                   const isSelected = selectedPersons.some(p => p.person_id === person.person_id);
                   const isLinked = linkedPersons.some(p => p.person_id === person.person_id);
-                  
+
                   return (
-                    <tr 
-                      key={person.person_id} 
+                    <tr
+                      key={person.person_id}
                       className={isSelected ? 'table-primary' : isLinked ? 'table-light' : ''}
                     >
                       <td>
@@ -278,7 +277,7 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
                       </td>
                       <td>
                         <div className="d-flex align-items-center">
-                          <div 
+                          <div
                             className="rounded-circle bg-light d-flex align-items-center justify-content-center me-2"
                             style={{ width: '40px', height: '40px' }}
                           >
@@ -359,22 +358,22 @@ const PersonLinker = ({ personId, linkedPersons = [], onLink, onUnlink, loading 
                       </td>
                       <td>{formatIdentification(person)}</td>
                       <td>
-                        <Badge 
+                        <Badge
                           bg={
                             // Relaciones personales
-                            person.relationship === 'FAMILIAR' ? 'info' : 
-                            person.relationship === 'AMIGO' ? 'success' : 
-                            person.relationship === 'CONOCIDO' ? 'warning' :
-                            person.relationship === 'COLEGA' ? 'primary' :
-                            // Relaciones criminales 
-                            person.relationship === 'GRUPO_CRIMINAL' ? 'danger' :
-                            person.relationship === 'JEFE_BANDA' ? 'danger' :
-                            person.relationship === 'MIEMBRO_ORGANIZACION' ? 'danger' :
-                            person.relationship === 'COMPLICE' ? 'dark' :
-                            person.relationship === 'LIDER_PANDILLA' ? 'danger' :
-                            person.relationship === 'VICTIMA' ? 'warning' :
-                            person.relationship === 'TESTIGO' ? 'info' :
-                            'secondary'
+                            person.relationship === 'FAMILIAR' ? 'info' :
+                              person.relationship === 'AMIGO' ? 'success' :
+                                person.relationship === 'CONOCIDO' ? 'warning' :
+                                  person.relationship === 'COLEGA' ? 'primary' :
+                                    // Relaciones criminales 
+                                    person.relationship === 'GRUPO_CRIMINAL' ? 'danger' :
+                                      person.relationship === 'JEFE_BANDA' ? 'danger' :
+                                        person.relationship === 'MIEMBRO_ORGANIZACION' ? 'danger' :
+                                          person.relationship === 'COMPLICE' ? 'dark' :
+                                            person.relationship === 'LIDER_PANDILLA' ? 'danger' :
+                                              person.relationship === 'VICTIMA' ? 'warning' :
+                                                person.relationship === 'TESTIGO' ? 'info' :
+                                                  'secondary'
                           }
                           pill
                         >

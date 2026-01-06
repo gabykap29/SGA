@@ -7,7 +7,7 @@ echo.
 
 :: 1. Iniciar Backend (Servidor Python)
 echo [1/2] Iniciando Backend...
-start "SGA Backend" cmd /k "cd server && .venv\Scripts\activate && python main.py"
+start "Servidor Python" cmd /k "cd server && env\Scripts\activate.bat && uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4"
 
 :: Esperar unos segundos para que el backend arranque
 timeout /t 5 /nobreak >nul

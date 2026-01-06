@@ -37,10 +37,10 @@ export default function Dashboard() {
         const userData = await authService.getCurrentUser();
         if (userData) {
           // Verificar si es rol VIEW
-          const isView = 
+          const isView =
             (userData.role_name && userData.role_name.toUpperCase() === 'VIEW') ||
             (userData.role && userData.role.role_name && userData.role.role_name.toUpperCase() === 'VIEW');
-          
+
           if (isView) {
             // Redirigir a la vista de visualizador
             router.push('/dashboard/view');
@@ -50,18 +50,18 @@ export default function Dashboard() {
       } catch (error) {
         console.error('Error al verificar acceso:', error);
       }
-      
+
       // Cargar datos del dashboard para usuarios autorizados
       loadDashboardData();
     };
 
     checkAndVerifyAccess();
-    
+
     // Actualizar los datos cada 30 segundos para mantenerlos frescos
     const intervalId = setInterval(() => {
       loadDashboardData();
     }, 30000);
-    
+
     // Limpiar el intervalo cuando el componente se desmonte
     return () => clearInterval(intervalId);
   }, [router]);
@@ -69,17 +69,17 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      
+
       // Obtener estadísticas del servidor utilizando el nuevo endpoint
       const statsResult = await dashboardService.getStats();
-      
+
       // Obtener personas recientes para la tabla
-      const personsResult = await dashboardService.getRecentPersons(5);
-      
+      const personsResult = await dashboardService.getRecentPersons(10);
+
       if (statsResult.success && personsResult.success) {
         // Verificar la estructura de datos recibida
         if (statsResult.data && statsResult.data.stats) {
-          
+
           // Combinar datos de estadísticas y personas recientes
           setDashboardData({
             stats: {
@@ -96,11 +96,11 @@ export default function Dashboard() {
         }
       } else {
         console.warn('Error al cargar datos del dashboard, utilizando fallback...');
-        
+
         // Fallback: intentar cargar personas directamente con personService
         try {
           const fallbackPersonsResult = await personService.getPersons();
-          
+
           if (fallbackPersonsResult.success) {
             const persons = fallbackPersonsResult.data;
             const sortedPersons = Array.isArray(persons) ? persons.sort((a, b) => {
@@ -108,7 +108,7 @@ export default function Dashboard() {
               const dateB = new Date(b.created_at || b.updated_at || 0);
               return dateB - dateA;
             }) : [];
-            
+
             setDashboardData({
               stats: {
                 totalPersonas: persons.length || 0,
@@ -124,7 +124,7 @@ export default function Dashboard() {
         } catch (fallbackError) {
           console.error('Fallback también falló:', fallbackError);
           toast.error('Error al cargar datos del dashboard');
-          
+
           // Datos completamente de fallback
           setDashboardData({
             stats: {

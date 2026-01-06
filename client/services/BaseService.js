@@ -5,7 +5,7 @@
 
 class BaseService {
   constructor(baseURL = null) {
-    this.baseURL = baseURL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    this.baseURL = baseURL || process.env.NEXT_PUBLIC_API_URL;
   }
 
   /**

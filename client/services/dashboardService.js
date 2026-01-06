@@ -30,7 +30,7 @@ class DashboardService {
       }
 
       const data = await response.json();
-      
+
       return {
         success: true,
         data: data
@@ -67,20 +67,13 @@ class DashboardService {
       }
 
       const data = await response.json();
-      
+
       // Procesar los datos: ordenar por fecha de creación y limitar
       let processedData = Array.isArray(data) ? data : [];
-      
-      // Ordenar por fecha de creación (más recientes primero)
-      processedData.sort((a, b) => {
-        const dateA = new Date(a.created_at || a.updated_at || 0);
-        const dateB = new Date(b.created_at || b.updated_at || 0);
-        return dateB - dateA;
-      });
-      
+
       // Limitar la cantidad
       processedData = processedData.slice(0, limit);
-      
+
       return {
         success: true,
         data: processedData
@@ -100,15 +93,15 @@ class DashboardService {
    */
   async getDashboardData() {
     console.warn('getDashboardData() está obsoleto. Utilice getStats() para obtener estadísticas.');
-    
+
     try {
       // Obtenemos estadísticas reales del servidor
       const statsResult = await this.getStats();
       const personsResult = await this.getRecentPersons(5);
-      
+
       if (statsResult.success && personsResult.success && statsResult.data && statsResult.data.stats) {
         const stats = statsResult.data.stats;
-        
+
         return {
           success: true,
           data: {
@@ -122,7 +115,7 @@ class DashboardService {
           }
         };
       }
-      
+
       // Fallback por si falla
       return {
         success: false,

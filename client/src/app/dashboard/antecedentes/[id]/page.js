@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Spinner, Alert, Badge, Tab, Nav } from 'react-bootstrap';
-import { FiFileText, FiArrowLeft, FiEdit, FiCalendar, FiUser, FiLink2, FiUserPlus } from 'react-icons/fi';
+import { FiFileText, FiArrowLeft, FiEdit, FiCalendar, FiUser, FiLink2, FiUserPlus, FiTrash2 } from 'react-icons/fi';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import DashboardLayout from '../../../../../components/layout/DashboardLayout';
@@ -14,7 +14,7 @@ export default function RecordDetail() {
   const params = useParams();
   const router = useRouter();
   const recordId = params.id;
-  
+
   const [loading, setLoading] = useState(true);
   const [record, setRecord] = useState(null);
   const [activeTab, setActiveTab] = useState('details');
@@ -32,7 +32,7 @@ export default function RecordDetail() {
     try {
       setLoading(true);
       const result = await recordService.getRecordById(recordId);
-      
+
       if (result.success) {
         setRecord(result.data);
       } else {
@@ -52,22 +52,22 @@ export default function RecordDetail() {
   const handleEdit = () => {
     router.push(`/dashboard/antecedentes/${recordId}/editar`);
   };
-  
+
   const handleCreateAndLinkPerson = async (personData) => {
     try {
       setLinkLoading(true);
-      
+
       // Extraer el ID de la persona de la respuesta con más opciones
       const personId = personData.person_id || personData.id || personData.personId;
-      
+
       if (!personId) {
         toast.error('No se pudo obtener el ID de la persona creada');
         return;
       }
-      
+
       // La persona ya fue creada en el modal, solo necesitamos vincularla
       const result = await recordService.linkPersonToRecord(personId, recordId, personData.type_relationship || 'Denunciado');
-      
+
       if (result.success) {
         toast.success('Persona creada y vinculada exitosamente');
         // Recargar los datos para mostrar la nueva persona vinculada
@@ -82,6 +82,29 @@ export default function RecordDetail() {
       toast.error('Ocurrió un error inesperado');
     } finally {
       setLinkLoading(false);
+    }
+  };
+
+  const handleUnlinkPerson = async (personId, personName) => {
+    if (window.confirm(`¿Está seguro de que desea desvincular a "${personName}" de este antecedente?`)) {
+      try {
+        // No activamos loading global para evitar parpadeo completo, o sí si preferimos feedback visual fuerte
+        // Usaremos loading global ya que recargaremos datos después
+        setLoading(true);
+        const result = await recordService.unlinkPersonFromRecord(personId, recordId);
+
+        if (result.success) {
+          toast.success('Persona desvinculada exitosamente');
+          await loadRecordData(); // Recargar datos
+        } else {
+          toast.error(result.error || 'Error al desvincular la persona');
+          setLoading(false); // Solo desactivar si hubo error y no recargamos
+        }
+      } catch (error) {
+        console.error('Error unlinking person:', error);
+        toast.error('Ocurrió un error inesperado');
+        setLoading(false);
+      }
     }
   };
 
@@ -135,8 +158,8 @@ export default function RecordDetail() {
         <div className="mb-4 p-4 bg-white rounded shadow-sm" style={{ border: '1px solid #d4cfcfff' }}>
           <div className="d-flex justify-content-between align-items-center">
             <div className="d-flex align-items-center">
-              <Button 
-                variant="link" 
+              <Button
+                variant="link"
                 onClick={() => router.push('/dashboard/antecedentes')}
                 className="p-0 me-3 text-decoration-none text-muted"
               >
@@ -150,7 +173,7 @@ export default function RecordDetail() {
                 </p>
               </div>
             </div>
-            <Button 
+            <Button
               variant="dark"
               onClick={handleEdit}
               className="d-flex align-items-center"
@@ -215,16 +238,16 @@ export default function RecordDetail() {
                           </div>
                           <h5 className="text-dark mb-2">No hay personas vinculadas</h5>
                           <p className="text-muted mb-4">Este antecedente no tiene personas asociadas actualmente.</p>
-                          <Button 
-                            variant="dark" 
+                          <Button
+                            variant="dark"
                             onClick={() => setShowCreatePersonModal(true)}
                             className="me-2"
                           >
                             <FiUserPlus className="me-1" />
                             Crear y Vincular Persona
                           </Button>
-                          <Button 
-                            variant="outline-dark" 
+                          <Button
+                            variant="outline-dark"
                             onClick={() => setShowLinkPersonModal(true)}
                           >
                             <FiLink2 className="me-1" />
@@ -259,14 +282,26 @@ export default function RecordDetail() {
                                     </Badge>
                                   </td>
                                   <td className="align-middle">
-                                    <Button
-                                      variant="dark"
-                                      size="sm"
-                                      onClick={() => router.push(`/dashboard/personas/${relationship.person_id}`)}
-                                    >
-                                      <FiUser size={14} className="me-1" />
-                                      Ver
-                                    </Button>
+                                    <div className="d-flex gap-2">
+                                      <Button
+                                        variant="dark"
+                                        size="sm"
+                                        onClick={() => router.push(`/dashboard/personas/${relationship.person_id}`)}
+                                        title="Ver perfil"
+                                      >
+                                        <FiUser size={14} className="me-1" />
+                                        Ver
+                                      </Button>
+                                      <Button
+                                        variant="danger"
+                                        size="sm"
+                                        onClick={() => handleUnlinkPerson(relationship.person_id, `${relationship.person?.names} ${relationship.person?.lastnames}`)}
+                                        title="Desvincular del antecedente"
+                                      >
+                                        <FiTrash2 size={14} className="me-1" />
+                                        Desvincular
+                                      </Button>
+                                    </div>
                                   </td>
                                 </tr>
                               ))}
@@ -280,7 +315,7 @@ export default function RecordDetail() {
               </Tab.Container>
             </Card>
           </Col>
-          
+
           <Col lg={4}>
             {/* Tarjeta de información */}
             <Card className="border-1 shadow-sm mb-4">
@@ -289,28 +324,28 @@ export default function RecordDetail() {
               </Card.Header>
               <Card.Body>
                 <div className="mb-3">
-                          <div className="small text-muted mb-1">Identificador</div>
-                          <div className="fw-medium text-dark">{record.record_id}</div>
-                        </div>
-                        <div className="mb-3">
-                          <div className="small text-muted mb-1">Fecha de Registro</div>
-                          <div className="fw-medium text-dark">
-                            {formatDate(record.create_at || record.record_date)}
-                          </div>
-                        </div>
-                        <div className="mb-3">
-                          <div className="small text-muted mb-1">Última Actualización</div>
-                          <div className="fw-medium text-dark">
-                            {formatDate(record.updated_at || record.record_date)}
-                          </div>
-                        </div>
+                  <div className="small text-muted mb-1">Identificador</div>
+                  <div className="fw-medium text-dark">{record.record_id}</div>
+                </div>
+                <div className="mb-3">
+                  <div className="small text-muted mb-1">Fecha de Registro</div>
+                  <div className="fw-medium text-dark">
+                    {formatDate(record.create_at || record.record_date)}
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <div className="small text-muted mb-1">Última Actualización</div>
+                  <div className="fw-medium text-dark">
+                    {formatDate(record.updated_at || record.record_date)}
+                  </div>
+                </div>
                 <div className="mb-3">
                   <div className="small text-muted mb-1">Estado</div>
                   <Badge bg="success" className="py-1 px-2">Activo</Badge>
                 </div>
               </Card.Body>
             </Card>
-            
+
             {/* Tarjeta de acciones */}
             <Card className="border-1 shadow-sm">
               <Card.Header className="bg-light border-1 py-3">
@@ -322,7 +357,7 @@ export default function RecordDetail() {
                     <FiEdit className="me-2" />
                     Editar Antecedente
                   </Button>
-                  <Button 
+                  <Button
                     variant="outline-dark"
                     onClick={() => setShowCreatePersonModal(true)}
                     className="mb-2"
@@ -330,7 +365,7 @@ export default function RecordDetail() {
                     <FiUserPlus className="me-2" />
                     Crear y Vincular Persona
                   </Button>
-                  <Button 
+                  <Button
                     variant="outline-dark"
                     onClick={() => setShowLinkPersonModal(true)}
                   >
@@ -343,14 +378,14 @@ export default function RecordDetail() {
           </Col>
         </Row>
         {/* Modal para crear persona */}
-        <CreatePersonModal 
+        <CreatePersonModal
           show={showCreatePersonModal}
           onHide={() => setShowCreatePersonModal(false)}
           onPersonCreated={handleCreateAndLinkPerson}
         />
-        
+
         {/* Modal para vincular persona existente */}
-        <LinkPersonModal 
+        <LinkPersonModal
           show={showLinkPersonModal}
           onHide={() => setShowLinkPersonModal(false)}
           recordId={recordId}

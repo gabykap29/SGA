@@ -12,9 +12,20 @@ export default function RecordsList() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const ANTECEDENT_TYPES = [
+    { value: 'ROBO', label: 'Robo' },
+    { value: 'ROBO_DE_MOTO', label: 'Robo de Moto' },
+    { value: 'ROBO_DE_AUTO', label: 'Robo de Auto' },
+    { value: 'HURTO', label: 'Hurto' },
+    { value: 'VIOLENCIA_DE_GENERO', label: 'Violencia de Género' }
+  ];
+
   const [filters, setFilters] = useState({
     dateFrom: '',
-    dateTo: ''
+    dateTo: '',
+    typeRecord: '',
+    customType: ''
   });
   const [showFilters, setShowFilters] = useState(false);
 
@@ -26,7 +37,7 @@ export default function RecordsList() {
     try {
       setLoading(true);
       const result = await recordService.getRecords();
-      
+
       if (result.success) {
         setRecords(Array.isArray(result.data) ? result.data : []);
       } else {
@@ -40,13 +51,34 @@ export default function RecordsList() {
     }
   };
 
+
+
+  const getEffectiveFilters = () => {
+    const activeFilters = { ...filters };
+
+    // Si se seleccionó "Otros" y hay un tipo personalizado, usar ese
+    if (filters.typeRecord === 'OTROS' && filters.customType) {
+      activeFilters.type_record = filters.customType;
+    } else if (filters.typeRecord && filters.typeRecord !== 'OTROS') {
+      // Si es un tipo predefinido
+      activeFilters.type_record = filters.typeRecord;
+    }
+
+    // Mapear dateFrom/dateTo a lo que espera el servicio (date_from, date_to)
+    if (filters.dateFrom) activeFilters.date_from = filters.dateFrom;
+    if (filters.dateTo) activeFilters.date_to = filters.dateTo;
+
+    return activeFilters;
+  };
+
   const handleSearch = async (e) => {
-    e.preventDefault();
-    
+    if (e) e.preventDefault();
+
     try {
       setLoading(true);
-      const result = await recordService.searchRecords(searchTerm, filters);
-      
+      const effectiveFilters = getEffectiveFilters();
+      const result = await recordService.searchRecords(searchTerm, effectiveFilters);
+
       if (result.success) {
         setRecords(Array.isArray(result.data) ? result.data : []);
       } else {
@@ -72,8 +104,13 @@ export default function RecordsList() {
     setSearchTerm('');
     setFilters({
       dateFrom: '',
-      dateTo: ''
+      dateTo: '',
+      typeRecord: '',
+      customType: ''
     });
+    // Necesitamos recargar, pero como el estado es asíncrono, mejor llamar a loadRecords directamente
+    // o asegurar que loadRecords no use el estado antiguo inmediatamente si dependiera de él.
+    // En este caso loadRecords llama a getRecords() sin filtros, así que está bien.
     loadRecords();
   };
 
@@ -117,8 +154,8 @@ export default function RecordsList() {
               <h2 className="display-8 fw-bold text-dark mb-0">Antecedentes</h2>
               <p className="lead text-muted mb-0"> ➜ Gestión de antecedentes del sistema</p>
             </div>
-            <Button 
-              variant="dark" 
+            <Button
+              variant="dark"
               onClick={handleCreateRecord}
               className="d-flex align-items-center"
             >
@@ -150,29 +187,29 @@ export default function RecordsList() {
                     </InputGroup>
                   </Form.Group>
                 </Col>
-                
+
                 <Col md={6} lg={5} className="mt-3 mt-md-0">
                   <div className="d-flex align-items-center">
-                    <Button 
-                      variant="outline-secondary" 
+                    <Button
+                      variant="outline-secondary"
                       className="me-2"
                       onClick={() => setShowFilters(!showFilters)}
                     >
                       <FiFilter size={16} className="me-1" />
                       Filtros
                     </Button>
-                    
-                    <Button 
-                      variant="outline-secondary" 
+
+                    <Button
+                      variant="outline-secondary"
                       className="me-2"
                       onClick={resetFilters}
                       disabled={!searchTerm && !filters.dateFrom && !filters.dateTo}
                     >
                       Limpiar
                     </Button>
-                    
-                    <Button 
-                      variant="dark" 
+
+                    <Button
+                      variant="dark"
                       type="submit"
                     >
                       <FiSearch size={16} className="me-2" />
@@ -181,7 +218,7 @@ export default function RecordsList() {
                   </div>
                 </Col>
               </Row>
-              
+
               {showFilters && (
                 <Row className="mt-3">
                   <Col md={6} lg={3}>
@@ -206,6 +243,37 @@ export default function RecordsList() {
                       />
                     </Form.Group>
                   </Col>
+                  <Col md={6} lg={3}>
+                    <Form.Group>
+                      <Form.Label className="small text-muted">Tipo de Antecedente</Form.Label>
+                      <Form.Select
+                        name="typeRecord"
+                        value={filters.typeRecord}
+                        onChange={handleFilterChange}
+                      >
+                        <option value="">Todos</option>
+                        {ANTECEDENT_TYPES.map(type => (
+                          <option key={type.value} value={type.value}>{type.label}</option>
+                        ))}
+                        <option value="OTROS">Otros (Especificar)</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+
+                  {filters.typeRecord === 'OTROS' && (
+                    <Col md={6} lg={3} className="mt-3 mt-lg-0">
+                      <Form.Group>
+                        <Form.Label className="small text-muted">Especifique Tipo</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="customType"
+                          value={filters.customType}
+                          onChange={handleFilterChange}
+                          placeholder="Ej: Estafa, Homicidio..."
+                        />
+                      </Form.Group>
+                    </Col>
+                  )}
                 </Row>
               )}
             </Form>
@@ -226,7 +294,7 @@ export default function RecordsList() {
                 </div>
               </div>
               {records.length > 0 && (
-                <Button 
+                <Button
                   variant="outline-dark"
                   className="d-flex align-items-center"
                   onClick={() => toast.info('Funcionalidad de exportar en desarrollo')}
@@ -237,7 +305,7 @@ export default function RecordsList() {
               )}
             </div>
           </Card.Header>
-          
+
           <div className="table-responsive">
             <Table hover className="mb-0">
               <thead className="bg-light">
@@ -263,7 +331,7 @@ export default function RecordsList() {
                 ) : records.length > 0 ? (
                   records.map((record) => (
                     <tr key={record.record_id} style={{ cursor: 'pointer' }}>
-                      <td 
+                      <td
                         className="py-3"
                         onClick={() => handleViewRecord(record.record_id)}
                       >
@@ -271,7 +339,7 @@ export default function RecordsList() {
                           {record.title}
                         </div>
                       </td>
-                      <td 
+                      <td
                         className="py-3"
                         onClick={() => handleViewRecord(record.record_id)}
                       >
@@ -279,19 +347,19 @@ export default function RecordsList() {
                           {formatDate(record.date)}
                         </Badge>
                       </td>
-                      <td 
+                      <td
                         className="py-3"
                         onClick={() => handleViewRecord(record.record_id)}
                       >
                         {truncateText(record.content)}
                       </td>
-                      <td 
+                      <td
                         className="py-3"
                         onClick={() => handleViewRecord(record.record_id)}
                       >
                         <Badge bg="secondary" className="py-1 px-2">
-                          {(record.person_relationships?.length || 
-                            record.personRelationships?.length || 
+                          {(record.person_relationships?.length ||
+                            record.personRelationships?.length ||
                             record.relationships?.length || 0)} personas
                         </Badge>
                       </td>
@@ -326,8 +394,8 @@ export default function RecordsList() {
                         </div>
                         <h5 className="text-dark mb-1">No se encontraron antecedentes</h5>
                         <p className="text-muted mb-3">No hay antecedentes registrados o que coincidan con la búsqueda</p>
-                        <Button 
-                          variant="dark" 
+                        <Button
+                          variant="dark"
                           onClick={handleCreateRecord}
                           className="d-flex align-items-center mx-auto"
                         >
