@@ -13,7 +13,7 @@ class Records(Base):
     )
     title = Column(String(255), nullable=False)
     date = Column(Date, nullable=False)
-    type_record = Column(String(55), nullable=False)
+    type_record = Column(String(500), nullable=False)
     content = Column(Text, nullable=False)
     observations = Column(Text, nullable=True)
     create_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
