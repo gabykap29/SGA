@@ -80,10 +80,10 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
     return { icon: FiFile, color: 'dark', type: 'Archivo' };
   };
 
-  const downloadDocument = async (document) => {
+  const downloadDocument = async (doc) => {
     try {
       const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${baseURL}/files/${document.file_id}/download`, {
+      const response = await fetch(`${baseURL}/files/${doc.file_id}/download`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -94,7 +94,7 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
-        a.download = document.original_filename;
+        a.download = doc.original_filename;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -109,7 +109,7 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
     }
   };
 
-  const viewDocument = async (document) => {
+  const viewDocument = async (doc) => {
     try {
       const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const token = localStorage.getItem('token');
@@ -119,7 +119,7 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
         return;
       }
 
-      const response = await fetch(`${baseURL}/files/${document.file_id}/download`, {
+      const response = await fetch(`${baseURL}/files/${doc.file_id}/download`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -146,11 +146,11 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
     }
   };
 
-  const deleteDocument = async (document) => {
-    if (window.confirm(`¿Está seguro de que desea eliminar el documento "${document.original_filename || 'sin nombre'}"?`)) {
+  const deleteDocument = async (doc) => {
+    if (window.confirm(`¿Está seguro de que desea eliminar el documento "${doc.original_filename || 'sin nombre'}"?`)) {
       try {
         const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        const response = await fetch(`${baseURL}/files/${document.file_id}`, {
+        const response = await fetch(`${baseURL}/files/${doc.file_id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`

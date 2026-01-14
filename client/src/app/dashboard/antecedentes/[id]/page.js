@@ -111,6 +111,19 @@ export default function RecordDetail() {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
+      // Parsear la fecha como local para evitar problemas de zona horaria
+      // Si la fecha viene como "2026-01-01", la parseamos como local
+      const parts = dateString.split('T')[0].split('-');
+      if (parts.length === 3) {
+        const [year, month, day] = parts;
+        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        return date.toLocaleDateString('es-ES', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      }
+      // Fallback para otros formatos
       return new Date(dateString).toLocaleDateString('es-ES', {
         year: 'numeric',
         month: 'long',

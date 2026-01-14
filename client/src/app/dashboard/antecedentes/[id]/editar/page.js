@@ -54,7 +54,7 @@ export default function EditRecord() {
                 );
 
                 const formattedDate = record.record_date
-                    ? new Date(record.record_date).toISOString().split('T')[0]
+                    ? record.record_date.split('T')[0]
                     : '';
 
                 const initialData = {
