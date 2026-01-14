@@ -121,9 +121,16 @@ class RecordService:
         content: str,
         observations: str,
         db: AsyncSession,
+        type_record: str = None,
     ):
+        # Convertir record_id de string a UUID
+        try:
+            record_uuid = uuid.UUID(record_id)
+        except ValueError:
+            return False
+
         stm_is_exist = select(self.recordModel).filter(
-            self.recordModel.record_id == record_id
+            self.recordModel.record_id == record_uuid
         )
         result = await db.execute(stm_is_exist)
         is_exist = result.scalars().first()
@@ -135,6 +142,8 @@ class RecordService:
         setattr(is_exist, "date", date)
         setattr(is_exist, "content", content)
         setattr(is_exist, "observations", observations)
+        if type_record:
+            setattr(is_exist, "type_record", type_record)
 
         await db.commit()
         return True

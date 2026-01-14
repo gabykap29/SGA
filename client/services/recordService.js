@@ -132,8 +132,8 @@ class RecordService {
   async updateRecord(recordId, recordData) {
     try {
 
-      const response = await fetch(`${this.baseURL}/records/${recordId}`, {
-        method: 'PUT',
+      const response = await fetch(`${this.baseURL}/records/update/${recordId}`, {
+        method: 'PATCH',
         headers: this.getHeaders(),
         body: JSON.stringify(recordData)
       });

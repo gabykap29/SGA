@@ -88,9 +88,9 @@ async def search_records(
         records_list = list(records) if records else []
 
         try:
-            search_desc = query or ", ".join([
-                f"{k}:{v}" for k, v in filters.items() if v
-            ])
+            search_desc = query or ", ".join(
+                [f"{k}:{v}" for k, v in filters.items() if v]
+            )
             await logs_service.create_log(
                 db=db_session,
                 user_id=uuid.UUID(current_user.get("user_id")),
@@ -155,12 +155,14 @@ async def get_record_by_id(
                     "province": person_obj.province,
                     "country": person_obj.country,
                 }
-            person_relationships.append({
-                "id": str(rel.id),
-                "person_id": str(rel.person_id),
-                "type_relationship": rel.type_relationship,
-                "person": person_data,
-            })
+            person_relationships.append(
+                {
+                    "id": str(rel.id),
+                    "person_id": str(rel.person_id),
+                    "type_relationship": rel.type_relationship,
+                    "person": person_data,
+                }
+            )
         record_dict["person_relationships"] = person_relationships
         return CustomJSONResponse(content=record_dict)
     except Exception as e:
@@ -275,6 +277,7 @@ async def update_record(
             else str(record.date),
             content=record.content,
             observations=record.observations,
+            type_record=record.type_record,
             db=db_session,
         )
         if not result:
@@ -306,7 +309,7 @@ async def update_record(
         )
 
     finally:
-        db_session.close()
+        await db_session.close()
 
 
 @router.get("/stats/", status_code=status.HTTP_200_OK)
