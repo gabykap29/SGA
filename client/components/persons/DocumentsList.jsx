@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { Table, Card, Button, Badge, Alert } from 'react-bootstrap';
-import { 
-  FiFile, 
-  FiDownload, 
-  FiEye, 
+import {
+  FiFile,
+  FiDownload,
+  FiEye,
   FiTrash2,
   FiFileText,
   FiFilePlus,
@@ -19,16 +19,16 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
   const [showAddDocumentModal, setShowAddDocumentModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   console.log('DocumentsList - Documentos recibidos:', documents);
-  
+
   // Filtrar documentos que no tienen propiedades necesarias
   const validDocuments = Array.isArray(documents) ? documents.filter(doc => {
     if (!doc || typeof doc !== 'object') return false;
     // Verificar que tenga un ID de archivo válido
     return doc.file_id && doc.file_id.trim() !== '';
   }) : [];
-  
+
   console.log('DocumentsList - Documentos válidos:', validDocuments.length);
-  
+
   const formatFileSize = (bytes) => {
     if (!bytes || bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -55,12 +55,12 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
   const getFileIcon = (filename, mimeType, fileType) => {
     // Determinar el tipo de archivo por extensión o mime type
     const extension = filename?.split('.').pop()?.toLowerCase();
-    
+
     // Si no hay suficiente información para determinar el tipo
     if (!filename && !mimeType && !fileType) {
       return { icon: FiFile, color: 'secondary', type: 'Documento' };
     }
-    
+
     if (fileType === 'pdf' || mimeType?.includes('pdf') || extension === 'pdf') {
       return { icon: FiFile, color: 'danger', type: 'PDF' };
     }
@@ -76,7 +76,7 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
     if (mimeType?.includes('text') || extension === 'txt') {
       return { icon: FiFileText, color: 'secondary', type: 'Texto' };
     }
-    
+
     return { icon: FiFile, color: 'dark', type: 'Archivo' };
   };
 
@@ -111,10 +111,35 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
 
   const viewDocument = async (document) => {
     try {
-      // Usar la URL base de la API configurada o URL por defecto
       const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const viewUrl = `${baseURL}/files/${document.file_id}/download`;
-      window.open(viewUrl, '_blank');
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        toast.error('Sesión expirada. Por favor, inicie sesión nuevamente.');
+        return;
+      }
+
+      const response = await fetch(`${baseURL}/files/${document.file_id}/download`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        // Limpiar el URL después de un tiempo para liberar memoria
+        setTimeout(() => window.URL.revokeObjectURL(url), 100);
+      } else {
+        if (response.status === 401 || response.status === 403) {
+          toast.error('Sesión expirada. Por favor, inicie sesión nuevamente.');
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          toast.error(errorData.detail || 'Error al acceder al documento');
+        }
+      }
     } catch (error) {
       console.error('Error viewing document:', error);
       toast.error('Error al abrir el documento');
@@ -131,7 +156,7 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         });
-        
+
         if (response.ok) {
           toast.success('Documento eliminado correctamente');
           onUpdate?.();
@@ -149,7 +174,7 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
     try {
       setUploading(true);
       const result = await personService.uploadFiles(personId, [{ file, description }]);
-      
+
       if (result.success) {
         toast.success('Documento subido exitosamente');
         setShowAddDocumentModal(false);
@@ -173,40 +198,40 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
           border: '1px solid #dee2e6',
           borderRadius: '4px'
         }}>
-        <div 
-          className="rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center"
-          style={{
-            width: '80px',
-            height: '80px',
-            background: 'linear-gradient(135deg, #6c757d 0%, #495057 100%)',
-            color: 'white'
-          }}
-        >
-          <FiFileText size={36} />
-        </div>
-        <h5 className="fw-bold text-dark mb-2">No hay documentos</h5>
-        <p className="text-muted mb-4">Esta persona no tiene documentos adjuntos.</p>
-        <Button 
-          variant="dark" 
-          onClick={() => setShowAddDocumentModal(true)}
-          className="px-4 py-2 shadow-sm"
-          style={{
-            background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
-            border: 'none',
-            borderRadius: '8px'
-          }}
-        >
-          <FiFilePlus className="me-2" />
-          Subir primer documento
-        </Button>
+          <div
+            className="rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center"
+            style={{
+              width: '80px',
+              height: '80px',
+              background: 'linear-gradient(135deg, #6c757d 0%, #495057 100%)',
+              color: 'white'
+            }}
+          >
+            <FiFileText size={36} />
+          </div>
+          <h5 className="fw-bold text-dark mb-2">No hay documentos</h5>
+          <p className="text-muted mb-4">Esta persona no tiene documentos adjuntos.</p>
+          <Button
+            variant="dark"
+            onClick={() => setShowAddDocumentModal(true)}
+            className="px-4 py-2 shadow-sm"
+            style={{
+              background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+              border: 'none',
+              borderRadius: '8px'
+            }}
+          >
+            <FiFilePlus className="me-2" />
+            Subir primer documento
+          </Button>
         </div>
 
         {/* Modal para añadir documento cuando no hay documentos */}
-        <AddDocumentModal 
-          show={showAddDocumentModal} 
-          onHide={() => setShowAddDocumentModal(false)} 
-          onUpload={handleAddDocument} 
-          isLoading={uploading} 
+        <AddDocumentModal
+          show={showAddDocumentModal}
+          onHide={() => setShowAddDocumentModal(false)}
+          onUpload={handleAddDocument}
+          isLoading={uploading}
         />
       </div>
     );
@@ -221,16 +246,16 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
           <small className="text-muted">Archivos y documentos digitales</small>
         </div>
         <div className="d-flex gap-2 align-items-center">
-          <Badge 
-            bg="dark" 
-            pill 
+          <Badge
+            bg="dark"
+            pill
             className="px-3 py-2 shadow-sm"
             style={{ fontSize: '0.9rem' }}
           >
             {validDocuments.length}
           </Badge>
-          <Button 
-            variant="dark" 
+          <Button
+            variant="dark"
             size="sm"
             className="px-3 py-2 shadow-sm"
             onClick={() => setShowAddDocumentModal(true)}
@@ -272,8 +297,8 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
             <tbody>
               {validDocuments.map((document, index) => {
                 const fileInfo = getFileIcon(
-                  document.original_filename || 'unknown', 
-                  document.mimetype || document.mime_type, 
+                  document.original_filename || 'unknown',
+                  document.mimetype || document.mime_type,
                   document.file_type
                 );
                 const IconComponent = fileInfo.icon;
@@ -282,7 +307,7 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
                   <tr key={document.file_id || index}>
                     <td className="py-3">
                       <div className="d-flex align-items-center">
-                        <div 
+                        <div
                           className={`rounded d-flex align-items-center justify-content-center me-3 text-white bg-${fileInfo.color}`}
                           style={{ width: '40px', height: '40px' }}
                         >
@@ -327,8 +352,8 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
                     </td>
                     <td className="py-3 text-center">
                       <div className="d-flex gap-1 justify-content-center">
-                        <Button 
-                          variant="dark" 
+                        <Button
+                          variant="dark"
                           size="sm"
                           title="Ver documento"
                           onClick={() => document.file_id ? viewDocument(document) : toast.warning('No se puede visualizar: ID de archivo no válido')}
@@ -341,8 +366,8 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
                         >
                           <FiEye size={14} />
                         </Button>
-                        <Button 
-                          variant="dark" 
+                        <Button
+                          variant="dark"
                           size="sm"
                           title="Descargar"
                           onClick={() => document.file_id ? downloadDocument(document) : toast.warning('No se puede descargar: ID de archivo no válido')}
@@ -356,8 +381,8 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
                         >
                           <FiDownload size={14} />
                         </Button>
-                        <Button 
-                          variant="dark" 
+                        <Button
+                          variant="dark"
                           size="sm"
                           title="Eliminar"
                           onClick={() => document.file_id ? deleteDocument(document) : toast.warning('No se puede eliminar: ID de archivo no válido')}
@@ -433,11 +458,11 @@ const DocumentsList = ({ documents = [], personId, onUpdate }) => {
       </div>
 
       {/* Modal para añadir documento */}
-      <AddDocumentModal 
-        show={showAddDocumentModal} 
-        onHide={() => setShowAddDocumentModal(false)} 
-        onUpload={handleAddDocument} 
-        isLoading={uploading} 
+      <AddDocumentModal
+        show={showAddDocumentModal}
+        onHide={() => setShowAddDocumentModal(false)}
+        onUpload={handleAddDocument}
+        isLoading={uploading}
       />
     </div>
   );
