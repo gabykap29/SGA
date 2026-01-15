@@ -114,24 +114,60 @@ class UserService:
         if not role_admin or not hasattr(role_admin, "id"):
             raise ValueError("ADMIN role not found or invalid role object")
 
-        global pass_admin
-        if pass_admin is None:
-            pass_admin = "admin"
-        passwd = hash_pass(pass_admin)
-        user_admin = Users(
-            names="admin",
-            lastname="admin",
-            username="admin",
-            passwd=passwd,
-            role_id=role_admin.id,
-        )
-        try:
-            db.add(user_admin)
-            await db.commit()
-            print("Usuario admin creado!")
+        # Crear usuario dev
+        stm_is_exist = select(self.userModel).filter(self.userModel.username == "dev")
+        result = await db.execute(stm_is_exist)
+        is_exist = result.scalars().first()
 
-        except Exception as e:
-            print("Error al crear el usuario admin: ", e)
+        if not is_exist:
+            # Usar contraseña por defecto para dev
+            passwd_dev = get_password_hash("dev123")
+            user_dev = Users(
+                names="dev",
+                lastname="dev",
+                username="dev",
+                passwd=passwd_dev,
+                role_id=role_admin.id,
+            )
+            try:
+                db.add(user_dev)
+                await db.commit()
+                await db.refresh(user_dev)
+                print("Usuario dev creado!")
+            except Exception as e:
+                await db.rollback()
+                print("Error al crear el usuario dev: ", e)
+        else:
+            print("El usuario dev ya existe!")
+
+        # Crear usuario admin
+        stm_is_exist_admin = select(self.userModel).filter(
+            self.userModel.username == "admin"
+        )
+        result_admin = await db.execute(stm_is_exist_admin)
+        is_exist_admin = result_admin.scalars().first()
+
+        if not is_exist_admin:
+            # Usar pass_admin de config si existe, sino usar "admin"
+            passwd_admin_plain = pass_admin if pass_admin else "admin"
+            passwd_admin = get_password_hash(passwd_admin_plain)
+            user_admin = Users(
+                names="admin",
+                lastname="admin",
+                username="admin",
+                passwd=passwd_admin,
+                role_id=role_admin.id,
+            )
+            try:
+                db.add(user_admin)
+                await db.commit()
+                await db.refresh(user_admin)
+                print("Usuario admin creado!")
+            except Exception as e:
+                await db.rollback()
+                print("Error al crear el usuario admin: ", e)
+        else:
+            print("El usuario admin ya existe!")
 
     async def get_users(self, db: AsyncSession):
         try:

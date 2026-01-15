@@ -12,7 +12,7 @@ async def create_admin():
         user_model = UserService()
         users = await user_model.get_users(db=db)
 
-        if not users:
+        if len(users) < 2:
             print("Base de datos vacía. Creando admin...")
             await user_model.create_admin_user(db=db)
             return True
