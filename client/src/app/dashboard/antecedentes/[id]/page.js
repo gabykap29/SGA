@@ -109,26 +109,21 @@ export default function RecordDetail() {
   };
 
   const formatDate = (dateString) => {
+    console.log("fecha ", dateString)
     if (!dateString) return 'N/A';
     try {
-      // Parsear la fecha como local para evitar problemas de zona horaria
-      // Si la fecha viene como "2026-01-01", la parseamos como local
-      const parts = dateString.split('T')[0].split('-');
-      if (parts.length === 3) {
-        const [year, month, day] = parts;
-        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        return date.toLocaleDateString('es-ES', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-      }
-      // Fallback para otros formatos
-      return new Date(dateString).toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
+      // Extraer solo la fecha sin parsear para evitar problemas de zona horaria
+      const datePart = dateString.split('T')[0]; // "2026-01-01"
+      const [year, month, day] = datePart.split('-');
+
+      // Mapeo de meses en español
+      const meses = [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+      ];
+
+      const monthName = meses[parseInt(month) - 1];
+      return `${parseInt(day)} de ${monthName} de ${year}`;
     } catch {
       return dateString;
     }
@@ -226,7 +221,17 @@ export default function RecordDetail() {
                     <Tab.Pane eventKey="details">
                       <div className="mb-4">
                         <h6 className="fw-bold text-muted small mb-2">Tipo de Antecedente</h6>
-                        <Badge bg="dark" className="px-3 py-2 fs-6">
+                        <Badge
+                          bg="dark"
+                          className="px-3 py-2 fs-6"
+                          style={{
+                            maxWidth: '100%',
+                            whiteSpace: 'normal',
+                            wordWrap: 'break-word',
+                            display: 'inline-block',
+                            textAlign: 'left'
+                          }}
+                        >
                           {record.type_record || 'No especificado'}
                         </Badge>
                       </div>

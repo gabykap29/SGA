@@ -129,23 +129,17 @@ export default function RecordsList() {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
-      // Parsear la fecha como local para evitar problemas de zona horaria
-      const parts = dateString.split('T')[0].split('-');
-      if (parts.length === 3) {
-        const [year, month, day] = parts;
-        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        return date.toLocaleDateString('es-ES', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
-        });
-      }
-      // Fallback para otros formatos
-      return new Date(dateString).toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
+      // Extraer solo la fecha sin parsear para evitar problemas de zona horaria
+      const datePart = dateString.split('T')[0]; // "2026-01-01"
+      const [year, month, day] = datePart.split('-');
+
+      // Mapeo de meses abreviados en español
+      const meses = [
+        'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+        'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
+      ];
+      const monthName = meses[parseInt(month) - 1];
+      return `${parseInt(day)} ${monthName} ${year}`;
     } catch {
       return dateString;
     }
